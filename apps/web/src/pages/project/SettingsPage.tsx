@@ -1,0 +1,17 @@
+import { NotFoundPage } from '../NotFoundPage'
+import { useProjectContext } from './ProjectLayout'
+import { ProjectSettings } from './ProjectSettings'
+import { StatusSettings } from './StatusSettings'
+
+export function SettingsPage() {
+  const { project } = useProjectContext()
+  // The tab is hidden for other roles; this covers a typed-in address.
+  if (project.role !== 'owner') return <NotFoundPage />
+
+  return (
+    <div className="space-y-6">
+      <StatusSettings projectId={project.id} />
+      <ProjectSettings key={project.id} project={project} />
+    </div>
+  )
+}

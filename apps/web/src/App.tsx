@@ -6,7 +6,11 @@ import { AppLayout } from './components/AppLayout'
 import { Alert, Button, Spinner } from './components/ui'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { ProjectPage } from './pages/ProjectPage'
+import { BoardPage } from './pages/project/BoardPage'
+import { ListPage } from './pages/project/ListPage'
+import { MembersPage } from './pages/project/MembersPage'
+import { ProjectLayout } from './pages/project/ProjectLayout'
+import { SettingsPage } from './pages/project/SettingsPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
 
@@ -52,7 +56,12 @@ export function App() {
         }
       >
         <Route index element={<ProjectsPage />} />
-        <Route path="/projects/:projectId" element={user && <ProjectPage currentUser={user} />} />
+        <Route path="/projects/:projectId" element={user && <ProjectLayout currentUser={user} />}>
+          <Route index element={<BoardPage />} />
+          <Route path="list" element={<ListPage />} />
+          <Route path="members" element={<MembersPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

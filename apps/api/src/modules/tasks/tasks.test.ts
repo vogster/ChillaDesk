@@ -1,5 +1,7 @@
 import { taskListSchema, taskSchema, type Task, type TaskList } from '@chillawiki/shared'
+import { inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { tasks as tasksTable } from '../../db/schema'
 import {
   createTestContext,
   type ProjectFixture,
@@ -95,7 +97,9 @@ describe('creating tasks', () => {
       Array.from({ length: 6 }, (_unused, index) => addTask(fixture, { title: `Task ${index}` })),
     )
 
-    expect(tasks.map((task) => task.number).sort()).toEqual([1, 2, 3, 4, 5, 6])
+    expect(tasks.map((task) => task.number).sort((left, right) => left - right)).toEqual([
+      1, 2, 3, 4, 5, 6,
+    ])
   })
 
   it('rejects a column or assignee from outside the project', async () => {
@@ -342,6 +346,24 @@ describe('moving tasks on the board', () => {
     }
 
     expect(await column(todo)).toEqual(['C', 'B', 'A'])
+  })
+
+  it('places a task correctly even when its neighbours share a position', async () => {
+    const { todo, doing, a, b, c, move, column } = await board()
+    await move(a, { statusId: doing })
+    await move(b, { statusId: doing })
+    // Two concurrent moves can leave equal positions behind; recreate that state directly.
+    await ctx.database.db
+      .update(tasksTable)
+      .set({ position: 2048 })
+      .where(inArray(tasksTable.id, [a.id, b.id]))
+    expect(await column(doing)).toEqual(['A', 'B'])
+
+    const response = await move(c, { statusId: doing, beforeTaskId: b.id })
+
+    expect(response.statusCode).toBe(200)
+    expect(await column(doing)).toEqual(['A', 'C', 'B'])
+    expect(await column(todo)).toEqual([])
   })
 
   it('rejects impossible targets', async () => {

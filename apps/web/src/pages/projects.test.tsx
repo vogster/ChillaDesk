@@ -141,7 +141,7 @@ describe('project page', () => {
     const calls = mockApi(
       ownerRoutes({ [`POST ${projectUrl}/members`]: () => ok(makeMember(bob, 'viewer'), 201) }),
     )
-    const { user } = renderApp(`/projects/${project.id}`)
+    const { user } = renderApp(`/projects/${project.id}/members`)
 
     await user.type(await screen.findByLabelText('Add a member by email'), 'bob@example.com')
     await user.selectOptions(screen.getByLabelText('Role'), 'viewer')
@@ -163,7 +163,7 @@ describe('project page', () => {
           apiError(404, 'NOT_FOUND', 'User with this email not found'),
       }),
     )
-    const { user } = renderApp(`/projects/${project.id}`)
+    const { user } = renderApp(`/projects/${project.id}/members`)
 
     await user.type(await screen.findByLabelText('Add a member by email'), 'nope')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -182,7 +182,7 @@ describe('project page', () => {
         [`DELETE ${projectUrl}/members/${bob.id}`]: noContent,
       }),
     )
-    const { user } = renderApp(`/projects/${project.id}`)
+    const { user } = renderApp(`/projects/${project.id}/members`)
 
     await user.selectOptions(await screen.findByLabelText('Role of Bob'), 'viewer')
     await waitFor(() =>
@@ -200,7 +200,7 @@ describe('project page', () => {
   it('lets an owner rename the project', async () => {
     const renamed = makeProject({ name: 'Renamed', updatedAt: '2026-02-02T00:00:00.000Z' })
     const calls = mockApi(ownerRoutes({ [`PATCH ${projectUrl}`]: () => ok(renamed) }))
-    const { user } = renderApp(`/projects/${project.id}`)
+    const { user } = renderApp(`/projects/${project.id}/settings`)
 
     const name = await screen.findByLabelText('Name')
     await user.clear(name)
@@ -221,7 +221,7 @@ describe('project page', () => {
     const calls = mockApi(
       ownerRoutes({ [`DELETE ${projectUrl}`]: noContent, 'GET /api/projects': () => ok([]) }),
     )
-    const { user } = renderApp(`/projects/${project.id}`)
+    const { user } = renderApp(`/projects/${project.id}/settings`)
 
     await user.click(await screen.findByRole('button', { name: 'Delete project…' }))
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -244,12 +244,12 @@ describe('project page', () => {
         'GET /api/projects': () => ok([]),
       }),
     )
-    const { user } = renderApp(`/projects/${project.id}`)
+    const { user } = renderApp(`/projects/${project.id}/members`)
 
     expect(await screen.findByText('(you)')).toBeInTheDocument()
     expect(screen.queryByLabelText('Role of Bob')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Remove Bob' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Add a member by email')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Leave project' }))
@@ -292,7 +292,7 @@ describe('member list stays in sync', () => {
 
   it('shows a newly added member and no longer shows a removed one', async () => {
     mockApi(memberServer())
-    const { user } = renderApp(`/projects/${project.id}`)
+    const { user } = renderApp(`/projects/${project.id}/members`)
 
     await user.type(await screen.findByLabelText('Add a member by email'), 'cat@example.com')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -304,7 +304,7 @@ describe('member list stays in sync', () => {
 
   it('replaces an old error once a later action succeeds', async () => {
     mockApi(memberServer())
-    const { user } = renderApp(`/projects/${project.id}`)
+    const { user } = renderApp(`/projects/${project.id}/members`)
 
     await user.type(await screen.findByLabelText('Add a member by email'), 'ghost@example.com')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -318,12 +318,12 @@ describe('member list stays in sync', () => {
 
   it('hides owner controls as soon as the user gives up the owner role', async () => {
     mockApi(memberServer())
-    const { user } = renderApp(`/projects/${project.id}`, { staleTime: 30_000 })
+    const { user } = renderApp(`/projects/${project.id}/members`, { staleTime: 30_000 })
 
     await user.selectOptions(await screen.findByLabelText('Role of Ann'), 'member')
 
     await waitFor(() =>
-      expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument(),
     )
     expect(screen.queryByLabelText('Role of Bob')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Add a member by email')).not.toBeInTheDocument()
@@ -340,7 +340,7 @@ describe('cached pages', () => {
           ok(makeProject({ description: 'Updated', updatedAt: '2026-03-03T00:00:00.000Z' })),
       }),
     )
-    const { user } = renderApp(`/projects/${project.id}`)
+    const { user } = renderApp(`/projects/${project.id}/settings`)
 
     await user.type(await screen.findByLabelText('Description'), ' more')
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
@@ -365,6 +365,7 @@ describe('cached pages', () => {
     const { user } = renderApp('/', { staleTime: 30_000 })
 
     await user.click(await screen.findByRole('link', { name: /CHL/ }))
+    await user.click(await screen.findByRole('link', { name: 'Members' }))
     await user.click(await screen.findByRole('button', { name: 'Leave project' }))
 
     expect(await screen.findByText('No projects yet')).toBeInTheDocument()

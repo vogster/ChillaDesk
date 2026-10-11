@@ -34,6 +34,14 @@ export type ReorderStatusesRequest = z.infer<typeof reorderStatusesRequestSchema
 export const taskPrioritySchema = z.enum(['low', 'medium', 'high', 'urgent'])
 export type TaskPriority = z.infer<typeof taskPrioritySchema>
 
+/**
+ * Calendar date, `YYYY-MM-DD`. The year range keeps out typos and half-typed values such as
+ * `0002-05-17`, and year 0000, which PostgreSQL cannot store.
+ */
+export const dueDateSchema = z.iso
+  .date()
+  .refine((date) => date >= '1900-01-01' && date <= '2999-12-31', 'Year must be 1900-2999')
+
 export const userSummarySchema = z.object({
   id: z.uuid(),
   name: z.string(),
@@ -56,8 +64,7 @@ export const taskSchema = z.object({
   assignee: userSummarySchema.nullable(),
   /** Null when the author's account was deleted. */
   reporter: userSummarySchema.nullable(),
-  /** Calendar date, `YYYY-MM-DD`. */
-  dueDate: z.iso.date().nullable(),
+  dueDate: dueDateSchema.nullable(),
   /** Sort key within the status column; only the order is meaningful. */
   position: z.number(),
   createdAt: z.iso.datetime(),
@@ -75,7 +82,7 @@ export const createTaskRequestSchema = z.object({
   statusId: z.uuid().optional(),
   priority: taskPrioritySchema.default('medium'),
   assigneeId: z.uuid().nullable().default(null),
-  dueDate: z.iso.date().nullable().default(null),
+  dueDate: dueDateSchema.nullable().default(null),
 })
 export type CreateTaskRequest = z.infer<typeof createTaskRequestSchema>
 
@@ -85,7 +92,7 @@ export const updateTaskRequestSchema = z
     description: taskDescriptionSchema.optional(),
     priority: taskPrioritySchema.optional(),
     assigneeId: z.uuid().nullable().optional(),
-    dueDate: z.iso.date().nullable().optional(),
+    dueDate: dueDateSchema.nullable().optional(),
   })
   .refine((patch) => Object.keys(patch).length > 0, 'At least one field is required')
 export type UpdateTaskRequest = z.infer<typeof updateTaskRequestSchema>
@@ -105,7 +112,7 @@ export const taskListQuerySchema = z.object({
   assigneeId: z.union([z.uuid(), z.literal('none')]).optional(),
   priority: taskPrioritySchema.optional(),
   /** Case-insensitive match in the title or description. */
-  q: z.string().trim().min(1).max(200).optional(),
+  q: textSchema.trim().min(1).max(200).optional(),
   limit: z.coerce.number().int().min(1).max(TASK_PAGE_MAX).default(TASK_PAGE_MAX),
   offset: z.coerce.number().int().min(0).default(0),
 })

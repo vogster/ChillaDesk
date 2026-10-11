@@ -114,7 +114,8 @@ export async function listTasks(
   const [rows, [counted]] = await Promise.all([
     selectTasks(db)
       .where(where)
-      .orderBy(asc(statuses.position), asc(tasks.position), asc(tasks.number))
+      // The ids break ties so that paging never repeats or skips a row.
+      .orderBy(asc(statuses.position), asc(statuses.id), asc(tasks.position), asc(tasks.number))
       .limit(query.limit)
       .offset(query.offset),
     db.select({ total: count() }).from(tasks).where(where),
@@ -132,20 +133,28 @@ export async function getTask(
   return loadTask(db, projectId, taskId)
 }
 
-async function assertStatusInProject(db: Executor, projectId: string, statusId: string) {
-  const [status] = await db
+/**
+ * Confirms the status belongs to the project and locks its row until the transaction ends.
+ * Everything that reads a column's positions and then writes one holds this lock, so two
+ * changes to the same column run one after the other; it also blocks deleting the status.
+ */
+async function lockStatus(tx: Tx, projectId: string, statusId: string): Promise<void> {
+  const [status] = await tx
     .select({ id: statuses.id })
     .from(statuses)
     .where(and(eq(statuses.projectId, projectId), eq(statuses.id, statusId)))
+    .for('update')
   if (!status) throw invalid('statusId does not belong to this project')
 }
 
-async function assertAssignable(db: Executor, projectId: string, assigneeId: string | null) {
+/** Holds the membership row so the member cannot be removed before the task is saved. */
+async function assertAssignable(tx: Tx, projectId: string, assigneeId: string | null) {
   if (assigneeId === null) return
-  const [membership] = await db
+  const [membership] = await tx
     .select({ userId: projectMembers.userId })
     .from(projectMembers)
     .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, assigneeId)))
+    .for('share')
   if (!membership) throw invalid('assigneeId must be a member of this project')
 }
 
@@ -154,7 +163,7 @@ async function firstStatusId(db: Executor, projectId: string): Promise<string> {
     .select({ id: statuses.id })
     .from(statuses)
     .where(eq(statuses.projectId, projectId))
-    .orderBy(asc(statuses.position))
+    .orderBy(asc(statuses.position), asc(statuses.id))
     .limit(1)
   if (!first) throw new Error(`Project ${projectId} has no statuses`)
   return first.id
@@ -182,17 +191,18 @@ export async function createTask(
 ): Promise<Task> {
   await getProject(db, userId, projectId, 'member')
   return db.transaction(async (tx) => {
-    const statusId = input.statusId ?? (await firstStatusId(tx, projectId))
-    if (input.statusId) await assertStatusInProject(tx, projectId, statusId)
-    await assertAssignable(tx, projectId, input.assigneeId)
-
     // The row lock taken by this update serialises concurrent creators, so numbers are unique.
+    // It comes first: status changes lock the project before a status, and so must this.
     const [counter] = await tx
       .update(projects)
       .set({ taskCounter: sql`${projects.taskCounter} + 1` })
       .where(eq(projects.id, projectId))
       .returning({ number: projects.taskCounter })
     if (!counter) throw notFound('Project')
+
+    const statusId = input.statusId ?? (await firstStatusId(tx, projectId))
+    await lockStatus(tx, projectId, statusId)
+    await assertAssignable(tx, projectId, input.assigneeId)
 
     const [created] = await tx
       .insert(tasks)
@@ -222,33 +232,36 @@ export async function updateTask(
   patch: UpdateTaskRequest,
 ): Promise<Task> {
   await getProject(db, userId, projectId, 'member')
-  if (patch.assigneeId !== undefined) await assertAssignable(db, projectId, patch.assigneeId)
+  return db.transaction(async (tx) => {
+    if (patch.assigneeId !== undefined) await assertAssignable(tx, projectId, patch.assigneeId)
 
-  const [updated] = await db
-    .update(tasks)
-    .set({ ...patch, updatedAt: new Date() })
-    .where(inProject(projectId, taskId))
-    .returning({ id: tasks.id })
-  if (!updated) throw notFound('Task')
-  return loadTask(db, projectId, taskId)
-}
-
-/** Spreads a column's tasks evenly again once repeated moves have used up the gaps. */
-async function rebalanceColumn(tx: Tx, statusId: string): Promise<void> {
-  const column = await tx
-    .select({ id: tasks.id })
-    .from(tasks)
-    .where(eq(tasks.statusId, statusId))
-    .orderBy(asc(tasks.position), asc(tasks.number))
-  for (const [index, task] of column.entries()) {
-    await tx
+    const [updated] = await tx
       .update(tasks)
-      .set({ position: (index + 1) * POSITION_STEP })
-      .where(eq(tasks.id, task.id))
-  }
+      .set({ ...patch, updatedAt: new Date() })
+      .where(inProject(projectId, taskId))
+      .returning({ id: tasks.id })
+    if (!updated) throw notFound('Task')
+    return loadTask(tx, projectId, taskId)
+  })
 }
 
-/** Position that sorts the moved task right before `beforeTaskId`, or null if the gap is used up. */
+/** Spreads a column's tasks evenly again: used-up gaps and equal positions both end up apart. */
+async function rebalanceColumn(tx: Tx, statusId: string): Promise<void> {
+  await tx.execute(sql`
+    update "tasks" set "position" = ranked.rank * ${POSITION_STEP}
+    from (
+      select "id", row_number() over (order by "position", "number") as rank
+      from "tasks" where "status_id" = ${statusId}
+    ) as ranked
+    where "tasks"."id" = ranked."id"
+  `)
+}
+
+/**
+ * Position that sorts the moved task right before `beforeTaskId`.
+ * Returns null when the column has to be rebalanced first: the gap is used up, or another
+ * task shares the target's position and a midpoint could land on the wrong side of it.
+ */
 async function positionBefore(
   tx: Tx,
   statusId: string,
@@ -261,12 +274,18 @@ async function positionBefore(
     .where(and(eq(tasks.statusId, statusId), eq(tasks.id, beforeTaskId)))
   if (!next) throw invalid('beforeTaskId must be a task in the target status')
 
+  const others = and(eq(tasks.statusId, statusId), ne(tasks.id, taskId), ne(tasks.id, beforeTaskId))
+  const [tied] = await tx
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(and(others, eq(tasks.position, next.position)))
+    .limit(1)
+  if (tied) return null
+
   const [previous] = await tx
     .select({ position: max(tasks.position) })
     .from(tasks)
-    .where(
-      and(eq(tasks.statusId, statusId), lt(tasks.position, next.position), ne(tasks.id, taskId)),
-    )
+    .where(and(others, lt(tasks.position, next.position)))
   if (previous?.position == null) return next.position - POSITION_STEP
   return next.position - previous.position < MIN_GAP
     ? null
@@ -285,7 +304,7 @@ export async function moveTask(
 
   return db.transaction(async (tx) => {
     await loadTask(tx, projectId, taskId)
-    await assertStatusInProject(tx, projectId, statusId)
+    await lockStatus(tx, projectId, statusId)
 
     let position: number | null
     if (beforeTaskId === null) {

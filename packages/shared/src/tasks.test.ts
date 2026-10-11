@@ -28,6 +28,8 @@ describe('createTaskRequestSchema', () => {
     ['an unknown priority', { title: 'T', priority: 'asap' }],
     ['a malformed due date', { title: 'T', dueDate: '31.12.2026' }],
     ['an impossible due date', { title: 'T', dueDate: '2026-02-30' }],
+    ['a half-typed year', { title: 'T', dueDate: '0202-05-17' }],
+    ['year zero', { title: 'T', dueDate: '0000-01-01' }],
     ['a malformed assignee', { title: 'T', assigneeId: 'me' }],
   ])('rejects %s', (_label, input) => {
     expect(createTaskRequestSchema.safeParse(input).success).toBe(false)
@@ -73,6 +75,10 @@ describe('taskListQuerySchema', () => {
     expect(taskListQuerySchema.safeParse({ assigneeId: 'none' }).success).toBe(true)
     expect(taskListQuerySchema.safeParse({ assigneeId: ID }).success).toBe(true)
     expect(taskListQuerySchema.safeParse({ assigneeId: 'anyone' }).success).toBe(false)
+  })
+
+  it('rejects a search text PostgreSQL cannot process', () => {
+    expect(taskListQuerySchema.safeParse({ q: 'a\u0000b' }).success).toBe(false)
   })
 
   it('caps the page size', () => {

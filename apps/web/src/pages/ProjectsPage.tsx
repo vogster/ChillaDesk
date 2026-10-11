@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { errorMessage } from '../api/client'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, Card, Spinner, TextField } from '../components/ui'
-import { useCreateProject, useProjects } from './projectQueries'
+import { useCreateProject, useProjects } from './project/projectQueries'
 
 function NewProjectForm({ onClose }: { onClose: () => void }) {
   const createProject = useCreateProject()

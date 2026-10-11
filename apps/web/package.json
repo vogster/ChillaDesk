@@ -12,11 +12,16 @@
   },
   "dependencies": {
     "@chillawiki/shared": "workspace:*",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.104.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
     "react-router": "^8.4.0",
+    "remark-gfm": "^4.0.1",
     "tailwindcss": "^4.3.3",
     "zod": "^4.6.6"
   },

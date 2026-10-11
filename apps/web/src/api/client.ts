@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions<T> {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   /** Validates the response body; omit for endpoints that answer 204. */
   schema?: z.ZodType<T>

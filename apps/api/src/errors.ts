@@ -33,10 +33,16 @@ export const forbidden = (message = 'You do not have access to this resource') =
 export const notFound = (what: string) => new AppError('NOT_FOUND', `${what} not found`)
 export const conflict = (message: string) => new AppError('CONFLICT', message)
 
-/** PostgreSQL unique_violation, as reported by both postgres-js and PGlite. */
-export function isUniqueViolation(error: unknown): boolean {
+// Drivers wrap the PostgreSQL error, so the SQLSTATE can sit anywhere in the cause chain.
+function hasSqlState(error: unknown, sqlState: string): boolean {
   for (let current = error; current instanceof Error; current = current.cause) {
-    if ('code' in current && current.code === '23505') return true
+    if ('code' in current && current.code === sqlState) return true
   }
   return false
 }
+
+/** PostgreSQL unique_violation, as reported by both postgres-js and PGlite. */
+export const isUniqueViolation = (error: unknown) => hasSqlState(error, '23505')
+
+/** PostgreSQL foreign_key_violation. */
+export const isForeignKeyViolation = (error: unknown) => hasSqlState(error, '23503')

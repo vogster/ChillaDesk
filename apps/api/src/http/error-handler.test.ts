@@ -1,6 +1,6 @@
 import { errorResponseSchema } from '@chillawiki/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { conflict, isUniqueViolation } from '../errors'
+import { conflict, isForeignKeyViolation, isUniqueViolation } from '../errors'
 import { createTestContext, type TestContext } from '../test/harness'
 import { loggableError } from './error-handler'
 
@@ -95,5 +95,14 @@ describe('isUniqueViolation', () => {
     expect(isUniqueViolation(Object.assign(new Error('fk'), { code: '23503' }))).toBe(false)
     expect(isUniqueViolation(new Error('plain'))).toBe(false)
     expect(isUniqueViolation('23505')).toBe(false)
+  })
+
+  it('is told apart from a foreign key violation', () => {
+    const foreignKey = new Error('Failed query', {
+      cause: Object.assign(new Error('still referenced'), { code: '23503' }),
+    })
+
+    expect(isForeignKeyViolation(foreignKey)).toBe(true)
+    expect(isUniqueViolation(foreignKey)).toBe(false)
   })
 })

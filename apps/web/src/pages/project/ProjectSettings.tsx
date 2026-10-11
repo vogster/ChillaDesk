@@ -1,9 +1,9 @@
 import { updateProjectRequestSchema, type Project } from '@chillawiki/shared'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { errorMessage } from '../api/client'
-import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
-import { Alert, Button, Card, TextField } from '../components/ui'
+import { errorMessage } from '../../api/client'
+import { focusFirstInvalid, parseForm, type FieldErrors } from '../../components/form'
+import { Alert, Button, Card, TextField } from '../../components/ui'
 import { useDeleteProject, useUpdateProject } from './projectQueries'
 
 /** Owner-only: rename the project or delete it. */

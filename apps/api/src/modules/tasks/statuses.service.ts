@@ -6,8 +6,8 @@ import type {
 } from '@chillawiki/shared'
 import { and, asc, eq, gt, max, sql } from 'drizzle-orm'
 import type { Db, Executor, Tx } from '../../db/client'
-import { statuses, tasks } from '../../db/schema'
-import { conflict, invalid, notFound } from '../../errors'
+import { projects, statuses, tasks } from '../../db/schema'
+import { conflict, invalid, isForeignKeyViolation, notFound } from '../../errors'
 import { getProject } from '../projects/service'
 
 const DEFAULT_STATUSES: readonly { name: string; category: StatusCategory }[] = [
@@ -34,7 +34,19 @@ export function loadStatuses(db: Executor, projectId: string): Promise<StatusRow
     .select()
     .from(statuses)
     .where(eq(statuses.projectId, projectId))
-    .orderBy(asc(statuses.position))
+    .orderBy(asc(statuses.position), asc(statuses.id))
+}
+
+/**
+ * Makes changes to a project's set of columns run one at a time. Without it two owners
+ * could each delete "one of the last two" columns, or append two columns at the same position.
+ */
+async function lockBoard(tx: Tx, projectId: string): Promise<void> {
+  await tx
+    .select({ id: projects.id })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .for('update')
 }
 
 export async function listStatuses(db: Db, userId: string, projectId: string): Promise<Status[]> {
@@ -50,6 +62,7 @@ export async function createStatus(
 ): Promise<Status> {
   await getProject(db, userId, projectId, 'owner')
   return db.transaction(async (tx) => {
+    await lockBoard(tx, projectId)
     const [last] = await tx
       .select({ position: max(statuses.position) })
       .from(statuses)
@@ -91,6 +104,7 @@ export async function reorderStatuses(
 ): Promise<Status[]> {
   await getProject(db, userId, projectId, 'owner')
   return db.transaction(async (tx) => {
+    await lockBoard(tx, projectId)
     const current = await loadStatuses(tx, projectId)
     const known = new Set(current.map((status) => status.id))
     const complete =
@@ -106,6 +120,8 @@ export async function reorderStatuses(
   })
 }
 
+const STATUS_IN_USE = 'Move the tasks out of this status before deleting it'
+
 export async function deleteStatus(
   db: Db,
   userId: string,
@@ -113,23 +129,36 @@ export async function deleteStatus(
   statusId: string,
 ): Promise<void> {
   await getProject(db, userId, projectId, 'owner')
-  await db.transaction(async (tx) => {
-    const current = await loadStatuses(tx, projectId)
-    const target = current.find((status) => status.id === statusId)
-    if (!target) throw notFound('Status')
-    if (current.length === 1) throw conflict('A board must keep at least one status')
+  try {
+    await db.transaction(async (tx) => {
+      await lockBoard(tx, projectId)
+      const current = await loadStatuses(tx, projectId)
+      const target = current.find((status) => status.id === statusId)
+      if (!target) throw notFound('Status')
+      if (current.length === 1) throw conflict('A board must keep at least one status')
 
-    const [used] = await tx
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(eq(tasks.statusId, statusId))
-      .limit(1)
-    if (used) throw conflict('Move the tasks out of this status before deleting it')
+      // Waits for any task being created in or moved into this column right now.
+      await tx
+        .select({ id: statuses.id })
+        .from(statuses)
+        .where(eq(statuses.id, statusId))
+        .for('update')
+      const [used] = await tx
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.statusId, statusId))
+        .limit(1)
+      if (used) throw conflict(STATUS_IN_USE)
 
-    await tx.delete(statuses).where(eq(statuses.id, statusId))
-    await tx
-      .update(statuses)
-      .set({ position: sql`${statuses.position} - 1` })
-      .where(and(eq(statuses.projectId, projectId), gt(statuses.position, target.position)))
-  })
+      await tx.delete(statuses).where(eq(statuses.id, statusId))
+      await tx
+        .update(statuses)
+        .set({ position: sql`${statuses.position} - 1` })
+        .where(and(eq(statuses.projectId, projectId), gt(statuses.position, target.position)))
+    })
+  } catch (error) {
+    // The foreign key is the last line of defence if a task slipped in after the check.
+    if (isForeignKeyViolation(error)) throw conflict(STATUS_IN_USE)
+    throw error
+  }
 }

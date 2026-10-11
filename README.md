@@ -8,8 +8,8 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **REST API** with OpenAPI docs — ready for a mobile client
 - **MCP server** — let AI agents read and update your projects
 
-> Status: early development. Accounts, projects and member roles work today;
-> tasks, kanban, wiki and MCP are next (see the roadmap).
+> Status: early development. Accounts, projects with member roles, the kanban board,
+> task list and comments work today; wiki and MCP are next (see the roadmap).
 
 ## Quick start (Docker)
 

@@ -10,7 +10,7 @@ import {
   removeMember,
   updateMemberRole,
   updateProject,
-} from '../api/projects'
+} from '../../api/projects'
 
 export const projectKeys = {
   all: ['projects'] as const,
@@ -88,7 +88,13 @@ export function useMemberMutations(projectId: string, currentUserId: string) {
     remove: useMutation({
       mutationFn: (userId: string) => removeMember(projectId, userId),
       onSuccess: (_result, userId) => {
-        if (userId !== currentUserId) return refreshMembers()
+        if (userId !== currentUserId) {
+          // The server unassigned that member's tasks.
+          void queryClient.invalidateQueries({
+            queryKey: [...projectKeys.detail(projectId), 'tasks'],
+          })
+          return refreshMembers()
+        }
         // The user left: the project is no longer theirs to see.
         queryClient.removeQueries({ queryKey: projectKeys.detail(projectId) })
         return queryClient.invalidateQueries({ queryKey: projectKeys.all, exact: true })

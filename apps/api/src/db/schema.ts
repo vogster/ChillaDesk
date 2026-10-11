@@ -114,6 +114,8 @@ export const tasks = pgTable(
   (table) => [
     uniqueIndex('tasks_project_number_idx').on(table.projectId, table.number),
     index('tasks_board_idx').on(table.projectId, table.statusId, table.position),
+    // Column lookups (end of column, neighbours, "is this status in use") filter by status only.
+    index('tasks_status_position_idx').on(table.statusId, table.position),
     index('tasks_assignee_id_idx').on(table.assigneeId),
   ],
 )

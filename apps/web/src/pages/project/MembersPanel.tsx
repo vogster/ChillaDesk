@@ -8,9 +8,9 @@ import {
 } from '@chillawiki/shared'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { errorMessage } from '../api/client'
-import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
-import { Alert, Button, Card, selectClass, Spinner, TextField } from '../components/ui'
+import { errorMessage } from '../../api/client'
+import { focusFirstInvalid, parseForm, type FieldErrors } from '../../components/form'
+import { Alert, Button, Card, selectClass, Spinner, TextField } from '../../components/ui'
 import { useMemberMutations, useMembers } from './projectQueries'
 
 const ROLES = projectRoleSchema.options
