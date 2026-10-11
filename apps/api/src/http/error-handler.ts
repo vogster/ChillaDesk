@@ -16,6 +16,17 @@ function body(code: ErrorCode, message: string, details?: ErrorResponse['error']
   return { error: { code, message, ...(details ? { details } : {}) } } satisfies ErrorResponse
 }
 
+/**
+ * Drizzle puts the bound parameters (emails, password hashes) into the error message,
+ * so query failures are logged as the driver's own error plus the SQL text.
+ */
+export function loggableError(error: Error): { err: unknown; query?: string } {
+  if ('params' in error && 'query' in error && typeof error.query === 'string') {
+    return { err: error.cause ?? new Error('Database query failed'), query: error.query }
+  }
+  return { err: error }
+}
+
 /** Gives every failure the shared `{ error: { code, message } }` shape. */
 export function registerErrorHandlers(app: FastifyInstance): void {
   app.setNotFoundHandler((request, reply) =>
@@ -43,7 +54,7 @@ export function registerErrorHandlers(app: FastifyInstance): void {
         .send(body(CODE_BY_STATUS[status] ?? 'VALIDATION_ERROR', error.message))
     }
 
-    request.log.error({ err: error }, 'unhandled error')
+    request.log.error(loggableError(error), 'unhandled error')
     return reply.code(500).send(body('INTERNAL_ERROR', 'Internal server error'))
   })
 }

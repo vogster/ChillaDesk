@@ -79,6 +79,27 @@ describe('trustProxy', () => {
   })
 })
 
+describe('trustProxy hop count', () => {
+  it('trusts only the nearest proxy, ignoring addresses a client put in the header', async () => {
+    const database = await createMemoryDatabase()
+    const app = await buildApp({ database, logLevel: 'silent', trustProxy: 1 })
+    let seen = ''
+    app.addHook('onRequest', async (request) => {
+      seen = request.ip
+    })
+
+    await app.inject({
+      method: 'GET',
+      url: '/api/health',
+      headers: { 'x-forwarded-for': '6.6.6.6, 203.0.113.7' },
+    })
+
+    expect(seen).toBe('203.0.113.7')
+    await app.close()
+    await database.close()
+  })
+})
+
 describe('unknown routes', () => {
   it('return a JSON 404', async () => {
     const database = await createMemoryDatabase()

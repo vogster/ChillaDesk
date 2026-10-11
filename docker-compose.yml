@@ -22,7 +22,9 @@ services:
     environment:
       DATABASE_URL: postgres://chillawiki:${POSTGRES_PASSWORD}@db:5432/chillawiki
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      TRUST_PROXY: 'true'
+      # Exactly one proxy (the bundled Caddy) sits in front of the API.
+      TRUST_PROXY: '1'
+      COOKIE_SECURE: ${COOKIE_SECURE:-auto}
       REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
     depends_on:
       db:

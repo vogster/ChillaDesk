@@ -10,9 +10,14 @@ const envSchema = z.object({
     .optional(),
   PGLITE_DATA_DIR: z.string().min(1).default('./.data/pglite'),
   TRUST_PROXY: z
-    .enum(['true', 'false'])
+    .string()
+    .regex(/^(true|false|\d+)$/, 'TRUST_PROXY must be true, false or a number of proxy hops')
     .default('false')
-    .transform((value) => value === 'true'),
+    .transform((value) => (/^\d+$/.test(value) ? Number(value) : value === 'true')),
+  COOKIE_SECURE: z
+    .enum(['auto', 'true', 'false'])
+    .default('auto')
+    .transform((value) => (value === 'auto' ? value : value === 'true')),
   REGISTRATION_ENABLED: z
     .enum(['true', 'false'])
     .default('true')
@@ -26,8 +31,13 @@ export interface AppConfig {
   /** When unset, the API falls back to an embedded PGlite database. */
   databaseUrl: string | undefined
   pgliteDataDir: string
-  /** Enable only when the API sits behind a reverse proxy that sets X-Forwarded-* headers. */
-  trustProxy: boolean
+  /**
+   * Number of reverse proxies in front of the API whose X-Forwarded-* headers are trusted.
+   * `true` trusts every hop and is only safe when clients cannot reach the API directly.
+   */
+  trustProxy: boolean | number
+  /** `auto` follows the request protocol; set `true` when TLS ends at an upstream proxy. */
+  cookieSecure: boolean | 'auto'
   /** Turn off once your team has signed up to stop strangers from creating accounts. */
   registrationEnabled: boolean
 }
@@ -50,5 +60,6 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     pgliteDataDir: parsed.PGLITE_DATA_DIR,
     trustProxy: parsed.TRUST_PROXY,
     registrationEnabled: parsed.REGISTRATION_ENABLED,
+    cookieSecure: parsed.COOKIE_SECURE,
   }
 }

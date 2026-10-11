@@ -15,6 +15,7 @@ const app = await buildApp({
   logLevel: config.logLevel,
   trustProxy: config.trustProxy,
   registrationEnabled: config.registrationEnabled,
+  cookieSecure: config.cookieSecure,
 })
 late.log = app.log
 
@@ -23,7 +24,13 @@ if (!(await database.ping())) {
   await database.close()
   process.exit(1)
 }
-await database.migrate()
+try {
+  await database.migrate()
+} catch (error) {
+  app.log.fatal({ err: error }, 'database migration failed')
+  await database.close()
+  process.exit(1)
+}
 app.log.info({ driver: database.driver }, 'database connected and migrated')
 
 let shuttingDown = false

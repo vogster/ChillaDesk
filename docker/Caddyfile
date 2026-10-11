@@ -1,11 +1,23 @@
 {
 	admin off
+	servers {
+		# Keep the client address and scheme reported by a TLS-terminating proxy in front of us.
+		trusted_proxies static private_ranges
+	}
 }
 
 :80 {
 	encode zstd gzip
 
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+	}
+
 	handle /api/* {
+		# API responses can carry session tokens and private data.
+		header Cache-Control no-store
 		reverse_proxy api:3000
 	}
 

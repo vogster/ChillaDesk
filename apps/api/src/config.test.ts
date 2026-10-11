@@ -11,6 +11,7 @@ describe('loadConfig', () => {
       pgliteDataDir: './.data/pglite',
       trustProxy: false,
       registrationEnabled: true,
+      cookieSecure: 'auto',
     })
   })
 
@@ -23,6 +24,7 @@ describe('loadConfig', () => {
       PGLITE_DATA_DIR: '/tmp/pg',
       TRUST_PROXY: 'true',
       REGISTRATION_ENABLED: 'false',
+      COOKIE_SECURE: 'true',
     })
 
     expect(config).toEqual({
@@ -33,11 +35,22 @@ describe('loadConfig', () => {
       pgliteDataDir: '/tmp/pg',
       trustProxy: true,
       registrationEnabled: false,
+      cookieSecure: true,
     })
   })
 
   it('throws a readable error for an invalid port', () => {
     expect(() => loadConfig({ PORT: 'abc' })).toThrow(/Invalid configuration.*PORT/s)
+  })
+
+  it('accepts a proxy hop count for TRUST_PROXY', () => {
+    expect(loadConfig({ TRUST_PROXY: '1' }).trustProxy).toBe(1)
+    expect(loadConfig({ TRUST_PROXY: 'false' }).trustProxy).toBe(false)
+    expect(() => loadConfig({ TRUST_PROXY: 'yes' })).toThrow(/TRUST_PROXY/)
+  })
+
+  it('lets COOKIE_SECURE be switched off explicitly', () => {
+    expect(loadConfig({ COOKIE_SECURE: 'false' }).cookieSecure).toBe(false)
   })
 
   it('rejects a non-postgres DATABASE_URL', () => {

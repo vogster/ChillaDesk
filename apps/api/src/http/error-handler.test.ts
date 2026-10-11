@@ -2,6 +2,7 @@ import { errorResponseSchema } from '@chillawiki/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { conflict, isUniqueViolation } from '../errors'
 import { createTestContext, type TestContext } from '../test/harness'
+import { loggableError } from './error-handler'
 
 let ctx: TestContext
 
@@ -53,6 +54,31 @@ describe('error responses', () => {
 
     expect(response.statusCode).toBe(404)
     expect(errorResponseSchema.parse(response.json()).error.code).toBe('NOT_FOUND')
+  })
+})
+
+describe('loggableError', () => {
+  it('drops query parameters, which can hold emails and password hashes', () => {
+    const driverError = new Error('invalid byte sequence')
+    const queryError = Object.assign(
+      new Error('Failed query: insert ... params: ann@example.com'),
+      {
+        query: 'insert into "users" values ($1)',
+        params: ['ann@example.com'],
+        cause: driverError,
+      },
+    )
+
+    expect(loggableError(queryError)).toEqual({
+      err: driverError,
+      query: 'insert into "users" values ($1)',
+    })
+  })
+
+  it('passes other errors through', () => {
+    const error = new Error('plain')
+
+    expect(loggableError(error)).toEqual({ err: error })
   })
 })
 

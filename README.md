@@ -8,7 +8,8 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **REST API** with OpenAPI docs — ready for a mobile client
 - **MCP server** — let AI agents read and update your projects
 
-> Status: early development (phase 0 — project skeleton).
+> Status: early development. Accounts, projects and member roles work today;
+> tasks, kanban, wiki and MCP are next (see the roadmap).
 
 ## Quick start (Docker)
 
@@ -18,6 +19,28 @@ docker compose up -d --build
 ```
 
 Open http://localhost:8080. API docs live at http://localhost:8080/api/docs.
+
+The compose file serves plain HTTP. For anything beyond your own machine, put an HTTPS
+reverse proxy in front of it and set `COOKIE_SECURE=true`.
+
+### Configuration
+
+| Variable               | Default         | Purpose                                                           |
+| ---------------------- | --------------- | ----------------------------------------------------------------- |
+| `POSTGRES_PASSWORD`    | — (required)    | Password of the bundled PostgreSQL (URL-safe characters)          |
+| `CHILLAWIKI_PORT`      | `8080`          | Host port of the web UI                                           |
+| `COOKIE_SECURE`        | `auto`          | `true` behind an HTTPS proxy, so the session cookie is HTTPS-only |
+| `REGISTRATION_ENABLED` | `true`          | Set to `false` once your team has signed up                       |
+| `DATABASE_URL`         | embedded PGlite | PostgreSQL connection string (set by compose)                     |
+| `TRUST_PROXY`          | `false`         | Number of reverse proxies in front of the API (compose: `1`)      |
+| `LOG_LEVEL`            | `info`          | `fatal` … `trace`, or `silent`                                    |
+
+## API and authentication
+
+Every endpoint is described in the OpenAPI document at `/api/docs`. Log in with
+`POST /api/auth/login`: browsers get an HTTP-only session cookie, and other clients
+(mobile apps, scripts) send the returned token as `Authorization: Bearer <token>`.
+Errors always have the shape `{ "error": { "code", "message", "details"? } }`.
 
 ## Development
 

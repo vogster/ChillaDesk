@@ -22,12 +22,17 @@ import { healthRoutes } from './routes/health'
 export interface AppOptions {
   database: Database
   logLevel: AppConfig['logLevel']
-  trustProxy?: boolean
+  trustProxy?: AppConfig['trustProxy']
   registrationEnabled?: boolean
+  cookieSecure?: AppConfig['cookieSecure']
   /** Requests per minute per client across the whole API. */
   rateLimitMax?: number
   /** Register/login attempts per minute per client. */
   authRateLimitMax?: number
+  /** Login attempts per 15 minutes for one email. */
+  accountRateLimitMax?: number
+  /** Members one user can add per minute; bounds probing for registered emails. */
+  memberInviteRateLimitMax?: number
 }
 
 export async function buildApp({
@@ -35,12 +40,16 @@ export async function buildApp({
   logLevel,
   trustProxy = false,
   registrationEnabled = true,
+  cookieSecure = 'auto',
   rateLimitMax = 300,
   authRateLimitMax = 10,
+  accountRateLimitMax = 10,
+  memberInviteRateLimitMax = 20,
 }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: logLevel },
-    trustProxy,
+    // Fastify's types omit the hop-count form, so it is expressed as the equivalent function.
+    trustProxy: typeof trustProxy === 'number' ? (_address, hop) => hop < trustProxy : trustProxy,
   }).withTypeProvider<ZodTypeProvider>()
   const { db } = database
 
@@ -82,9 +91,15 @@ export async function buildApp({
     prefix: '/api/auth',
     db,
     registrationEnabled,
+    cookieSecure,
     rateLimitMax: authRateLimitMax,
+    accountRateLimitMax,
   })
-  await app.register(projectRoutes, { prefix: '/api/projects', db })
+  await app.register(projectRoutes, {
+    prefix: '/api/projects',
+    db,
+    memberInviteRateLimitMax,
+  })
 
   return app
 }

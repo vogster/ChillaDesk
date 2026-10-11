@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { emailSchema } from './auth'
+import { emailSchema, textSchema } from './auth'
 
 export const projectRoleSchema = z.enum(['owner', 'member', 'viewer'])
 export type ProjectRole = z.infer<typeof projectRoleSchema>
@@ -12,8 +12,8 @@ export const projectKeySchema = z
     'Key must be 2-10 uppercase letters or digits, starting with a letter',
   )
 
-const projectNameSchema = z.string().trim().min(1).max(100)
-const projectDescriptionSchema = z.string().max(2000)
+const projectNameSchema = textSchema.trim().min(1).max(100)
+const projectDescriptionSchema = textSchema.max(2000)
 
 export const projectSchema = z.object({
   id: z.uuid(),

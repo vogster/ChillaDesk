@@ -1,23 +1,60 @@
-import { useQuery } from '@tanstack/react-query'
-import { fetchHealth } from './api/health'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
+import { errorMessage } from './api/client'
+import { redirectTarget } from './auth/redirect'
+import { useCurrentUser } from './auth/useAuth'
+import { AppLayout } from './components/AppLayout'
+import { Alert, Button, Spinner } from './components/ui'
+import { LoginPage } from './pages/LoginPage'
+import { NotFoundPage } from './pages/NotFoundPage'
+import { ProjectPage } from './pages/ProjectPage'
+import { ProjectsPage } from './pages/ProjectsPage'
+import { RegisterPage } from './pages/RegisterPage'
 
-function ApiStatus() {
-  const health = useQuery({ queryKey: ['health'], queryFn: fetchHealth })
-
-  if (health.isPending) return <p>Checking API…</p>
-  if (health.isError) return <p role="alert">API is unreachable</p>
-  return (
-    <p>
-      API v{health.data.version} — {health.data.status}
-    </p>
-  )
+/**
+ * Wraps the login and registration pages. Once the user is signed in this is the single place
+ * that moves them on, to the page they first asked for.
+ */
+function GuestOnly({ signedIn }: { signedIn: boolean }) {
+  const location = useLocation()
+  return signedIn ? <Navigate to={redirectTarget(location.state)} replace /> : <Outlet />
 }
 
 export function App() {
+  const currentUser = useCurrentUser()
+  const location = useLocation()
+
+  if (currentUser.isPending) return <Spinner />
+  // A failed background refresh keeps the last known user; only a failed first load blocks.
+  if (currentUser.data === undefined) {
+    return (
+      <div className="mx-auto max-w-md space-y-4 p-8">
+        <Alert>{errorMessage(currentUser.error)}</Alert>
+        <Button onClick={() => void currentUser.refetch()}>Try again</Button>
+      </div>
+    )
+  }
+
+  const user = currentUser.data
+  const requested = location.pathname + location.search + location.hash
   return (
-    <main>
-      <h1>ChillaWiki</h1>
-      <ApiStatus />
-    </main>
+    <Routes>
+      <Route element={<GuestOnly signedIn={user !== null} />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Route>
+      <Route
+        element={
+          user ? (
+            <AppLayout user={user} />
+          ) : (
+            <Navigate to="/login" replace state={{ from: requested }} />
+          )
+        }
+      >
+        <Route index element={<ProjectsPage />} />
+        <Route path="/projects/:projectId" element={user && <ProjectPage currentUser={user} />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   )
 }

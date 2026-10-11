@@ -32,7 +32,15 @@ const errors = {
   404: errorResponseSchema,
 }
 
-export const projectRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db }) => {
+export interface ProjectRoutesOptions {
+  db: Db
+  memberInviteRateLimitMax: number
+}
+
+export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async (
+  app,
+  { db, memberInviteRateLimitMax },
+) => {
   // onRequest runs before body validation, so anonymous callers get 401 rather than field errors.
   app.addHook('onRequest', async (request) => {
     requireAuth(request)
@@ -129,6 +137,15 @@ export const projectRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db
   app.post(
     '/:projectId/members',
     {
+      // The answer reveals whether an email is registered, so each user gets a small budget.
+      config: {
+        rateLimit: {
+          max: memberInviteRateLimitMax,
+          timeWindow: '1 minute',
+          hook: 'preHandler',
+          keyGenerator: (request) => `invite:${request.auth?.user.id ?? request.ip}`,
+        },
+      },
       schema: {
         tags: memberTags,
         summary: 'Add a registered user to the project by email (owner only)',

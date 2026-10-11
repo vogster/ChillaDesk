@@ -158,6 +158,16 @@ describe('updating and deleting a project', () => {
     expect(Date.parse(updated.updatedAt)).toBeGreaterThanOrEqual(Date.parse(project.updatedAt))
   })
 
+  it('updates the description alone without touching the name', async () => {
+    const owner = await ctx.signUp()
+    const project = await createProject(owner, 'Keep me')
+
+    const response = await call(owner, 'PATCH', `/${project.id}`)({ description: 'New text' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({ name: 'Keep me', description: 'New text' })
+  })
+
   it('rejects an empty patch', async () => {
     const owner = await ctx.signUp()
     const project = await createProject(owner)
@@ -241,6 +251,29 @@ describe('project members', () => {
 
     expect(unknown.statusCode).toBe(404)
     expect(duplicate.statusCode).toBe(409)
+  })
+
+  it('limits how fast one user can add members', async () => {
+    const limited = await createTestContext({ memberInviteRateLimitMax: 1 })
+    const owner = await limited.signUp()
+    const created = await limited.app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      headers: owner.headers,
+      payload: { name: 'Limited', key: 'LIM' },
+    })
+    const invite = () =>
+      limited.app.inject({
+        method: 'POST',
+        url: `/api/projects/${created.json<Project>().id}/members`,
+        headers: owner.headers,
+        payload: { email: 'ghost@example.com' },
+      })
+
+    const statuses = [(await invite()).statusCode, (await invite()).statusCode]
+
+    expect(statuses).toEqual([404, 429])
+    await limited.close()
   })
 
   it('forbids non-owners from adding members or changing roles', async () => {

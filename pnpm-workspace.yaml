@@ -3,3 +3,5 @@ packages:
   - packages/*
 minimumReleaseAgeExclude:
   - zod@4.6.6
+allowBuilds:
+  esbuild: true

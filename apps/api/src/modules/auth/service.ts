@@ -19,7 +19,9 @@ function toUser(row: UserRow): User {
   return { id: row.id, email: row.email, name: row.name, createdAt: row.createdAt.toISOString() }
 }
 
-async function startSession(db: Db, user: UserRow, now: Date): Promise<AuthResponse> {
+type Executor = Pick<Db, 'insert'>
+
+async function startSession(db: Executor, user: UserRow, now: Date): Promise<AuthResponse> {
   const { token, tokenHash } = generateToken()
   const expiresAt = new Date(now.getTime() + SESSION_TTL_MS)
   await db.insert(sessions).values({ userId: user.id, tokenHash, expiresAt })
@@ -37,12 +39,15 @@ export async function register(
 
   const passwordHash = await hashPassword(input.password)
   try {
-    const [user] = await db
-      .insert(users)
-      .values({ email: input.email.toLowerCase(), name: input.name, passwordHash })
-      .returning()
-    if (!user) throw new Error('Insert returned no user row')
-    return await startSession(db, user, options.now ?? new Date())
+    // One transaction, so a failed session insert cannot leave an account the client never saw.
+    return await db.transaction(async (tx) => {
+      const [user] = await tx
+        .insert(users)
+        .values({ email: input.email.toLowerCase(), name: input.name, passwordHash })
+        .returning()
+      if (!user) throw new Error('Insert returned no user row')
+      return startSession(tx, user, options.now ?? new Date())
+    })
   } catch (error) {
     if (isUniqueViolation(error)) throw conflict('An account with this email already exists')
     throw error

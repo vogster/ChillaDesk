@@ -22,8 +22,16 @@ function bearerToken(request: FastifyRequest): string | undefined {
 // Browsers attach cookies to cross-site requests, so a cookie-authenticated write must come from
 // our own origin. Bearer tokens are never sent automatically and need no such check.
 function isCrossSiteWrite(request: FastifyRequest): boolean {
+  if (SAFE_METHODS.has(request.method)) return false
+
+  // Set by the browser itself, so unlike Origin-vs-Host it survives proxies that rewrite Host.
+  // `none` is a user-initiated navigation; `same-site` is another subdomain and is not trusted.
+  const fetchSite = request.headers['sec-fetch-site']
+  if (typeof fetchSite === 'string') return fetchSite !== 'same-origin' && fetchSite !== 'none'
+
+  // Fallback for browsers without Fetch Metadata.
   const origin = request.headers.origin
-  if (SAFE_METHODS.has(request.method) || !origin) return false
+  if (!origin) return false
   try {
     return new URL(origin).host !== request.host
   } catch {

@@ -34,6 +34,8 @@ export async function createTestContext(
     logLevel: 'silent',
     rateLimitMax: 10_000,
     authRateLimitMax: 10_000,
+    accountRateLimitMax: 10_000,
+    memberInviteRateLimitMax: 10_000,
     ...options,
   })
 
