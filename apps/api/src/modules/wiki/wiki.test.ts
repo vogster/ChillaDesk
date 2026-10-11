@@ -195,6 +195,30 @@ describe('editing a page', () => {
     expect(current.json()).toMatchObject({ content: 'Owner edit', version: 2 })
   })
 
+  it('marks a stale edit so clients can tell it from a title clash', async () => {
+    const fixture = await ctx.createProject()
+    await addPage(fixture, { title: 'Taken' })
+    const page = await addPage(fixture, { title: 'Mine' })
+    await fixture.call(fixture.owner, 'PATCH', `/wiki/${page.id}`, {
+      content: 'v2',
+      baseVersion: 1,
+    })
+    type ErrorBody = { error: { details?: { path: string }[] } }
+
+    const stale = await fixture.call(fixture.member, 'PATCH', `/wiki/${page.id}`, {
+      content: 'late',
+      baseVersion: 1,
+    })
+    const titleClash = await fixture.call(fixture.member, 'PATCH', `/wiki/${page.id}`, {
+      title: 'Taken',
+      baseVersion: 2,
+    })
+
+    expect([stale.statusCode, titleClash.statusCode]).toEqual([409, 409])
+    expect(stale.json<ErrorBody>().error.details).toMatchObject([{ path: 'baseVersion' }])
+    expect(titleClash.json<ErrorBody>().error.details).toBeUndefined()
+  })
+
   it('does not create a version when nothing in the text changed', async () => {
     const fixture = await ctx.createProject()
     const parent = await addPage(fixture, { title: 'Parent' })
@@ -267,6 +291,31 @@ describe('editing a page', () => {
   })
 })
 
+describe('pages of another project', () => {
+  it('cannot be read, changed, deleted or have their history read through this project', async () => {
+    const fixture = await ctx.createProject()
+    const other = await ctx.createProject()
+    const foreign = await addPage(other, { title: 'Foreign', content: 'Secret' })
+    const call = (
+      method: 'GET' | 'PATCH' | 'DELETE',
+      path: string,
+      payload?: Record<string, unknown>,
+    ) => fixture.call(fixture.owner, method, `/wiki/${foreign.id}${path}`, payload)
+
+    const responses = await Promise.all([
+      call('GET', ''),
+      call('PATCH', '', { content: 'Hijacked', baseVersion: 1 }),
+      call('GET', '/versions'),
+      call('GET', '/versions/1'),
+      call('DELETE', ''),
+    ])
+
+    expect(responses.map((response) => response.statusCode)).toEqual([404, 404, 404, 404, 404])
+    const intact = await other.call(other.viewer, 'GET', `/wiki/${foreign.id}`)
+    expect(intact.json()).toMatchObject({ content: 'Secret', version: 1 })
+  })
+})
+
 describe('page history', () => {
   async function edited() {
     const fixture = await ctx.createProject()
@@ -303,9 +352,15 @@ describe('page history', () => {
 
     const old = await fixture.call(fixture.viewer, 'GET', `/wiki/${page.id}/versions/1`)
     const missing = await fixture.call(fixture.viewer, 'GET', `/wiki/${page.id}/versions/9`)
+    const tooLarge = await fixture.call(
+      fixture.viewer,
+      'GET',
+      `/wiki/${page.id}/versions/99999999999`,
+    )
 
     expect(old.json()).toMatchObject({ version: 1, title: 'Draft', content: 'v1 text' })
     expect(missing.statusCode).toBe(404)
+    expect(tooLarge.statusCode).toBe(400)
   })
 
   it('is hidden from outsiders', async () => {
@@ -359,8 +414,10 @@ describe('looking a task up by its number', () => {
     const missing = await fixture.call(fixture.viewer, 'GET', '/tasks/by-number/99')
     const malformed = await fixture.call(fixture.viewer, 'GET', '/tasks/by-number/abc')
     const outsider = await fixture.call(fixture.outsider, 'GET', '/tasks/by-number/2')
+    const tooLarge = await fixture.call(fixture.viewer, 'GET', '/tasks/by-number/99999999999')
 
     expect(found.json()).toMatchObject({ number: 2, title: 'Two' })
     expect([missing.statusCode, malformed.statusCode, outsider.statusCode]).toEqual([404, 400, 404])
+    expect(tooLarge.statusCode).toBe(400)
   })
 })

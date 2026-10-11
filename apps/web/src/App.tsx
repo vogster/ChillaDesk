@@ -11,6 +11,12 @@ import { ListPage } from './pages/project/ListPage'
 import { MembersPage } from './pages/project/MembersPage'
 import { ProjectLayout } from './pages/project/ProjectLayout'
 import { SettingsPage } from './pages/project/SettingsPage'
+import { TaskNumberRedirect } from './pages/project/TaskNumberRedirect'
+import { WikiEditPage, WikiNewPage } from './pages/project/wiki/WikiEditor'
+import { WikiHistory } from './pages/project/wiki/WikiHistory'
+import { WikiHome } from './pages/project/wiki/WikiHome'
+import { WikiLayout } from './pages/project/wiki/WikiLayout'
+import { WikiPageView } from './pages/project/wiki/WikiPageView'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
 
@@ -59,6 +65,14 @@ export function App() {
         <Route path="/projects/:projectId" element={user && <ProjectLayout currentUser={user} />}>
           <Route index element={<BoardPage />} />
           <Route path="list" element={<ListPage />} />
+          <Route path="tasks/:number" element={<TaskNumberRedirect />} />
+          <Route path="wiki" element={<WikiLayout />}>
+            <Route index element={<WikiHome />} />
+            <Route path="new" element={<WikiNewPage />} />
+            <Route path=":pageId" element={<WikiPageView />} />
+            <Route path=":pageId/edit" element={<WikiEditPage />} />
+            <Route path=":pageId/history" element={<WikiHistory />} />
+          </Route>
           <Route path="members" element={<MembersPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

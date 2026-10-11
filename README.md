@@ -9,7 +9,7 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **MCP server** — let AI agents read and update your projects
 
 > Status: early development. Accounts, projects with member roles, the kanban board,
-> task list and comments work today; wiki and MCP are next (see the roadmap).
+> task list, comments and the wiki work today; MCP access is next (see the roadmap).
 
 ## Quick start (Docker)
 

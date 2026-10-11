@@ -1,4 +1,6 @@
+import type { ComponentProps } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { Link } from 'react-router'
 import remarkGfm from 'remark-gfm'
 
 const STYLES = [
@@ -16,21 +18,69 @@ const STYLES = [
   '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
 ].join(' ')
 
+// Overrides the link colour for a page that does not exist yet.
+const MISSING_LINK = '!text-red-600 decoration-dashed dark:!text-red-400'
+
+type RemarkPlugins = NonNullable<ComponentProps<typeof ReactMarkdown>['remarkPlugins']>
+
+interface MarkdownProps {
+  children: string
+  /** Extra remark plugins, run after GitHub-flavoured Markdown. */
+  plugins?: RemarkPlugins
+  /** Attribute a plugin sets on links to pages that do not exist yet. */
+  missingLinkAttribute?: string
+  /**
+   * Open in-app links in a new tab as well. For previews inside a form, where following
+   * a link in place would leave the form.
+   */
+  linksLeaveInNewTab?: boolean
+}
+
 /**
  * Renders user-written Markdown. react-markdown ignores raw HTML and unsafe URLs by default,
  * so the output is safe to show to other members. Images are left out: loading one from an
  * arbitrary address would tell that server who opened the page and when.
+ *
+ * Links that start with `/` stay inside the app; all others open in a new tab.
  */
-export function Markdown({ children }: { children: string }) {
+export function Markdown({
+  children,
+  plugins = [],
+  missingLinkAttribute,
+  linksLeaveInNewTab = false,
+}: MarkdownProps) {
   return (
     <div className={STYLES}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, ...plugins]}
         disallowedElements={['img']}
         components={{
-          a: ({ node: _node, ...props }) => (
-            <a {...props} target="_blank" rel="noopener noreferrer" />
-          ),
+          a: ({ node: _node, href, children: label, ...props }) => {
+            const internal = href?.startsWith('/') && !href.startsWith('//')
+            if (!internal || linksLeaveInNewTab) {
+              return (
+                <a href={href} target="_blank" rel="noopener noreferrer">
+                  {label}
+                </a>
+              )
+            }
+            const missing =
+              missingLinkAttribute !== undefined &&
+              (props as Record<string, unknown>)[missingLinkAttribute] !== undefined
+            return (
+              <Link
+                to={href ?? ''}
+                className={missing ? MISSING_LINK : undefined}
+                title={
+                  missing
+                    ? 'This page does not exist yet. Follow the link to create it.'
+                    : undefined
+                }
+              >
+                {label}
+              </Link>
+            )
+          },
         }}
       >
         {children}

@@ -86,6 +86,9 @@ export function ProjectLayout({ currentUser }: { currentUser: User }) {
         <NavLink to="list" className={tabClass}>
           List
         </NavLink>
+        <NavLink to="wiki" className={tabClass}>
+          Wiki
+        </NavLink>
         <NavLink to="members" className={tabClass}>
           Members
         </NavLink>

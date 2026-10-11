@@ -27,7 +27,9 @@ import {
 const projectParams = z.object({ projectId: z.uuid() })
 const taskParams = projectParams.extend({ taskId: z.uuid() })
 const commentParams = taskParams.extend({ commentId: z.uuid() })
-const numberParams = projectParams.extend({ number: z.coerce.number().int().min(1) })
+const numberParams = projectParams.extend({
+  number: z.coerce.number().int().min(1).max(2147483647),
+})
 
 const errors = {
   400: errorResponseSchema,

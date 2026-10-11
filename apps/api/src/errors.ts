@@ -1,4 +1,4 @@
-import type { ErrorCode } from '@chillawiki/shared'
+import type { ErrorCode, ErrorResponse } from '@chillawiki/shared'
 
 const STATUS_BY_CODE = {
   VALIDATION_ERROR: 400,
@@ -17,6 +17,8 @@ export class AppError extends Error {
   constructor(
     readonly code: ErrorCode,
     message: string,
+    /** Which part of the request the error is about, for clients that react to it. */
+    readonly details?: NonNullable<ErrorResponse['error']['details']>,
   ) {
     super(message)
     this.name = 'AppError'
@@ -31,7 +33,8 @@ export const unauthenticated = (message = 'Authentication required') =>
 export const forbidden = (message = 'You do not have access to this resource') =>
   new AppError('FORBIDDEN', message)
 export const notFound = (what: string) => new AppError('NOT_FOUND', `${what} not found`)
-export const conflict = (message: string) => new AppError('CONFLICT', message)
+export const conflict = (message: string, details?: AppError['details']) =>
+  new AppError('CONFLICT', message, details)
 
 // Drivers wrap the PostgreSQL error, so the SQLSTATE can sit anywhere in the cause chain.
 function hasSqlState(error: unknown, sqlState: string): boolean {

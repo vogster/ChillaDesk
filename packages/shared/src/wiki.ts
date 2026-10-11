@@ -4,12 +4,16 @@ import { userSummarySchema } from './tasks'
 
 export const WIKI_CONTENT_MAX = 200_000
 
-// `[[Title]]` links are resolved by title, so brackets and line breaks cannot be part of one.
+// `[[Title]]` links are found in Markdown text and resolved by title. Brackets and line breaks
+// would end the link early; `*`, backticks and backslashes would be read as formatting first.
 const wikiTitleSchema = textSchema
   .trim()
   .min(1)
   .max(150)
-  .regex(/^[^[\]\r\n]+$/, 'Title must not contain square brackets or line breaks')
+  .regex(
+    /^[^[\]*`\\\r\n]+$/,
+    'Title must not contain square brackets, asterisks, backticks, backslashes or line breaks',
+  )
 
 const wikiContentSchema = textSchema.max(WIKI_CONTENT_MAX)
 

@@ -1,4 +1,4 @@
-import type { Project, ProjectMember, Status, Task, User } from '@chillawiki/shared'
+import type { Project, ProjectMember, Status, Task, User, WikiPage } from '@chillawiki/shared'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -134,6 +134,22 @@ export function makeTask(number: number, overrides: Partial<Task> = {}): Task {
     reporter: summary(ann),
     dueDate: null,
     position: number,
+    createdAt: TIMESTAMP,
+    updatedAt: TIMESTAMP,
+    ...overrides,
+  }
+}
+
+/** A wiki page of the test project; the id is derived from `number`. */
+export function makeWikiPage(number: number, overrides: Partial<WikiPage> = {}): WikiPage {
+  return {
+    id: `77777777-7777-4777-8777-${String(number).padStart(12, '0')}`,
+    projectId: '33333333-3333-4333-8333-333333333333',
+    parentId: null,
+    title: `Page ${number}`,
+    content: '',
+    version: 1,
+    updatedBy: summary(ann),
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
     ...overrides,

@@ -11,6 +11,9 @@ beforeAll(async () => {
   ctx.app.get('/boom', async () => {
     throw new Error('secret database password leaked')
   })
+  ctx.app.get('/stale', async () => {
+    throw conflict('Changed meanwhile', [{ path: 'baseVersion', message: 'Stale' }])
+  })
   ctx.app.get('/conflict', async () => {
     throw conflict('Already there')
   })
@@ -35,6 +38,14 @@ describe('error responses', () => {
 
     expect(response.statusCode).toBe(409)
     expect(response.json()).toEqual({ error: { code: 'CONFLICT', message: 'Already there' } })
+  })
+
+  it('passes on the details of an application error', async () => {
+    const response = await ctx.app.inject({ method: 'GET', url: '/stale' })
+
+    expect(errorResponseSchema.parse(response.json()).error.details).toEqual([
+      { path: 'baseVersion', message: 'Stale' },
+    ])
   })
 
   it('reports malformed JSON as a client error', async () => {

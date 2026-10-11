@@ -1,9 +1,9 @@
 import { commentRequestSchema, type Comment } from '@chillawiki/shared'
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../api/client'
-import { Markdown } from '../../components/Markdown'
 import { Alert, Button, Spinner } from '../../components/ui'
 import type { ProjectContext } from './ProjectLayout'
+import { ProjectMarkdown } from './ProjectMarkdown'
 import { useCommentMutations, useComments } from './taskQueries'
 
 const textAreaClass =
@@ -76,7 +76,7 @@ export function TaskComments({ context, taskId }: TaskCommentsProps) {
                   </button>
                 )}
               </div>
-              <Markdown>{comment.body}</Markdown>
+              <ProjectMarkdown project={project}>{comment.body}</ProjectMarkdown>
             </li>
           ))}
         </ul>

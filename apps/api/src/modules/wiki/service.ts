@@ -10,8 +10,8 @@ import type {
 } from '@chillawiki/shared'
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import type { Db, Executor, Tx } from '../../db/client'
-import { users, wikiPages, wikiPageVersions } from '../../db/schema'
-import { conflict, invalid, isUniqueViolation, notFound } from '../../errors'
+import { projects, users, wikiPages, wikiPageVersions } from '../../db/schema'
+import { conflict, invalid, isForeignKeyViolation, isUniqueViolation, notFound } from '../../errors'
 import { getProject } from '../projects/service'
 
 const author = { id: users.id, name: users.name, email: users.email }
@@ -99,6 +99,22 @@ export async function getPage(
   return loadPage(db, projectId, pageId)
 }
 
+/**
+ * Makes changes to a project's page tree (nesting, moving, deleting) run one at a time.
+ * Otherwise two moves could each pass the cycle check and together make A the parent of B
+ * and B the parent of A, or a page could be nested under one that is being deleted.
+ * Always taken before any page row lock.
+ */
+async function lockTree(tx: Tx, projectId: string): Promise<void> {
+  await tx
+    .select({ id: projects.id })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .for('update')
+}
+
+const PARENT_GONE = 'parentId must be a page of this project'
+
 const titleTaken = (title: string) => conflict(`A page titled "${title}" already exists`)
 
 async function assertParentInProject(db: Executor, projectId: string, parentId: string) {
@@ -106,7 +122,7 @@ async function assertParentInProject(db: Executor, projectId: string, parentId: 
     .select({ id: wikiPages.id })
     .from(wikiPages)
     .where(inProject(projectId, parentId))
-  if (!parent) throw invalid('parentId must be a page of this project')
+  if (!parent) throw invalid(PARENT_GONE)
 }
 
 function recordVersion(
@@ -132,7 +148,10 @@ export async function createPage(
   await getProject(db, userId, projectId, 'member')
   try {
     return await db.transaction(async (tx) => {
-      if (input.parentId) await assertParentInProject(tx, projectId, input.parentId)
+      if (input.parentId) {
+        await lockTree(tx, projectId)
+        await assertParentInProject(tx, projectId, input.parentId)
+      }
       const [created] = await tx
         .insert(wikiPages)
         .values({ ...input, projectId, updatedById: userId })
@@ -143,6 +162,7 @@ export async function createPage(
     })
   } catch (error) {
     if (isUniqueViolation(error)) throw titleTaken(input.title)
+    if (isForeignKeyViolation(error)) throw invalid(PARENT_GONE)
     throw error
   }
 }
@@ -157,7 +177,7 @@ async function assertNoCycle(tx: Tx, projectId: string, pageId: string, parentId
         .where(eq(wikiPages.projectId, projectId))
     ).map((page) => [page.id, page.parentId]),
   )
-  if (!parents.has(parentId)) throw invalid('parentId must be a page of this project')
+  if (!parents.has(parentId)) throw invalid(PARENT_GONE)
 
   const seen = new Set<string>()
   for (let current: string | null = parentId; current; current = parents.get(current) ?? null) {
@@ -177,6 +197,7 @@ export async function updatePage(
   await getProject(db, userId, projectId, 'member')
   try {
     return await db.transaction(async (tx) => {
+      if (changes.parentId !== undefined) await lockTree(tx, projectId)
       // Locked so that two saves are compared against the stored version one at a time.
       const [current] = await tx
         .select()
@@ -187,6 +208,8 @@ export async function updatePage(
       if (current.version !== baseVersion) {
         throw conflict(
           'This page was changed by someone else while you were editing. Reload it to see the latest version.',
+          // Lets a client tell a stale edit from the other 409 here, a title that is taken.
+          [{ path: 'baseVersion', message: `The page is now at version ${current.version}` }],
         )
       }
       if (changes.parentId) await assertNoCycle(tx, projectId, pageId, changes.parentId)
@@ -211,6 +234,7 @@ export async function updatePage(
     })
   } catch (error) {
     if (isUniqueViolation(error)) throw titleTaken(changes.title ?? '')
+    if (isForeignKeyViolation(error)) throw invalid(PARENT_GONE)
     throw error
   }
 }
@@ -223,6 +247,7 @@ export async function deletePage(
 ): Promise<void> {
   await getProject(db, userId, projectId, 'member')
   await db.transaction(async (tx) => {
+    await lockTree(tx, projectId)
     const [page] = await tx
       .select({ parentId: wikiPages.parentId })
       .from(wikiPages)

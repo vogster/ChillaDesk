@@ -35,7 +35,7 @@ export function registerErrorHandlers(app: FastifyInstance): void {
 
   app.setErrorHandler((error: FastifyError | AppError, request, reply) => {
     if (error instanceof AppError) {
-      return reply.code(error.statusCode).send(body(error.code, error.message))
+      return reply.code(error.statusCode).send(body(error.code, error.message, error.details))
     }
 
     if (hasZodFastifySchemaValidationErrors(error)) {

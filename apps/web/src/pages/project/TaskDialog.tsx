@@ -8,10 +8,10 @@ import {
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { ApiError, errorMessage } from '../../api/client'
 import { parseForm, type FieldErrors } from '../../components/form'
-import { Markdown } from '../../components/Markdown'
 import { Modal } from '../../components/Modal'
 import { Alert, Button, selectClass, Spinner } from '../../components/ui'
 import type { ProjectContext } from './ProjectLayout'
+import { ProjectMarkdown } from './ProjectMarkdown'
 import { useMembers } from './projectQueries'
 import { TaskComments } from './TaskComments'
 import { formatDueDate, PRIORITY_LABELS } from './taskDisplay'
@@ -166,7 +166,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
             )}
           </div>
           {task.description ? (
-            <Markdown>{task.description}</Markdown>
+            <ProjectMarkdown project={project}>{task.description}</ProjectMarkdown>
           ) : (
             <p className="text-sm text-slate-500">No description.</p>
           )}

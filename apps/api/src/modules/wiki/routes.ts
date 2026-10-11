@@ -24,7 +24,7 @@ import {
 
 const projectParams = z.object({ projectId: z.uuid() })
 const pageParams = projectParams.extend({ pageId: z.uuid() })
-const versionParams = pageParams.extend({ version: z.coerce.number().int().min(1) })
+const versionParams = pageParams.extend({ version: z.coerce.number().int().min(1).max(2147483647) })
 
 const errors = {
   400: errorResponseSchema,
