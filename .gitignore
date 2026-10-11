@@ -1,4 +1,10 @@
 .claude/settings.local.json
 node_modules/
+dist/
+coverage/
+.turbo/
+*.log
 .env
 .env.*
+!.env.example
+.data/
