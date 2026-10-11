@@ -24,6 +24,8 @@ export class AppError extends Error {
   }
 }
 
+/** A request that is well-formed but refers to something it may not, e.g. a foreign id. */
+export const invalid = (message: string) => new AppError('VALIDATION_ERROR', message)
 export const unauthenticated = (message = 'Authentication required') =>
   new AppError('UNAUTHENTICATED', message)
 export const forbidden = (message = 'You do not have access to this resource') =>

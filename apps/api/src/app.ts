@@ -17,6 +17,8 @@ import { registerErrorHandlers } from './http/error-handler'
 import { registerAuth, SESSION_COOKIE } from './modules/auth/plugin'
 import { authRoutes } from './modules/auth/routes'
 import { projectRoutes } from './modules/projects/routes'
+import { taskRoutes } from './modules/tasks/routes'
+import { statusRoutes } from './modules/tasks/statuses.routes'
 import { healthRoutes } from './routes/health'
 
 export interface AppOptions {
@@ -100,6 +102,8 @@ export async function buildApp({
     db,
     memberInviteRateLimitMax,
   })
+  await app.register(statusRoutes, { prefix: '/api/projects/:projectId/statuses', db })
+  await app.register(taskRoutes, { prefix: '/api/projects/:projectId/tasks', db })
 
   return app
 }

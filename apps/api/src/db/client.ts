@@ -16,6 +16,12 @@ import * as schema from './schema'
 /** Driver-independent handle: services depend on this, never on PGlite or postgres-js directly. */
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>
 
+/** The handle passed to a `db.transaction` callback. */
+export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
+
+/** Anything that can run queries: the database itself or an open transaction. */
+export type Executor = Db | Tx
+
 export interface Database {
   driver: 'pglite' | 'postgres'
   db: Db

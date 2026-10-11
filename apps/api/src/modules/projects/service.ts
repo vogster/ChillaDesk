@@ -7,9 +7,10 @@ import type {
   UpdateProjectRequest,
 } from '@chillawiki/shared'
 import { and, asc, eq } from 'drizzle-orm'
-import type { Db } from '../../db/client'
-import { projectMembers, projects, users } from '../../db/schema'
+import type { Db, Tx } from '../../db/client'
+import { projectMembers, projects, tasks, users } from '../../db/schema'
 import { conflict, forbidden, isUniqueViolation, notFound } from '../../errors'
+import { createDefaultStatuses } from '../tasks/statuses.service'
 
 const ROLE_RANK: Record<ProjectRole, number> = { viewer: 0, member: 1, owner: 2 }
 
@@ -65,6 +66,7 @@ export async function createProject(
       const [project] = await tx.insert(projects).values(input).returning()
       if (!project) throw new Error('Insert returned no project row')
       await tx.insert(projectMembers).values({ projectId: project.id, userId, role: 'owner' })
+      await createDefaultStatuses(tx, project.id)
       return toProject(project, 'owner')
     })
   } catch (error) {
@@ -160,14 +162,8 @@ export async function addMember(
   }
 }
 
-type Transaction = Parameters<Parameters<Db['transaction']>[0]>[0]
-
 // Locks the project's owner rows so two concurrent demotions cannot both pass the check.
-async function assertNotLastOwner(
-  tx: Transaction,
-  projectId: string,
-  targetId: string,
-): Promise<void> {
+async function assertNotLastOwner(tx: Tx, projectId: string, targetId: string): Promise<void> {
   const owners = await tx
     .select({ userId: projectMembers.userId })
     .from(projectMembers)
@@ -223,5 +219,10 @@ export async function removeMember(
       .where(membershipOf(projectId, memberId))
       .returning()
     if (removed.length === 0) throw notFound('Member')
+    // Someone outside the project cannot be responsible for its tasks.
+    await tx
+      .update(tasks)
+      .set({ assigneeId: null })
+      .where(and(eq(tasks.projectId, projectId), eq(tasks.assigneeId, memberId)))
   })
 }
