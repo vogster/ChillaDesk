@@ -19,6 +19,7 @@ import { authRoutes } from './modules/auth/routes'
 import { projectRoutes } from './modules/projects/routes'
 import { taskRoutes } from './modules/tasks/routes'
 import { statusRoutes } from './modules/tasks/statuses.routes'
+import { wikiRoutes } from './modules/wiki/routes'
 import { healthRoutes } from './routes/health'
 
 export interface AppOptions {
@@ -104,6 +105,7 @@ export async function buildApp({
   })
   await app.register(statusRoutes, { prefix: '/api/projects/:projectId/statuses', db })
   await app.register(taskRoutes, { prefix: '/api/projects/:projectId/tasks', db })
+  await app.register(wikiRoutes, { prefix: '/api/projects/:projectId/wiki', db })
 
   return app
 }

@@ -14,11 +14,20 @@ import { z } from 'zod'
 import type { Db } from '../../db/client'
 import { requireAuth } from '../auth/plugin'
 import { addComment, deleteComment, listComments, updateComment } from './comments.service'
-import { createTask, deleteTask, getTask, listTasks, moveTask, updateTask } from './service'
+import {
+  createTask,
+  deleteTask,
+  getTask,
+  getTaskByNumber,
+  listTasks,
+  moveTask,
+  updateTask,
+} from './service'
 
 const projectParams = z.object({ projectId: z.uuid() })
 const taskParams = projectParams.extend({ taskId: z.uuid() })
 const commentParams = taskParams.extend({ commentId: z.uuid() })
+const numberParams = projectParams.extend({ number: z.coerce.number().int().min(1) })
 
 const errors = {
   400: errorResponseSchema,
@@ -72,6 +81,25 @@ export const taskRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db })
       )
       return reply.code(201).send(task)
     },
+  )
+
+  app.get(
+    '/by-number/:number',
+    {
+      schema: {
+        tags,
+        summary: 'Task by its number, the part after the dash in a key such as CHL-12',
+        params: numberParams,
+        response: { 200: taskSchema, ...errors },
+      },
+    },
+    (request) =>
+      getTaskByNumber(
+        db,
+        requireAuth(request).user.id,
+        request.params.projectId,
+        request.params.number,
+      ),
   )
 
   app.get(

@@ -1,4 +1,6 @@
+import { sql } from 'drizzle-orm'
 import {
+  type AnyPgColumn,
   date,
   doublePrecision,
   index,
@@ -133,4 +135,46 @@ export const comments = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [index('comments_task_id_idx').on(table.taskId, table.createdAt)],
+)
+
+export const wikiPages = pgTable(
+  'wiki_pages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    // The API moves children up before deleting a page; SET NULL is the safety net.
+    parentId: uuid('parent_id').references((): AnyPgColumn => wikiPages.id, {
+      onDelete: 'set null',
+    }),
+    title: text('title').notNull(),
+    content: text('content').notNull().default(''),
+    /** Grows by one with every saved change to the title or content. */
+    version: integer('version').notNull().default(1),
+    updatedById: uuid('updated_by_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    // `[[Title]]` links are resolved by title, so a title is unique per project, ignoring case.
+    uniqueIndex('wiki_pages_project_title_idx').on(table.projectId, sql`lower(${table.title})`),
+    index('wiki_pages_parent_id_idx').on(table.parentId),
+  ],
+)
+
+/** Every saved state of a page, including the current one. */
+export const wikiPageVersions = pgTable(
+  'wiki_page_versions',
+  {
+    pageId: uuid('page_id')
+      .notNull()
+      .references(() => wikiPages.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    title: text('title').notNull(),
+    content: text('content').notNull(),
+    authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (table) => [primaryKey({ columns: [table.pageId, table.version] })],
 )

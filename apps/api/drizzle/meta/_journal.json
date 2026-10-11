@@ -22,6 +22,13 @@
       "when": 1791754781705,
       "tag": "0002_task_column_index",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791755284183,
+      "tag": "0003_wiki",
+      "breakpoints": true
     }
   ]
 }

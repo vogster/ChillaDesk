@@ -123,6 +123,21 @@ export async function listTasks(
   return { items: rows.map(toTask), total: counted?.total ?? 0 }
 }
 
+/** Resolves the number in a task key such as `CHL-12`. */
+export async function getTaskByNumber(
+  db: Db,
+  userId: string,
+  projectId: string,
+  number: number,
+): Promise<Task> {
+  await getProject(db, userId, projectId)
+  const [row] = await selectTasks(db).where(
+    and(eq(tasks.projectId, projectId), eq(tasks.number, number)),
+  )
+  if (!row) throw notFound('Task')
+  return toTask(row)
+}
+
 export async function getTask(
   db: Db,
   userId: string,
