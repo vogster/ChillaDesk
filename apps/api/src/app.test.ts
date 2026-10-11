@@ -87,7 +87,7 @@ describe('unknown routes', () => {
     const response = await app.inject({ method: 'GET', url: '/api/nope' })
 
     expect(response.statusCode).toBe(404)
-    expect(response.json()).toMatchObject({ error: 'Not Found' })
+    expect(response.json()).toMatchObject({ error: { code: 'NOT_FOUND' } })
     await app.close()
     await database.close()
   })

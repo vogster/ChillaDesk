@@ -35,6 +35,7 @@ COPY --from=api-deps /repo/node_modules ./node_modules
 COPY --from=api-deps /repo/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /repo/apps/api/package.json ./apps/api/package.json
 COPY --from=build /repo/apps/api/dist ./apps/api/dist
+COPY --from=build /repo/apps/api/drizzle ./apps/api/drizzle
 WORKDIR /repo/apps/api
 USER node
 EXPOSE 3000

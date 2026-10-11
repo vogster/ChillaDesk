@@ -12,6 +12,7 @@ export const healthRoutes: FastifyPluginAsyncZod<{ database: Database }> = async
     {
       // Container health probes hit this every few seconds; keep them out of the request log.
       logLevel: 'warn',
+      config: { rateLimit: false },
       schema: {
         tags: ['system'],
         summary: 'Service health',

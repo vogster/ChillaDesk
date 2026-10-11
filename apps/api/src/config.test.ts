@@ -10,6 +10,7 @@ describe('loadConfig', () => {
       databaseUrl: undefined,
       pgliteDataDir: './.data/pglite',
       trustProxy: false,
+      registrationEnabled: true,
     })
   })
 
@@ -21,6 +22,7 @@ describe('loadConfig', () => {
       DATABASE_URL: 'postgres://user:pass@db:5432/chillawiki',
       PGLITE_DATA_DIR: '/tmp/pg',
       TRUST_PROXY: 'true',
+      REGISTRATION_ENABLED: 'false',
     })
 
     expect(config).toEqual({
@@ -30,6 +32,7 @@ describe('loadConfig', () => {
       databaseUrl: 'postgres://user:pass@db:5432/chillawiki',
       pgliteDataDir: '/tmp/pg',
       trustProxy: true,
+      registrationEnabled: false,
     })
   })
 

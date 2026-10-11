@@ -1,0 +1,86 @@
+import type { AuthResponse, LoginRequest, RegisterRequest, User } from '@chillawiki/shared'
+import { and, eq, gt, lte } from 'drizzle-orm'
+import type { Db } from '../../db/client'
+import { sessions, users } from '../../db/schema'
+import { conflict, forbidden, isUniqueViolation, unauthenticated } from '../../errors'
+import { hashPassword, verifyPassword } from './password'
+import { generateToken, hashToken } from './tokens'
+
+export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
+
+export interface AuthContext {
+  user: User
+  sessionId: string
+}
+
+type UserRow = typeof users.$inferSelect
+
+function toUser(row: UserRow): User {
+  return { id: row.id, email: row.email, name: row.name, createdAt: row.createdAt.toISOString() }
+}
+
+async function startSession(db: Db, user: UserRow, now: Date): Promise<AuthResponse> {
+  const { token, tokenHash } = generateToken()
+  const expiresAt = new Date(now.getTime() + SESSION_TTL_MS)
+  await db.insert(sessions).values({ userId: user.id, tokenHash, expiresAt })
+  return { user: toUser(user), token, expiresAt: expiresAt.toISOString() }
+}
+
+export async function register(
+  db: Db,
+  input: RegisterRequest,
+  options: { registrationEnabled: boolean; now?: Date },
+): Promise<AuthResponse> {
+  if (!options.registrationEnabled) {
+    throw forbidden('Registration is disabled on this server')
+  }
+
+  const passwordHash = await hashPassword(input.password)
+  try {
+    const [user] = await db
+      .insert(users)
+      .values({ email: input.email.toLowerCase(), name: input.name, passwordHash })
+      .returning()
+    if (!user) throw new Error('Insert returned no user row')
+    return await startSession(db, user, options.now ?? new Date())
+  } catch (error) {
+    if (isUniqueViolation(error)) throw conflict('An account with this email already exists')
+    throw error
+  }
+}
+
+// Verified when the email is unknown, so response time does not reveal which emails exist.
+const dummyHash = hashPassword('dummy-password-for-timing')
+
+export async function login(
+  db: Db,
+  input: LoginRequest,
+  now: Date = new Date(),
+): Promise<AuthResponse> {
+  const [user] = await db.select().from(users).where(eq(users.email, input.email.toLowerCase()))
+  const passwordMatches = await verifyPassword(
+    input.password,
+    user?.passwordHash ?? (await dummyHash),
+  )
+  if (!user || !passwordMatches) throw unauthenticated('Invalid email or password')
+
+  await db.delete(sessions).where(and(eq(sessions.userId, user.id), lte(sessions.expiresAt, now)))
+  return startSession(db, user, now)
+}
+
+export async function authenticate(
+  db: Db,
+  token: string,
+  now: Date = new Date(),
+): Promise<AuthContext | null> {
+  const [row] = await db
+    .select({ user: users, sessionId: sessions.id })
+    .from(sessions)
+    .innerJoin(users, eq(users.id, sessions.userId))
+    .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, now)))
+  return row ? { user: toUser(row.user), sessionId: row.sessionId } : null
+}
+
+export async function logout(db: Db, sessionId: string): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.id, sessionId))
+}

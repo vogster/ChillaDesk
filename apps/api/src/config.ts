@@ -13,6 +13,10 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  REGISTRATION_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 })
 
 export interface AppConfig {
@@ -24,6 +28,8 @@ export interface AppConfig {
   pgliteDataDir: string
   /** Enable only when the API sits behind a reverse proxy that sets X-Forwarded-* headers. */
   trustProxy: boolean
+  /** Turn off once your team has signed up to stop strangers from creating accounts. */
+  registrationEnabled: boolean
 }
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -43,5 +49,6 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     databaseUrl: parsed.DATABASE_URL,
     pgliteDataDir: parsed.PGLITE_DATA_DIR,
     trustProxy: parsed.TRUST_PROXY,
+    registrationEnabled: parsed.REGISTRATION_ENABLED,
   }
 }

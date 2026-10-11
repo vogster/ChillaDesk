@@ -14,6 +14,7 @@ const app = await buildApp({
   database,
   logLevel: config.logLevel,
   trustProxy: config.trustProxy,
+  registrationEnabled: config.registrationEnabled,
 })
 late.log = app.log
 
@@ -22,7 +23,8 @@ if (!(await database.ping())) {
   await database.close()
   process.exit(1)
 }
-app.log.info({ driver: database.driver }, 'database connected')
+await database.migrate()
+app.log.info({ driver: database.driver }, 'database connected and migrated')
 
 let shuttingDown = false
 async function shutdown(signal: string): Promise<void> {
