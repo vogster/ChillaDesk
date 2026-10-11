@@ -15,8 +15,16 @@ export default tseslint.config(
     rules: {
       'no-console': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        // `const { secret: _secret, ...rest } = value` is how a field is left out.
+        { argsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
     },
+  },
+  {
+    files: ['**/*.mjs'],
+    languageOptions: { globals: { ...globals.node } },
   },
   {
     files: ['apps/web/**/*.{ts,tsx}'],

@@ -178,3 +178,24 @@ export const wikiPageVersions = pgTable(
   },
   (table) => [primaryKey({ columns: [table.pageId, table.version] })],
 )
+
+export const apiTokenScope = pgEnum('api_token_scope', ['read', 'write'])
+
+/** Personal access tokens for scripts and AI agents (MCP). */
+export const apiTokens = pgTable(
+  'api_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    /** SHA-256 of the token; the token itself is shown once and never stored. */
+    tokenHash: text('token_hash').notNull().unique(),
+    scope: apiTokenScope('scope').notNull(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (table) => [index('api_tokens_user_id_idx').on(table.userId)],
+)

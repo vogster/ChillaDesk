@@ -551,7 +551,10 @@ describe('page history', () => {
 
     await user.click(within(old).getByRole('button', { name: 'Restore this version' }))
 
-    expect(await screen.findByText(/Version 3/)).toBeInTheDocument()
+    // Wait for the page itself: the history list also shows the new version for a moment
+    // before the app leaves it.
+    const article = await screen.findByRole('article')
+    expect(await within(article).findByText(/Version 3/)).toBeInTheDocument()
     expect(bodyOf(`PATCH ${url}/wiki/${about.id}`)).toEqual({
       title: 'About',
       content: '# About us',

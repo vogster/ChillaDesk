@@ -19,6 +19,12 @@ export function AppLayout({ user }: { user: User }) {
             ChillaWiki
           </Link>
           <div className="flex items-center gap-3">
+            <Link
+              to="/tokens"
+              className="text-sm text-slate-600 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-slate-100"
+            >
+              API tokens
+            </Link>
             <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-400">
               {user.name}
             </span>

@@ -234,8 +234,12 @@ describe('GET /api/auth/me', () => {
     const user = await ctx.signUp()
     const afterExpiry = new Date(Date.now() + SESSION_TTL_MS + 1000)
 
-    await expect(authenticate(ctx.database.db, user.token)).resolves.not.toBeNull()
-    await expect(authenticate(ctx.database.db, user.token, afterExpiry)).resolves.toBeNull()
+    await expect(
+      authenticate(ctx.database.db, user.token, { viaHeader: true }),
+    ).resolves.not.toBeNull()
+    await expect(
+      authenticate(ctx.database.db, user.token, { viaHeader: true, now: afterExpiry }),
+    ).resolves.toBeNull()
   })
 })
 

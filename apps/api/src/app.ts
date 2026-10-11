@@ -14,11 +14,13 @@ import type { AppConfig } from './config'
 import type { Database } from './db/client'
 import { AppError } from './errors'
 import { registerErrorHandlers } from './http/error-handler'
-import { registerAuth, SESSION_COOKIE } from './modules/auth/plugin'
+import { MCP_PATH, registerAuth, SESSION_COOKIE } from './modules/auth/plugin'
 import { authRoutes } from './modules/auth/routes'
+import { mcpRoutes } from './modules/mcp/routes'
 import { projectRoutes } from './modules/projects/routes'
 import { taskRoutes } from './modules/tasks/routes'
 import { statusRoutes } from './modules/tasks/statuses.routes'
+import { tokenRoutes } from './modules/tokens/routes'
 import { wikiRoutes } from './modules/wiki/routes'
 import { healthRoutes } from './routes/health'
 
@@ -105,6 +107,8 @@ export async function buildApp({
   })
   await app.register(statusRoutes, { prefix: '/api/projects/:projectId/statuses', db })
   await app.register(taskRoutes, { prefix: '/api/projects/:projectId/tasks', db })
+  await app.register(tokenRoutes, { prefix: '/api/tokens', db })
+  await app.register(mcpRoutes, { prefix: MCP_PATH, db })
   await app.register(wikiRoutes, { prefix: '/api/projects/:projectId/wiki', db })
 
   return app

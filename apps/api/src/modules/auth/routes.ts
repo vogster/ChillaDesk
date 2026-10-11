@@ -108,7 +108,8 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
       },
     },
     async (request, reply) => {
-      if (request.auth) await logout(db, request.auth.sessionId)
+      // An API token has no session to end; revoking it is done on the tokens page.
+      if (request.auth?.sessionId) await logout(db, request.auth.sessionId)
       reply.clearCookie(SESSION_COOKIE, { path: '/' })
       return reply.code(204).send(null)
     },

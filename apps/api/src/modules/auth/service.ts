@@ -1,7 +1,14 @@
-import type { AuthResponse, LoginRequest, RegisterRequest, User } from '@chillawiki/shared'
-import { and, eq, gt, lte } from 'drizzle-orm'
+import {
+  API_TOKEN_PREFIX,
+  type ApiTokenScope,
+  type AuthResponse,
+  type LoginRequest,
+  type RegisterRequest,
+  type User,
+} from '@chillawiki/shared'
+import { and, eq, gt, isNull, lt, lte, or } from 'drizzle-orm'
 import type { Db } from '../../db/client'
-import { sessions, users } from '../../db/schema'
+import { apiTokens, sessions, users } from '../../db/schema'
 import { conflict, forbidden, isUniqueViolation, unauthenticated } from '../../errors'
 import { hashPassword, verifyPassword } from './password'
 import { generateToken, hashToken } from './tokens'
@@ -10,7 +17,10 @@ export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 export interface AuthContext {
   user: User
-  sessionId: string
+  /** Set for a browser or mobile session; null when a personal API token was used. */
+  sessionId: string | null
+  /** Set when the request was made with a personal API token. */
+  apiToken: { id: string; scope: ApiTokenScope } | null
 }
 
 type UserRow = typeof users.$inferSelect
@@ -73,17 +83,61 @@ export async function login(
   return startSession(db, user, now)
 }
 
+// "Last used" is for the owner's overview, so one write a minute per token is plenty.
+const LAST_USED_RESOLUTION_MS = 60_000
+
+async function authenticateApiToken(db: Db, token: string, now: Date): Promise<AuthContext | null> {
+  const [row] = await db
+    .select({ user: users, id: apiTokens.id, scope: apiTokens.scope })
+    .from(apiTokens)
+    .innerJoin(users, eq(users.id, apiTokens.userId))
+    .where(
+      and(
+        eq(apiTokens.tokenHash, hashToken(token)),
+        or(isNull(apiTokens.expiresAt), gt(apiTokens.expiresAt, now)),
+      ),
+    )
+  if (!row) return null
+
+  await db
+    .update(apiTokens)
+    .set({ lastUsedAt: now })
+    .where(
+      and(
+        eq(apiTokens.id, row.id),
+        or(
+          isNull(apiTokens.lastUsedAt),
+          lt(apiTokens.lastUsedAt, new Date(now.getTime() - LAST_USED_RESOLUTION_MS)),
+        ),
+      ),
+    )
+  return { user: toUser(row.user), sessionId: null, apiToken: { id: row.id, scope: row.scope } }
+}
+
+export interface AuthenticateOptions {
+  /**
+   * Whether the token came in the Authorization header. Personal API tokens are refused
+   * anywhere else: as a cookie they would be sent by the browser on its own.
+   */
+  viaHeader: boolean
+  now?: Date
+}
+
 export async function authenticate(
   db: Db,
   token: string,
-  now: Date = new Date(),
+  { viaHeader, now = new Date() }: AuthenticateOptions,
 ): Promise<AuthContext | null> {
+  if (token.startsWith(API_TOKEN_PREFIX)) {
+    return viaHeader ? authenticateApiToken(db, token, now) : null
+  }
+
   const [row] = await db
     .select({ user: users, sessionId: sessions.id })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, now)))
-  return row ? { user: toUser(row.user), sessionId: row.sessionId } : null
+  return row ? { user: toUser(row.user), sessionId: row.sessionId, apiToken: null } : null
 }
 
 export async function logout(db: Db, sessionId: string): Promise<void> {

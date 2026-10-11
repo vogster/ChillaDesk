@@ -19,6 +19,7 @@ import { WikiLayout } from './pages/project/wiki/WikiLayout'
 import { WikiPageView } from './pages/project/wiki/WikiPageView'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { TokensPage } from './pages/TokensPage'
 
 /**
  * Wraps the login and registration pages. Once the user is signed in this is the single place
@@ -62,6 +63,7 @@ export function App() {
         }
       >
         <Route index element={<ProjectsPage />} />
+        <Route path="/tokens" element={<TokensPage />} />
         <Route path="/projects/:projectId" element={user && <ProjectLayout currentUser={user} />}>
           <Route index element={<BoardPage />} />
           <Route path="list" element={<ListPage />} />

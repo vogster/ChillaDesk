@@ -49,8 +49,29 @@ export function registerAuth(app: FastifyInstance, db: Db): void {
     if (!token) return
     if (!bearer && isCrossSiteWrite(request)) throw forbidden('Cross-site request blocked')
 
-    request.auth = await authenticate(db, token)
+    request.auth = await authenticate(db, token, { viaHeader: bearer !== undefined })
+
+    // MCP is exempt: it reads and writes through POST, and checks the scope per tool.
+    const readOnly = request.auth?.apiToken?.scope === 'read'
+    if (readOnly && !SAFE_METHODS.has(request.method) && !isMcpRequest(request)) {
+      throw forbidden('This API token is read-only')
+    }
   })
+}
+
+export const MCP_PATH = '/api/mcp'
+
+function isMcpRequest(request: FastifyRequest): boolean {
+  const path = request.url.split('?')[0] ?? ''
+  return path === MCP_PATH || path === `${MCP_PATH}/`
+}
+
+/** For actions on the account itself, which a personal API token must not be able to do. */
+export function requireSession(request: FastifyRequest): AuthContext {
+  const auth = requireAuth(request)
+  if (auth.sessionId === null)
+    throw forbidden('This action needs a signed-in session, not an API token')
+  return auth
 }
 
 export function requireAuth(request: FastifyRequest): AuthContext {

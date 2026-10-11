@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
+    // Integration tests start an embedded PostgreSQL and hash passwords; on a busy machine
+    // (CI, or the other packages' tests running alongside) the defaults are too tight.
+    testTimeout: 30_000,
+    hookTimeout: 60_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

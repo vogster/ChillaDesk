@@ -10,7 +10,7 @@ import {
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import type { Db } from '../../db/client'
-import { requireAuth } from '../auth/plugin'
+import { requireAuth, requireSession } from '../auth/plugin'
 import {
   addMember,
   createProject,
@@ -32,6 +32,11 @@ const errors = {
   404: errorResponseSchema,
 }
 
+/**
+ * Who is in a project, and whether it exists at all, is changed only from a signed-in
+ * session (`requireSession`), never with a personal API token: a leaked token could
+ * otherwise add its thief as an owner, and that would outlast revoking the token.
+ */
 export interface ProjectRoutesOptions {
   db: Db
   memberInviteRateLimitMax: number
@@ -116,7 +121,7 @@ export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async 
       },
     },
     async (request, reply) => {
-      await deleteProject(db, requireAuth(request).user.id, request.params.projectId)
+      await deleteProject(db, requireSession(request).user.id, request.params.projectId)
       return reply.code(204).send(null)
     },
   )
@@ -157,7 +162,7 @@ export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async 
     async (request, reply) => {
       const member = await addMember(
         db,
-        requireAuth(request).user.id,
+        requireSession(request).user.id,
         request.params.projectId,
         request.body,
       )
@@ -179,7 +184,7 @@ export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async 
     (request) =>
       updateMemberRole(
         db,
-        requireAuth(request).user.id,
+        requireSession(request).user.id,
         request.params.projectId,
         request.params.userId,
         request.body.role,
@@ -199,7 +204,7 @@ export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async 
     async (request, reply) => {
       await removeMember(
         db,
-        requireAuth(request).user.id,
+        requireSession(request).user.id,
         request.params.projectId,
         request.params.userId,
       )
