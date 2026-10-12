@@ -3,6 +3,7 @@ import type {
   Label,
   MoveTaskRequest,
   Task,
+  TaskInContext,
   TaskList,
   TaskListQuery,
   UpdateTaskRequest,
@@ -11,10 +12,12 @@ import type {
 import { and, asc, count, eq, ilike, isNull, lt, max, ne, or, sql, type SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import type { Db, Executor, Tx } from '../../db/client'
+import { containsPattern } from '../../db/like'
 import { projectMembers, projects, statuses, taskLabels, tasks, users } from '../../db/schema'
 import { invalid, notFound } from '../../errors'
 import { loadLabelsOfTasks, setTaskLabels } from '../labels/service'
 import { getProject } from '../projects/service'
+import { toStatus } from './statuses.service'
 
 const assignee = alias(users, 'assignee')
 const reporter = alias(users, 'reporter')
@@ -102,11 +105,49 @@ async function loadTask(db: Executor, projectId: string, taskId: string): Promis
   return toSingleTask(db, row)
 }
 
-// `%`, `_` and `\` are LIKE wildcards; a search for "100%" must match that text literally.
-const escapeLike = (text: string) => text.replace(/[\\%_]/g, '\\$&')
+interface CrossProjectQuery {
+  where: SQL | undefined
+  orderBy: SQL[]
+  limit: number
+}
+
+/**
+ * Tasks from every project the user is a member of, each with its project and status.
+ * The membership join is the access check: nothing outside the user's projects can match.
+ */
+export async function findTasksOfUser(
+  db: Db,
+  userId: string,
+  { where, orderBy, limit }: CrossProjectQuery,
+): Promise<TaskInContext[]> {
+  const rows = await db
+    .select({
+      ...taskColumns,
+      project: { id: projects.id, key: projects.key, name: projects.name },
+      status: statuses,
+    })
+    .from(tasks)
+    .innerJoin(projects, eq(projects.id, tasks.projectId))
+    .innerJoin(statuses, eq(statuses.id, tasks.statusId))
+    .innerJoin(
+      projectMembers,
+      and(eq(projectMembers.projectId, tasks.projectId), eq(projectMembers.userId, userId)),
+    )
+    .leftJoin(assignee, eq(assignee.id, tasks.assigneeId))
+    .leftJoin(reporter, eq(reporter.id, tasks.reporterId))
+    .where(where)
+    .orderBy(...orderBy)
+    .limit(limit)
+
+  const found = await toTasks(db, rows)
+  return rows.flatMap(({ project, status }, index) => {
+    const task = found[index]
+    return task ? [{ ...task, project, status: toStatus(status) }] : []
+  })
+}
 
 function filters(projectId: string, query: TaskListQuery): SQL | undefined {
-  const pattern = query.q ? `%${escapeLike(query.q)}%` : undefined
+  const pattern = query.q ? containsPattern(query.q) : undefined
   return and(
     eq(tasks.projectId, projectId),
     query.statusId ? eq(tasks.statusId, query.statusId) : undefined,

@@ -127,6 +127,8 @@ describe('protocol', () => {
       'list_projects',
       'list_tasks',
       'list_wiki_pages',
+      'my_tasks',
+      'search',
       'update_task',
       'update_wiki_page',
     ])
@@ -418,6 +420,49 @@ describe('writing tasks', () => {
   })
 })
 
+describe('across projects', () => {
+  it('lists the open tasks assigned to the token owner in every project', async () => {
+    const { fixture, key, token } = await setup()
+    const mine = fixture.member.email
+    await expectData(call(token, 'create_task', { project: key, title: 'Mine', assignee: mine }))
+    await expectData(
+      call(token, 'create_task', { project: key, title: 'Done', assignee: mine, status: 'Done' }),
+    )
+    await expectData(call(token, 'create_task', { project: key, title: 'Not mine' }))
+    type Mine = { project: string; title: string; status: string; description?: string }
+
+    const open = await expectData(call<Mine[]>(token, 'my_tasks'))
+    const all = await expectData(call<Mine[]>(token, 'my_tasks', { includeDone: true }))
+
+    expect(open).toEqual([
+      expect.objectContaining({ project: key, title: 'Mine', status: 'To Do' }),
+    ])
+    expect(open[0]).not.toHaveProperty('description')
+    expect(all.map((task) => task.title).sort()).toEqual(['Done', 'Mine'])
+  })
+
+  it('searches tasks and wiki pages, and explains a query that is too short', async () => {
+    const { key, token } = await setup()
+    await setup()
+    await expectData(call(token, 'create_task', { project: key, title: 'Rotate the API keys' }))
+    await expectData(
+      call(token, 'create_wiki_page', { project: key, title: 'Security', content: 'Rotate keys' }),
+    )
+    type Found = { tasks: { project: string; title: string }[]; wikiPages: { title: string }[] }
+
+    const found = await expectData(call<Found>(token, 'search', { query: 'rotate' }))
+    const byKey = await expectData(call<Found>(token, 'search', { query: `${key}-1` }))
+    const tooShort = await expectError(call(token, 'search', { query: 'r' }))
+
+    expect(found.tasks).toEqual([
+      expect.objectContaining({ project: key, title: 'Rotate the API keys' }),
+    ])
+    expect(found.wikiPages.map((page) => page.title)).toEqual(['Security'])
+    expect(byKey.tasks.map((task) => task.title)).toEqual(['Rotate the API keys'])
+    expect(tooShort).toContain('Invalid input')
+  })
+})
+
 describe('labels', () => {
   it('lists label names with the project and sets them on tasks by name', async () => {
     const { fixture, key, token } = await setup()
@@ -524,7 +569,9 @@ describe('tool safety net', () => {
   it('marks as read-only only tools whose names say they read', () => {
     const readTools = TOOLS.filter((tool) => tool.readOnly).map((tool) => tool.name)
 
-    expect(readTools.every((name) => /^(list|get)_/.test(name))).toBe(true)
+    // A new read-only tool has to be added here on purpose, not by a mislabelled flag.
+    const readingNames = /^(list_|get_|my_tasks$|search$)/
+    expect(readTools.filter((name) => !readingNames.test(name))).toEqual([])
   })
 
   it('hides the details of an unexpected failure from the client and logs them', async () => {

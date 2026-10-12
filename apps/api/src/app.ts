@@ -18,6 +18,7 @@ import { MCP_PATH, registerAuth, SESSION_COOKIE } from './modules/auth/plugin'
 import { authRoutes } from './modules/auth/routes'
 import { labelRoutes } from './modules/labels/routes'
 import { mcpRoutes } from './modules/mcp/routes'
+import { overviewRoutes } from './modules/overview/routes'
 import { projectRoutes } from './modules/projects/routes'
 import { taskRoutes } from './modules/tasks/routes'
 import { statusRoutes } from './modules/tasks/statuses.routes'
@@ -110,6 +111,7 @@ export async function buildApp({
   await app.register(statusRoutes, { prefix: '/api/projects/:projectId/statuses', db })
   await app.register(taskRoutes, { prefix: '/api/projects/:projectId/tasks', db })
   await app.register(tokenRoutes, { prefix: '/api/tokens', db })
+  await app.register(overviewRoutes, { prefix: '/api', db })
   await app.register(mcpRoutes, { prefix: MCP_PATH, db })
   await app.register(wikiRoutes, { prefix: '/api/projects/:projectId/wiki', db })
 

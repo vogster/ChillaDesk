@@ -225,7 +225,7 @@ await mcp.connect(
   }),
 )
 const { tools } = await mcp.listTools()
-check('MCP lists its tools', tools.length === 11, `${tools.length} tools`)
+check('MCP lists its tools', tools.length === 13, `${tools.length} tools`)
 const viaMcp = await mcp.callTool({
   name: 'create_task',
   arguments: { project: key, title: 'Created by the stack check', priority: 'high' },

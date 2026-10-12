@@ -10,6 +10,7 @@ import type {
 } from '@chillawiki/shared'
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import type { Db, Executor, Tx } from '../../db/client'
+import { containsPattern } from '../../db/like'
 import { projects, users, wikiPages, wikiPageVersions } from '../../db/schema'
 import { conflict, invalid, isForeignKeyViolation, isUniqueViolation, notFound } from '../../errors'
 import { getProject } from '../projects/service'
@@ -63,9 +64,6 @@ async function loadPage(db: Executor, projectId: string, pageId: string): Promis
   return toPage(row.page, row.updatedBy)
 }
 
-// `%`, `_` and `\` are LIKE wildcards; a search for "100%" must match that text literally.
-const escapeLike = (text: string) => text.replace(/[\\%_]/g, '\\$&')
-
 export async function listPages(
   db: Db,
   userId: string,
@@ -73,7 +71,7 @@ export async function listPages(
   query: WikiListQuery,
 ): Promise<WikiPageSummary[]> {
   await getProject(db, userId, projectId)
-  const pattern = query.q ? `%${escapeLike(query.q)}%` : undefined
+  const pattern = query.q ? containsPattern(query.q) : undefined
   const rows = await db
     .select(summaryColumns)
     .from(wikiPages)

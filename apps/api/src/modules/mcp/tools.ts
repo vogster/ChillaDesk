@@ -3,6 +3,7 @@ import {
   createTaskRequestSchema,
   createWikiPageRequestSchema,
   dueDateSchema,
+  searchQuerySchema,
   taskListQuerySchema,
   taskPrioritySchema,
   updateTaskRequestSchema,
@@ -10,6 +11,7 @@ import {
   wikiListQuerySchema,
   type Status,
   type Task,
+  type TaskInContext,
   type WikiPage,
 } from '@chillawiki/shared'
 import { z } from 'zod'
@@ -18,6 +20,7 @@ import { AppError, forbidden, invalid } from '../../errors'
 import { loggableError } from '../../http/error-handler'
 import type { AuthContext } from '../auth/service'
 import { listLabels } from '../labels/service'
+import { listMyTasks, search } from '../overview/service'
 import { listMembers, listProjects } from '../projects/service'
 import { addComment, listComments } from '../tasks/comments.service'
 import { createTask, listTasks, moveTask, updateTask } from '../tasks/service'
@@ -93,6 +96,12 @@ function describeTask(task: Task, statuses: Status[]) {
   }
 }
 
+/** A task found outside one project: its status comes with it, and its description is left out. */
+function describeTaskInContext(task: TaskInContext) {
+  const { description: _description, ...summary } = describeTask(task, [task.status])
+  return { project: task.project.key, ...summary }
+}
+
 const describePage = (page: WikiPage) => ({
   title: page.title,
   version: page.version,
@@ -115,6 +124,40 @@ export const TOOLS: ToolDefinition[] = [
         description,
         role,
       })),
+  }),
+
+  tool({
+    name: 'my_tasks',
+    title: 'My tasks',
+    description:
+      'Tasks assigned to the token owner in all their projects, earliest due date first. Finished tasks are left out unless includeDone is set.',
+    readOnly: true,
+    inputSchema: { includeDone: z.boolean().default(false) },
+    run: async (input, { db, auth }) =>
+      (await listMyTasks(db, auth.user.id, { includeDone: input.includeDone })).map(
+        describeTaskInContext,
+      ),
+  }),
+
+  tool({
+    name: 'search',
+    title: 'Search everything',
+    description:
+      'Searches task titles and descriptions and wiki titles and content in all projects of the token owner. A task key such as CHL-12 finds that task. Returns at most 20 of each.',
+    readOnly: true,
+    inputSchema: { query: z.string().describe('At least two characters.') },
+    run: async (input, { db, auth }) => {
+      const { q } = validate(searchQuerySchema, { q: input.query })
+      const results = await search(db, auth.user.id, q)
+      return {
+        tasks: results.tasks.map(describeTaskInContext),
+        wikiPages: results.pages.map((page) => ({
+          project: page.project.key,
+          title: page.title,
+          updatedAt: page.updatedAt,
+        })),
+      }
+    },
   }),
 
   tool({

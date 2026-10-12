@@ -18,7 +18,7 @@ const DEFAULT_STATUSES: readonly { name: string; category: StatusCategory }[] = 
 
 type StatusRow = typeof statuses.$inferSelect
 
-function toStatus(row: StatusRow): Status {
+export function toStatus(row: StatusRow): Status {
   return { id: row.id, name: row.name, category: row.category, position: row.position }
 }
 

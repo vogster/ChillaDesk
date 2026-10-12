@@ -6,6 +6,8 @@ import { AppLayout } from './components/AppLayout'
 import { Alert, Button, Spinner } from './components/ui'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { MyTasksPage } from './pages/overview/MyTasksPage'
+import { SearchPage } from './pages/overview/SearchPage'
 import { BoardPage } from './pages/project/BoardPage'
 import { ListPage } from './pages/project/ListPage'
 import { MembersPage } from './pages/project/MembersPage'
@@ -64,6 +66,8 @@ export function App() {
       >
         <Route index element={<ProjectsPage />} />
         <Route path="/tokens" element={<TokensPage />} />
+        <Route path="/my-tasks" element={<MyTasksPage />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="/projects/:projectId" element={user && <ProjectLayout currentUser={user} />}>
           <Route index element={<BoardPage />} />
           <Route path="list" element={<ListPage />} />
