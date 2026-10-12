@@ -199,3 +199,47 @@ export const apiTokens = pgTable(
   },
   (table) => [index('api_tokens_user_id_idx').on(table.userId)],
 )
+
+export const labelColor = pgEnum('label_color', [
+  'gray',
+  'red',
+  'orange',
+  'yellow',
+  'green',
+  'teal',
+  'blue',
+  'purple',
+  'pink',
+])
+
+export const labels = pgTable(
+  'labels',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    color: labelColor('color').notNull().default('gray'),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    uniqueIndex('labels_project_name_idx').on(table.projectId, sql`lower(${table.name})`),
+  ],
+)
+
+export const taskLabels = pgTable(
+  'task_labels',
+  {
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    labelId: uuid('label_id')
+      .notNull()
+      .references(() => labels.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.taskId, table.labelId] }),
+    index('task_labels_label_id_idx').on(table.labelId),
+  ],
+)

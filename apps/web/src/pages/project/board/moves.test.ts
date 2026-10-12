@@ -34,6 +34,7 @@ function task(id: string, statusId: string, position: number): Task {
     assignee: null,
     reporter: null,
     dueDate: null,
+    labels: [],
     position,
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,

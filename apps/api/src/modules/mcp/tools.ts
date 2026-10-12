@@ -17,12 +17,20 @@ import type { Db } from '../../db/client'
 import { AppError, forbidden, invalid } from '../../errors'
 import { loggableError } from '../../http/error-handler'
 import type { AuthContext } from '../auth/service'
+import { listLabels } from '../labels/service'
 import { listMembers, listProjects } from '../projects/service'
 import { addComment, listComments } from '../tasks/comments.service'
 import { createTask, listTasks, moveTask, updateTask } from '../tasks/service'
 import { listStatuses } from '../tasks/statuses.service'
 import { createPage, listPages, updatePage } from '../wiki/service'
-import { memberByEmail, projectByKey, statusByName, taskByKey, wikiPageByTitle } from './resolve'
+import {
+  labelsByName,
+  memberByEmail,
+  projectByKey,
+  statusByName,
+  taskByKey,
+  wikiPageByTitle,
+} from './resolve'
 
 export interface ToolContext {
   db: Db
@@ -79,6 +87,7 @@ function describeTask(task: Task, statuses: Status[]) {
     assignee: task.assignee?.email ?? null,
     reporter: task.reporter?.email ?? null,
     dueDate: task.dueDate,
+    labels: task.labels.map((label) => label.name),
     description: task.description,
     updatedAt: task.updatedAt,
   }
@@ -112,15 +121,16 @@ export const TOOLS: ToolDefinition[] = [
     name: 'get_project',
     title: 'Get project',
     description:
-      'A project with its board statuses (columns, left to right) and members. ' +
-      'Call this before creating or moving tasks to learn the valid status names and assignee emails.',
+      'A project with its board statuses (columns, left to right), labels and members. ' +
+      'Call this before creating or moving tasks to learn the valid status names, label names and assignee emails.',
     readOnly: true,
     inputSchema: { project },
     run: async (input, { db, auth }) => {
       const found = await projectByKey(db, auth.user.id, input.project)
-      const [statuses, members] = await Promise.all([
+      const [statuses, members, labels] = await Promise.all([
         listStatuses(db, auth.user.id, found.id),
         listMembers(db, auth.user.id, found.id),
+        listLabels(db, auth.user.id, found.id),
       ])
       return {
         key: found.key,
@@ -128,6 +138,7 @@ export const TOOLS: ToolDefinition[] = [
         description: found.description,
         yourRole: found.role,
         statuses: statuses.map(({ name, category }) => ({ name, category })),
+        labels: labels.map((label) => label.name),
         members: members.map(({ name, email, role }) => ({ name, email, role })),
       }
     },
@@ -147,6 +158,7 @@ export const TOOLS: ToolDefinition[] = [
         .optional()
         .describe('Email of the assignee, or "none" for unassigned tasks.'),
       priority: taskPrioritySchema.optional(),
+      label: z.string().optional().describe('Only tasks that carry the label with this name.'),
       query: z.string().optional().describe('Text to look for in titles and descriptions.'),
       limit: z.number().int().min(1).max(200).default(50),
     },
@@ -166,6 +178,9 @@ export const TOOLS: ToolDefinition[] = [
           : {}),
         ...(assigneeId ? { assigneeId } : {}),
         ...(input.priority ? { priority: input.priority } : {}),
+        ...(input.label
+          ? { labelId: (await labelsByName(db, userId, found.id, [input.label]))[0]?.id }
+          : {}),
         ...(input.query?.trim() ? { q: input.query.trim() } : {}),
       })
       const list = await listTasks(db, userId, found.id, filters)
@@ -216,6 +231,7 @@ export const TOOLS: ToolDefinition[] = [
       priority: taskPrioritySchema.optional(),
       assignee: z.string().optional().describe('Email of a project member.'),
       dueDate: dueDateSchema.optional().describe('YYYY-MM-DD'),
+      labels: z.array(z.string()).optional().describe('Names of existing labels; see get_project.'),
     },
     run: async (input, { db, auth }) => {
       const userId = auth.user.id
@@ -233,6 +249,9 @@ export const TOOLS: ToolDefinition[] = [
         assigneeId: assignee?.userId ?? null,
         dueDate: input.dueDate ?? null,
         statusId: status?.id,
+        labelIds: (await labelsByName(db, userId, found.id, input.labels ?? [])).map(
+          (label) => label.id,
+        ),
       })
       const task = await createTask(db, userId, found.id, request)
       return describeTask(task, await listStatuses(db, userId, found.id))
@@ -257,6 +276,10 @@ export const TOOLS: ToolDefinition[] = [
         .optional()
         .describe('Email of a project member, or null to unassign.'),
       dueDate: dueDateSchema.nullable().optional().describe('YYYY-MM-DD, or null to clear.'),
+      labels: z
+        .array(z.string())
+        .optional()
+        .describe('The complete new set of label names; an empty list removes all labels.'),
     },
     run: async (input, { db, auth }) => {
       const userId = auth.user.id
@@ -271,6 +294,13 @@ export const TOOLS: ToolDefinition[] = [
         ...(input.priority !== undefined ? { priority: input.priority } : {}),
         ...(assigneeId !== undefined ? { assigneeId } : {}),
         ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
+        ...(input.labels !== undefined
+          ? {
+              labelIds: (await labelsByName(db, userId, found.id, input.labels)).map(
+                (label) => label.id,
+              ),
+            }
+          : {}),
       }
 
       // Everything is checked before the first write, so a bad status name cannot leave

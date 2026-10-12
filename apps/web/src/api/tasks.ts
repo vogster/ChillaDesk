@@ -24,6 +24,7 @@ export interface TaskFilters {
   /** A user id, or `none` for unassigned tasks. */
   assigneeId?: string
   priority?: TaskPriority
+  labelId?: string
   q?: string
 }
 
@@ -110,6 +111,18 @@ export const fetchComments = (projectId: string, taskId: string): Promise<Commen
 export const addComment = (projectId: string, taskId: string, body: string): Promise<Comment> =>
   apiRequest(`${base(projectId)}/tasks/${taskId}/comments`, {
     method: 'POST',
+    body: { body },
+    schema: commentSchema,
+  })
+
+export const updateComment = (
+  projectId: string,
+  taskId: string,
+  commentId: string,
+  body: string,
+): Promise<Comment> =>
+  apiRequest(`${base(projectId)}/tasks/${taskId}/comments/${commentId}`, {
+    method: 'PATCH',
     body: { body },
     schema: commentSchema,
   })

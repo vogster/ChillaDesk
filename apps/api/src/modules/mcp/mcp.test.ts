@@ -418,6 +418,61 @@ describe('writing tasks', () => {
   })
 })
 
+describe('labels', () => {
+  it('lists label names with the project and sets them on tasks by name', async () => {
+    const { fixture, key, token } = await setup()
+    for (const name of ['Bug', 'Feature']) {
+      await fixture.call(fixture.member, 'POST', '/labels', { name })
+    }
+
+    const project = await expectData(
+      call<{ labels: string[] }>(token, 'get_project', { project: key }),
+    )
+    const created = await expectData(
+      call<TaskView & { labels: string[] }>(token, 'create_task', {
+        project: key,
+        title: 'Crash',
+        labels: ['bug', 'Feature'],
+      }),
+    )
+    const relabelled = await expectData(
+      call<TaskView & { labels: string[] }>(token, 'update_task', {
+        key: `${key}-1`,
+        labels: ['Feature'],
+      }),
+    )
+    const cleared = await expectData(
+      call<TaskView & { labels: string[] }>(token, 'update_task', { key: `${key}-1`, labels: [] }),
+    )
+
+    expect(project.labels).toEqual(['Bug', 'Feature'])
+    expect(created.labels).toEqual(['Bug', 'Feature'])
+    expect(relabelled.labels).toEqual(['Feature'])
+    expect(cleared.labels).toEqual([])
+  })
+
+  it('filters tasks by label and names the labels that exist when one is unknown', async () => {
+    const { fixture, key, token } = await setup()
+    await fixture.call(fixture.member, 'POST', '/labels', { name: 'Bug' })
+    await expectData(
+      call(token, 'create_task', { project: key, title: 'Labelled', labels: ['Bug'] }),
+    )
+    await expectData(call(token, 'create_task', { project: key, title: 'Plain' }))
+
+    const bugs = await expectData(
+      call<{ tasks: TaskView[] }>(token, 'list_tasks', { project: key, label: 'BUG' }),
+    )
+    const unknown = await expectError(call(token, 'list_tasks', { project: key, label: 'Nope' }))
+    const unknownOnCreate = await expectError(
+      call(token, 'create_task', { project: key, title: 'T', labels: ['Nope'] }),
+    )
+
+    expect(bugs.tasks.map((task) => task.title)).toEqual(['Labelled'])
+    expect(unknown).toContain('This project has: "Bug"')
+    expect(unknownOnCreate).toContain('Unknown label "Nope"')
+  })
+})
+
 describe('read-only tokens', () => {
   it('can use read tools but none of the write tools', async () => {
     const { fixture, key } = await setup()

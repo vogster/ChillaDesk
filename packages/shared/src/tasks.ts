@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { emailSchema, textSchema } from './auth'
+import { labelIdsSchema, labelSchema } from './labels'
 
 /** What a column means, whatever it is called: lets clients tell open work from finished. */
 export const statusCategorySchema = z.enum(['todo', 'in_progress', 'done'])
@@ -65,6 +66,8 @@ export const taskSchema = z.object({
   /** Null when the author's account was deleted. */
   reporter: userSummarySchema.nullable(),
   dueDate: dueDateSchema.nullable(),
+  /** Sorted by name. */
+  labels: z.array(labelSchema),
   /** Sort key within the status column; only the order is meaningful. */
   position: z.number(),
   createdAt: z.iso.datetime(),
@@ -83,6 +86,7 @@ export const createTaskRequestSchema = z.object({
   priority: taskPrioritySchema.default('medium'),
   assigneeId: z.uuid().nullable().default(null),
   dueDate: dueDateSchema.nullable().default(null),
+  labelIds: labelIdsSchema.default([]),
 })
 export type CreateTaskRequest = z.infer<typeof createTaskRequestSchema>
 
@@ -93,6 +97,8 @@ export const updateTaskRequestSchema = z
     priority: taskPrioritySchema.optional(),
     assigneeId: z.uuid().nullable().optional(),
     dueDate: dueDateSchema.nullable().optional(),
+    /** The complete new set of labels. */
+    labelIds: labelIdsSchema.optional(),
   })
   .refine((patch) => Object.keys(patch).length > 0, 'At least one field is required')
 export type UpdateTaskRequest = z.infer<typeof updateTaskRequestSchema>
@@ -111,6 +117,8 @@ export const taskListQuerySchema = z.object({
   /** A user id, or `none` for unassigned tasks. */
   assigneeId: z.union([z.uuid(), z.literal('none')]).optional(),
   priority: taskPrioritySchema.optional(),
+  /** Only tasks that carry this label. */
+  labelId: z.uuid().optional(),
   /** Case-insensitive match in the title or description. */
   q: textSchema.trim().min(1).max(200).optional(),
   limit: z.coerce.number().int().min(1).max(TASK_PAGE_MAX).default(TASK_PAGE_MAX),

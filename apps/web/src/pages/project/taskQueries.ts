@@ -20,6 +20,7 @@ import {
   fetchTasks,
   moveTask,
   reorderStatuses,
+  updateComment,
   updateStatus,
   updateTask,
   type NewTask,
@@ -161,6 +162,11 @@ export function useCommentMutations(projectId: string, taskId: string) {
   return {
     add: useMutation({
       mutationFn: (body: string) => addComment(projectId, taskId, body),
+      onSuccess,
+    }),
+    edit: useMutation({
+      mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
+        updateComment(projectId, taskId, commentId, body),
       onSuccess,
     }),
     remove: useMutation({

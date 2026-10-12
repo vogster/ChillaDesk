@@ -133,6 +133,7 @@ export function makeTask(number: number, overrides: Partial<Task> = {}): Task {
     assignee: null,
     reporter: summary(ann),
     dueDate: null,
+    labels: [],
     position: number,
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,

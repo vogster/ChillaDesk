@@ -1,6 +1,7 @@
-import type { Project, ProjectMember, Status, Task, WikiPage } from '@chillawiki/shared'
+import type { Label, Project, ProjectMember, Status, Task, WikiPage } from '@chillawiki/shared'
 import type { Db } from '../../db/client'
 import { invalid, notFound } from '../../errors'
+import { listLabels } from '../labels/service'
 import { listMembers, listProjects } from '../projects/service'
 import { getTaskByNumber } from '../tasks/service'
 import { listStatuses } from '../tasks/statuses.service'
@@ -46,6 +47,24 @@ export async function memberByEmail(
   )
   if (!member) throw invalid(`"${email}" is not a member of this project`)
   return member
+}
+
+/** Resolves label names to labels; every name must exist in the project. */
+export async function labelsByName(
+  db: Db,
+  userId: string,
+  projectId: string,
+  names: string[],
+): Promise<Label[]> {
+  const labels = await listLabels(db, userId, projectId)
+  return names.map((name) => {
+    const label = labels.find((item) => sameText(item.name, name.trim()))
+    if (!label) {
+      const available = labels.map((item) => `"${item.name}"`).join(', ') || 'none yet'
+      throw invalid(`Unknown label "${name}". This project has: ${available}`)
+    }
+    return label
+  })
 }
 
 const TASK_KEY = /^([A-Za-z][A-Za-z0-9]{1,9})-([1-9]\d{0,8})$/

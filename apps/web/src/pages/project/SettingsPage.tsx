@@ -1,4 +1,5 @@
 import { NotFoundPage } from '../NotFoundPage'
+import { LabelSettings } from './labels/LabelSettings'
 import { useProjectContext } from './ProjectLayout'
 import { ProjectSettings } from './ProjectSettings'
 import { StatusSettings } from './StatusSettings'
@@ -11,6 +12,7 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <StatusSettings projectId={project.id} />
+      <LabelSettings projectId={project.id} />
       <ProjectSettings key={project.id} project={project} />
     </div>
   )

@@ -1,4 +1,4 @@
-import type { Comment, Project, Status, Task } from '@chillawiki/shared'
+import type { Comment, Label, Project, Status, Task } from '@chillawiki/shared'
 import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
@@ -28,6 +28,7 @@ interface ServerOptions {
   tasks?: Task[]
   statuses?: Status[]
   comments?: Comment[]
+  labels?: Label[]
   extra?: ApiRoutes
 }
 
@@ -36,7 +37,13 @@ function server({ role = 'owner', extra = {}, ...initial }: ServerOptions = {}) 
   let tasks = initial.tasks ?? [makeTask(1), makeTask(2, { statusId: doing.id })]
   let statuses = initial.statuses ?? [todo, doing, done]
   let comments = initial.comments ?? []
+  let labels = initial.labels ?? []
   const taskRoutes: ApiRoutes = {}
+  // Tasks carry copies of their labels; rebuild them from the current label list.
+  const withCurrentLabels = (task: Task): Task => ({
+    ...task,
+    labels: task.labels.flatMap((label) => labels.find((item) => item.id === label.id) ?? []),
+  })
 
   const defineTaskRoutes = (task: Task) => {
     const taskUrl = `${url}/tasks/${task.id}`
@@ -47,18 +54,21 @@ function server({ role = 'owner', extra = {}, ...initial }: ServerOptions = {}) 
     }
     taskRoutes[`GET ${taskUrl}`] = () => {
       const found = current()
-      return found ? ok(found) : apiError(404, 'NOT_FOUND', 'Task not found')
+      return found ? ok(withCurrentLabels(found)) : apiError(404, 'NOT_FOUND', 'Task not found')
     }
     taskRoutes[`PATCH ${taskUrl}`] = (body) => {
-      const patch = body as Partial<Task> & { assigneeId?: string | null }
-      const { assigneeId, ...fields } = patch
+      const patch = body as Partial<Task> & { assigneeId?: string | null; labelIds?: string[] }
+      const { assigneeId, labelIds, ...fields } = patch
+      const taskLabels = labelIds
+        ? labels.filter((label) => labelIds.includes(label.id))
+        : (current()?.labels ?? [])
       const assignee =
         assigneeId === undefined
           ? (current()?.assignee ?? null)
           : assigneeId === null
             ? null
             : summary(assigneeId === bob.id ? bob : ann)
-      return replace({ ...(current() ?? task), ...fields, assignee })
+      return replace({ ...(current() ?? task), ...fields, assignee, labels: taskLabels })
     }
     taskRoutes[`POST ${taskUrl}/move`] = (body) =>
       replace({ ...(current() ?? task), statusId: (body as { statusId: string }).statusId })
@@ -83,6 +93,15 @@ function server({ role = 'owner', extra = {}, ...initial }: ServerOptions = {}) 
   }
   tasks.forEach(defineTaskRoutes)
   for (const comment of comments) {
+    taskRoutes[`PATCH ${url}/tasks/${comment.taskId}/comments/${comment.id}`] = (body) => {
+      const edited = {
+        ...comment,
+        body: (body as { body: string }).body,
+        updatedAt: '2026-02-02T00:00:00.000Z',
+      }
+      comments = comments.map((item) => (item.id === comment.id ? edited : item))
+      return ok(edited)
+    }
     taskRoutes[`DELETE ${url}/tasks/${comment.taskId}/comments/${comment.id}`] = () => {
       comments = comments.filter((item) => item.id !== comment.id)
       return noContent()
@@ -94,6 +113,38 @@ function server({ role = 'owner', extra = {}, ...initial }: ServerOptions = {}) 
     [`GET ${url}`]: () => ok(makeProject({ role })),
     [`GET ${url}/members`]: () => ok([makeMember(ann, role), makeMember(bob, 'member')]),
     [`GET ${url}/statuses`]: () => ok(statuses),
+    [`GET ${url}/labels`]: () => ok(labels),
+    [`POST ${url}/labels`]: (body) => {
+      const input = body as Pick<Label, 'name' | 'color'>
+      if (labels.some((label) => label.name.toLowerCase() === input.name.toLowerCase())) {
+        return apiError(409, 'CONFLICT', `A label named "${input.name}" already exists`)
+      }
+      const created: Label = {
+        ...input,
+        id: `99999999-9999-4999-8999-${String(labels.length + 1).padStart(12, '0')}`,
+      }
+      labels = [...labels, created].sort((left, right) => left.name.localeCompare(right.name))
+      return ok(created, 201)
+    },
+    ...Object.fromEntries(
+      (initial.labels ?? []).flatMap((label) => [
+        [
+          `PATCH ${url}/labels/${label.id}`,
+          (body: unknown) => {
+            const updated = { ...label, ...(body as Partial<Label>) }
+            labels = labels.map((item) => (item.id === label.id ? updated : item))
+            return ok(updated)
+          },
+        ],
+        [
+          `DELETE ${url}/labels/${label.id}`,
+          () => {
+            labels = labels.filter((item) => item.id !== label.id)
+            return noContent()
+          },
+        ],
+      ]),
+    ),
     [`POST ${url}/statuses`]: (body) => {
       const input = body as Pick<Status, 'name' | 'category'>
       const created: Status = {
@@ -131,12 +182,14 @@ function server({ role = 'owner', extra = {}, ...initial }: ServerOptions = {}) 
           (!q || task.title.toLowerCase().includes(q)) &&
           (!query.get('statusId') || task.statusId === query.get('statusId')) &&
           (!query.get('priority') || task.priority === query.get('priority')) &&
+          (!query.get('labelId') ||
+            task.labels.some((label) => label.id === query.get('labelId'))) &&
           (!query.get('assigneeId') ||
             (query.get('assigneeId') === 'none'
               ? task.assignee === null
               : task.assignee?.id === query.get('assigneeId'))),
       )
-      return ok({ items, total: items.length })
+      return ok({ items: items.map(withCurrentLabels), total: items.length })
     },
     [`POST ${url}/tasks`]: (body) => {
       const input = body as { title: string; statusId: string }
@@ -637,5 +690,234 @@ describe('board column settings', () => {
     renderApp(settings)
 
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+  })
+})
+
+describe('labels', () => {
+  const bug: Label = { id: '99999999-9999-4999-8999-0000000000b1', name: 'Bug', color: 'red' }
+  const feature: Label = {
+    id: '99999999-9999-4999-8999-0000000000f1',
+    name: 'Feature',
+    color: 'green',
+  }
+  const labelled = makeTask(1, { title: 'Crash on save', labels: [bug] })
+  const plain = makeTask(2, { title: 'Plain task', statusId: doing.id })
+  const withLabels = (options: ServerOptions = {}) =>
+    server({ tasks: [labelled, plain], labels: [bug, feature], ...options })
+
+  it('shows the labels of a task on its board card', async () => {
+    withLabels()
+    renderApp(boardPath)
+
+    const card = (await screen.findByRole('link', { name: 'Crash on save' })).closest(
+      'li',
+    ) as HTMLElement
+    expect(
+      within(within(card).getByRole('list', { name: 'Labels' })).getByText('Bug'),
+    ).toBeInTheDocument()
+    const plainCard = screen.getByRole('link', { name: 'Plain task' }).closest('li') as HTMLElement
+    expect(within(plainCard).queryByRole('list', { name: 'Labels' })).not.toBeInTheDocument()
+  })
+
+  it('adds and removes labels in the task dialog', async () => {
+    const { bodyOf } = withLabels()
+    const { user } = renderApp(`${boardPath}?task=${labelled.id}`)
+    const dialog = await screen.findByRole('dialog', { name: 'CHL-1: Crash on save' })
+    const taskUrl = `${url}/tasks/${labelled.id}`
+
+    await user.click(await within(dialog).findByRole('button', { name: 'Edit labels' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'Bug' })).toBeChecked()
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Feature' }))
+    await waitFor(() =>
+      expect(bodyOf(`PATCH ${taskUrl}`)).toEqual({ labelIds: [bug.id, feature.id] }),
+    )
+    await waitFor(() =>
+      expect(within(dialog).getByRole('checkbox', { name: 'Feature' })).toBeChecked(),
+    )
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Bug' }))
+    await waitFor(() => expect(bodyOf(`PATCH ${taskUrl}`)).toEqual({ labelIds: [feature.id] }))
+
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }))
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+
+  it('creates a label from the dialog and puts it on the task', async () => {
+    const { bodyOf } = withLabels()
+    const { user } = renderApp(`${boardPath}?task=${plain.id}`)
+    const dialog = await screen.findByRole('dialog', { name: 'CHL-2: Plain task' })
+
+    expect(await within(dialog).findByText('No labels')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Edit labels' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Create label' }))
+    expect(within(dialog).getByLabelText('New label')).toBeInvalid()
+
+    await user.type(within(dialog).getByLabelText('New label'), 'Docs')
+    await user.selectOptions(within(dialog).getByLabelText('Colour of the new label'), 'Blue')
+    await user.click(within(dialog).getByRole('button', { name: 'Create label' }))
+
+    await waitFor(() =>
+      expect(bodyOf(`POST ${url}/labels`)).toEqual({ name: 'Docs', color: 'blue' }),
+    )
+    expect(await within(dialog).findByRole('checkbox', { name: 'Docs' })).toBeChecked()
+    expect(
+      (bodyOf(`PATCH ${url}/tasks/${plain.id}`) as { labelIds: string[] }).labelIds,
+    ).toHaveLength(1)
+  })
+
+  it('reports a label name that is taken', async () => {
+    withLabels()
+    const { user } = renderApp(`${boardPath}?task=${plain.id}`)
+    const dialog = await screen.findByRole('dialog', { name: 'CHL-2: Plain task' })
+
+    await user.click(await within(dialog).findByRole('button', { name: 'Edit labels' }))
+    await user.type(within(dialog).getByLabelText('New label'), 'bug')
+    await user.click(within(dialog).getByRole('button', { name: 'Create label' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('already exists')
+  })
+
+  it('shows labels to viewers without the picker', async () => {
+    withLabels({ role: 'viewer' })
+    renderApp(`${boardPath}?task=${labelled.id}`)
+    const dialog = await screen.findByRole('dialog', { name: 'CHL-1: Crash on save' })
+
+    expect(await within(dialog).findByText('Bug')).toBeInTheDocument()
+    expect(within(dialog).queryByRole('button', { name: 'Edit labels' })).not.toBeInTheDocument()
+  })
+
+  it('shows labels in the list and filters by one', async () => {
+    withLabels()
+    const { user } = renderApp(`${boardPath}/list`)
+    await screen.findByText('2 tasks')
+    const row = screen.getByRole('link', { name: 'Crash on save' }).closest('tr') as HTMLElement
+    expect(within(row).getByText('Bug')).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Label'), 'Bug')
+    expect(await screen.findByText('1 task')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Plain task' })).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Label'), 'Feature')
+    expect(await screen.findByText('No tasks match these filters.')).toBeInTheDocument()
+  })
+
+  it('offers no label filter in a project without labels', async () => {
+    server()
+    renderApp(`${boardPath}/list`)
+
+    await screen.findByText('2 tasks')
+    expect(screen.queryByLabelText('Label')).not.toBeInTheDocument()
+  })
+
+  describe('in project settings', () => {
+    const settings = `${boardPath}/settings`
+    const labelNames = () =>
+      screen.getAllByLabelText(/^Name of label/).map((input) => (input as HTMLInputElement).value)
+
+    it('adds, renames, recolours and deletes labels', async () => {
+      const { bodyOf } = withLabels()
+      const { user } = renderApp(settings)
+      await screen.findByLabelText('Name of label Bug')
+
+      await user.type(screen.getByLabelText('New label'), 'Chore')
+      await user.selectOptions(screen.getByLabelText('Colour'), 'Purple')
+      await user.click(screen.getByRole('button', { name: 'Add label' }))
+      await waitFor(() => expect(labelNames()).toEqual(['Bug', 'Chore', 'Feature']))
+      expect(bodyOf(`POST ${url}/labels`)).toEqual({ name: 'Chore', color: 'purple' })
+
+      const name = screen.getByLabelText('Name of label Bug')
+      await user.clear(name)
+      await user.type(name, 'Defect{Enter}')
+      await waitFor(() =>
+        expect(bodyOf(`PATCH ${url}/labels/${bug.id}`)).toEqual({ name: 'Defect' }),
+      )
+
+      await user.selectOptions(await screen.findByLabelText('Colour of Defect'), 'Orange')
+      await waitFor(() =>
+        expect(bodyOf(`PATCH ${url}/labels/${bug.id}`)).toEqual({ color: 'orange' }),
+      )
+
+      await user.click(screen.getByRole('button', { name: 'Delete label Feature' }))
+      await waitFor(() => expect(labelNames()).not.toContain('Feature'))
+    })
+
+    it('validates the new label and keeps a name when it is cleared', async () => {
+      const { calls } = withLabels()
+      const { user } = renderApp(settings)
+
+      const name = await screen.findByLabelText('Name of label Bug')
+      await user.clear(name)
+      await user.tab()
+      expect(name).toHaveValue('Bug')
+
+      await user.click(screen.getByRole('button', { name: 'Add label' }))
+      expect(screen.getByLabelText('New label')).toBeInvalid()
+      expect(
+        calls.some((call) => call.key.includes('/labels') && !call.key.startsWith('GET')),
+      ).toBe(false)
+    })
+
+    it('says so when there are no labels', async () => {
+      server()
+      renderApp(settings)
+
+      expect(await screen.findByText('No labels yet.')).toBeInTheDocument()
+    })
+  })
+})
+
+describe('editing comments', () => {
+  const taskOne = makeTask(1)
+  const comment = (id: number, author: typeof ann, body: string): Comment => ({
+    id: `66666666-6666-4666-8666-${String(id).padStart(12, '0')}`,
+    taskId: taskOne.id,
+    author: summary(author),
+    body,
+    createdAt: TIMESTAMP,
+    updatedAt: TIMESTAMP,
+  })
+  const path = `${boardPath}?task=${taskOne.id}`
+  const mine = comment(1, ann, 'First draft')
+
+  it('lets the author edit a comment and marks it as edited', async () => {
+    const { bodyOf } = server({ tasks: [taskOne], comments: [mine, comment(2, bob, 'Not mine')] })
+    const { user } = renderApp(path)
+
+    await user.click(await screen.findByRole('button', { name: /^Edit your comment/ }))
+    const box = screen.getByLabelText('Edit comment')
+    expect(box).toHaveValue('First draft')
+    await user.clear(box)
+    await user.type(box, 'Final **text**')
+    await user.click(screen.getByRole('button', { name: 'Save comment' }))
+
+    expect((await screen.findByText('text')).tagName).toBe('STRONG')
+    expect(bodyOf(`PATCH ${url}/tasks/${taskOne.id}/comments/${mine.id}`)).toEqual({
+      body: 'Final **text**',
+    })
+    expect(screen.getByText('(edited)')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Edit comment')).not.toBeInTheDocument()
+  })
+
+  it('offers editing only to the author, even to a project owner', async () => {
+    server({ tasks: [taskOne], comments: [comment(2, bob, 'Not mine')] })
+    renderApp(path)
+
+    expect(await screen.findByText('Not mine')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Edit your comment/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('(edited)')).not.toBeInTheDocument()
+  })
+
+  it('does not save an empty comment and can cancel', async () => {
+    const { calls } = server({ tasks: [taskOne], comments: [mine] })
+    const { user } = renderApp(path)
+
+    await user.click(await screen.findByRole('button', { name: /^Edit your comment/ }))
+    await user.clear(screen.getByLabelText('Edit comment'))
+    await user.click(screen.getByRole('button', { name: 'Save comment' }))
+    expect(screen.getByLabelText('Edit comment')).toBeInvalid()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByText('First draft')).toBeInTheDocument()
+    expect(calls.some((call) => call.key.startsWith('PATCH'))).toBe(false)
   })
 })

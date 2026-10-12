@@ -6,6 +6,8 @@ import type { TaskFilters } from '../../api/tasks'
 import { Alert, selectClass, Spinner } from '../../components/ui'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useTaskLink } from './board/TaskCard'
+import { LabelList } from './labels/LabelChip'
+import { useLabels } from './labels/labelQueries'
 import { useProjectContext } from './ProjectLayout'
 import { useMembers } from './projectQueries'
 import { DueDate, PRIORITY_LABELS, PriorityBadge } from './taskDisplay'
@@ -27,6 +29,7 @@ export function ListPage() {
   const [statusId, setStatusId] = useState('')
   const [assigneeId, setAssigneeId] = useState('')
   const [priority, setPriority] = useState<TaskPriority | ''>('')
+  const [labelId, setLabelId] = useState('')
   const debouncedSearch = useDebounce(search.trim(), SEARCH_DELAY_MS)
 
   const filters: TaskFilters = {
@@ -34,9 +37,11 @@ export function ListPage() {
     ...(statusId ? { statusId } : {}),
     ...(assigneeId ? { assigneeId } : {}),
     ...(priority ? { priority } : {}),
+    ...(labelId ? { labelId } : {}),
   }
   const statuses = useStatuses(project.id)
   const members = useMembers(project.id)
+  const labels = useLabels(project.id)
   const tasks = useTasks(project.id, filters)
   const filtered = Object.keys(filters).length > 0
   const statusById = new Map((statuses.data ?? []).map((status) => [status.id, status]))
@@ -103,6 +108,23 @@ export function ListPage() {
             ))}
           </select>
         </label>
+        {labels.data && labels.data.length > 0 && (
+          <label className="text-sm font-medium">
+            <span className="mb-1 block">Label</span>
+            <select
+              className={selectClass}
+              value={labelId}
+              onChange={(event) => setLabelId(event.target.value)}
+            >
+              <option value="">Any label</option>
+              {labels.data.map((label) => (
+                <option key={label.id} value={label.id}>
+                  {label.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       {tasks.isPending && <Spinner />}
@@ -153,6 +175,11 @@ export function ListPage() {
                       </td>
                       <td className="px-3 py-2">
                         <TaskTitleLink taskId={task.id} title={task.title} />
+                        {task.labels.length > 0 && (
+                          <div className="mt-1">
+                            <LabelList labels={task.labels} />
+                          </div>
+                        )}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">{status?.name}</td>
                       <td className="px-3 py-2">

@@ -16,6 +16,7 @@ import { AppError } from './errors'
 import { registerErrorHandlers } from './http/error-handler'
 import { MCP_PATH, registerAuth, SESSION_COOKIE } from './modules/auth/plugin'
 import { authRoutes } from './modules/auth/routes'
+import { labelRoutes } from './modules/labels/routes'
 import { mcpRoutes } from './modules/mcp/routes'
 import { projectRoutes } from './modules/projects/routes'
 import { taskRoutes } from './modules/tasks/routes'
@@ -105,6 +106,7 @@ export async function buildApp({
     db,
     memberInviteRateLimitMax,
   })
+  await app.register(labelRoutes, { prefix: '/api/projects/:projectId/labels', db })
   await app.register(statusRoutes, { prefix: '/api/projects/:projectId/statuses', db })
   await app.register(taskRoutes, { prefix: '/api/projects/:projectId/tasks', db })
   await app.register(tokenRoutes, { prefix: '/api/tokens', db })

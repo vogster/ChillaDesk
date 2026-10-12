@@ -1,5 +1,6 @@
 import type {
   CreateTaskRequest,
+  Label,
   MoveTaskRequest,
   Task,
   TaskList,
@@ -10,8 +11,9 @@ import type {
 import { and, asc, count, eq, ilike, isNull, lt, max, ne, or, sql, type SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import type { Db, Executor, Tx } from '../../db/client'
-import { projectMembers, projects, statuses, tasks, users } from '../../db/schema'
+import { projectMembers, projects, statuses, taskLabels, tasks, users } from '../../db/schema'
 import { invalid, notFound } from '../../errors'
+import { loadLabelsOfTasks, setTaskLabels } from '../labels/service'
 import { getProject } from '../projects/service'
 
 const assignee = alias(users, 'assignee')
@@ -46,7 +48,7 @@ interface TaskRow {
   reporter: JoinedUser
 }
 
-function toTask({ task, projectKey, assignee, reporter }: TaskRow): Task {
+function toTask({ task, projectKey, assignee, reporter }: TaskRow, labels: Label[]): Task {
   return {
     id: task.id,
     projectId: task.projectId,
@@ -59,6 +61,7 @@ function toTask({ task, projectKey, assignee, reporter }: TaskRow): Task {
     assignee: toSummary(assignee),
     reporter: toSummary(reporter),
     dueDate: task.dueDate,
+    labels,
     position: task.position,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -75,14 +78,28 @@ function selectTasks(db: Executor) {
     .leftJoin(reporter, eq(reporter.id, tasks.reporterId))
 }
 
+/** Turns query rows into tasks, fetching the labels of all of them in one go. */
+async function toTasks(db: Executor, rows: TaskRow[]): Promise<Task[]> {
+  const labels = await loadLabelsOfTasks(
+    db,
+    rows.map((row) => row.task.id),
+  )
+  return rows.map((row) => toTask(row, labels.get(row.task.id) ?? []))
+}
+
+async function toSingleTask(db: Executor, row: TaskRow | undefined): Promise<Task> {
+  const [task] = row ? await toTasks(db, [row]) : []
+  if (!task) throw notFound('Task')
+  return task
+}
+
 const inProject = (projectId: string, taskId: string) =>
   and(eq(tasks.projectId, projectId), eq(tasks.id, taskId))
 
 /** Loads a task without checking access; the caller has already authorised the project. */
 async function loadTask(db: Executor, projectId: string, taskId: string): Promise<Task> {
   const [row] = await selectTasks(db).where(inProject(projectId, taskId))
-  if (!row) throw notFound('Task')
-  return toTask(row)
+  return toSingleTask(db, row)
 }
 
 // `%`, `_` and `\` are LIKE wildcards; a search for "100%" must match that text literally.
@@ -99,6 +116,9 @@ function filters(projectId: string, query: TaskListQuery): SQL | undefined {
       : query.assigneeId
         ? eq(tasks.assigneeId, query.assigneeId)
         : undefined,
+    query.labelId
+      ? sql`exists (select 1 from ${taskLabels} where ${taskLabels.taskId} = ${tasks.id} and ${taskLabels.labelId} = ${query.labelId})`
+      : undefined,
     pattern ? or(ilike(tasks.title, pattern), ilike(tasks.description, pattern)) : undefined,
   )
 }
@@ -120,7 +140,7 @@ export async function listTasks(
       .offset(query.offset),
     db.select({ total: count() }).from(tasks).where(where),
   ])
-  return { items: rows.map(toTask), total: counted?.total ?? 0 }
+  return { items: await toTasks(db, rows), total: counted?.total ?? 0 }
 }
 
 /** Resolves the number in a task key such as `CHL-12`. */
@@ -134,8 +154,7 @@ export async function getTaskByNumber(
   const [row] = await selectTasks(db).where(
     and(eq(tasks.projectId, projectId), eq(tasks.number, number)),
   )
-  if (!row) throw notFound('Task')
-  return toTask(row)
+  return toSingleTask(db, row)
 }
 
 export async function getTask(
@@ -235,6 +254,7 @@ export async function createTask(
       })
       .returning({ id: tasks.id })
     if (!created) throw new Error('Insert returned no task row')
+    await setTaskLabels(tx, projectId, created.id, input.labelIds)
     return loadTask(tx, projectId, created.id)
   })
 }
@@ -244,18 +264,19 @@ export async function updateTask(
   userId: string,
   projectId: string,
   taskId: string,
-  patch: UpdateTaskRequest,
+  { labelIds, ...fields }: UpdateTaskRequest,
 ): Promise<Task> {
   await getProject(db, userId, projectId, 'member')
   return db.transaction(async (tx) => {
-    if (patch.assigneeId !== undefined) await assertAssignable(tx, projectId, patch.assigneeId)
+    if (fields.assigneeId !== undefined) await assertAssignable(tx, projectId, fields.assigneeId)
 
     const [updated] = await tx
       .update(tasks)
-      .set({ ...patch, updatedAt: new Date() })
+      .set({ ...fields, updatedAt: new Date() })
       .where(inProject(projectId, taskId))
       .returning({ id: tasks.id })
     if (!updated) throw notFound('Task')
+    if (labelIds !== undefined) await setTaskLabels(tx, projectId, taskId, labelIds)
     return loadTask(tx, projectId, taskId)
   })
 }

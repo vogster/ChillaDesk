@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { LabelList } from '../labels/LabelChip'
 import { TASK_PARAM } from '../ProjectLayout'
 import { Avatar, DueDate, PriorityBadge } from '../taskDisplay'
 
@@ -31,6 +32,11 @@ export function TaskCardBody({ task, status, action }: TaskCardBodyProps) {
         </Link>
         {action}
       </div>
+      {task.labels.length > 0 && (
+        <div className="mt-2">
+          <LabelList labels={task.labels} />
+        </div>
+      )}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <span className="font-mono text-xs text-slate-500">{task.key}</span>
         <PriorityBadge priority={task.priority} />

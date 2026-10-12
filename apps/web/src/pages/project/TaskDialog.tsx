@@ -10,6 +10,7 @@ import { ApiError, errorMessage } from '../../api/client'
 import { parseForm, type FieldErrors } from '../../components/form'
 import { Modal } from '../../components/Modal'
 import { Alert, Button, selectClass, Spinner } from '../../components/ui'
+import { TaskLabels } from './labels/TaskLabels'
 import type { ProjectContext } from './ProjectLayout'
 import { ProjectMarkdown } from './ProjectMarkdown'
 import { useMembers } from './projectQueries'
@@ -172,6 +173,13 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
           )}
         </div>
       )}
+
+      <TaskLabels
+        projectId={project.id}
+        task={task}
+        canEdit={canEdit}
+        onChange={(labelIds) => updateTask.mutate({ labelIds })}
+      />
 
       <dl className="grid gap-3 border-y border-slate-200 py-4 text-sm sm:grid-cols-2 dark:border-slate-800">
         <Field label="Status" htmlFor={canEdit ? 'task-status' : undefined}>
