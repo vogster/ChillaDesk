@@ -68,7 +68,9 @@ export interface AppConfig {
 }
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
-  const result = envSchema.safeParse(env)
+  // docker compose passes a variable that is not set as an empty string; that means "unset".
+  const given = Object.fromEntries(Object.entries(env).filter(([, value]) => value !== ''))
+  const result = envSchema.safeParse(given)
   if (!result.success) {
     const details = result.error.issues
       .map((issue) => `${issue.path.join('.')}: ${issue.message}`)

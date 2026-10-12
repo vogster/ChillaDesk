@@ -80,6 +80,12 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...mail, PUBLIC_URL: 'wiki.example.com' })).toThrow(/PUBLIC_URL/)
   })
 
+  it('treats an empty variable as not set, the way docker compose passes it', () => {
+    const config = loadConfig({ SMTP_URL: '', MAIL_FROM: '', PUBLIC_URL: '', PORT: '' })
+
+    expect(config).toMatchObject({ mail: null, port: 3000 })
+  })
+
   it('rejects a non-postgres DATABASE_URL', () => {
     expect(() => loadConfig({ DATABASE_URL: 'mysql://localhost/db' })).toThrow(/DATABASE_URL/)
   })
