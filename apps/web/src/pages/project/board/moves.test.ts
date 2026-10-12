@@ -1,6 +1,17 @@
 import type { Status, Task } from '@chillawiki/shared'
 import { describe, expect, it } from 'vitest'
-import { applyMove, columnDropId, describeDragItem, groupByStatus, planMove } from './moves'
+import {
+  applyMove,
+  columnDropId,
+  columnOf,
+  describeDragItem,
+  groupByStatus,
+  isSamePlace,
+  moveToColumn,
+  reorderInColumn,
+  targetOf,
+  toOrder,
+} from './moves'
 
 const TIMESTAMP = '2026-01-01T00:00:00.000Z'
 
@@ -50,42 +61,102 @@ describe('groupByStatus', () => {
   })
 })
 
-describe('planMove', () => {
-  const plan = (activeId: string, overId: string) => planMove(tasks, activeId, overId)
+describe('board order while dragging', () => {
+  const order = toOrder(groupByStatus(statuses, tasks))
 
-  it('returns nothing when a task is dropped on itself or on something unknown', () => {
-    expect(plan('a', 'a')).toBeNull()
-    expect(plan('a', 'missing')).toBeNull()
-    expect(plan('missing', 'a')).toBeNull()
+  it('starts as the ids of each column in board order', () => {
+    expect(order).toEqual({ todo: ['a', 'b', 'c'], doing: ['x', 'y'], done: [] })
   })
 
-  it('appends to a column when dropped on the column itself', () => {
-    expect(plan('a', columnDropId('done'))).toEqual({ statusId: 'done', beforeTaskId: null })
-    expect(plan('a', columnDropId('doing'))).toEqual({ statusId: 'doing', beforeTaskId: null })
+  it('finds the column of a card or of a column drop target', () => {
+    expect(columnOf(order, 'b')).toBe('todo')
+    expect(columnOf(order, columnDropId('done'))).toBe('done')
+    expect(columnOf(order, 'missing')).toBeUndefined()
+    expect(columnOf(order, columnDropId('missing'))).toBeUndefined()
   })
 
-  it('does nothing when the last task is dropped on its own column', () => {
-    expect(plan('c', columnDropId('todo'))).toBeNull()
-  })
-
-  it('places the task before the one it is dropped on in another column', () => {
-    expect(plan('a', 'y')).toEqual({ statusId: 'doing', beforeTaskId: 'y' })
-  })
-
-  it('moves a task up within its column to just before the target', () => {
-    expect(plan('c', 'a')).toEqual({ statusId: 'todo', beforeTaskId: 'a' })
-  })
-
-  it('moves a task down within its column to just after the target', () => {
-    expect(plan('a', 'b')).toEqual({ statusId: 'todo', beforeTaskId: 'c' })
-    expect(plan('a', 'c')).toEqual({ statusId: 'todo', beforeTaskId: null })
-  })
-
-  it('moves past the last card of a two-card column', () => {
-    expect(planMove([task('a', 'todo', 1), task('b', 'todo', 2)], 'a', 'b')).toEqual({
-      statusId: 'todo',
-      beforeTaskId: null,
+  describe('moveToColumn', () => {
+    it('puts the card before the card it hovers, or after it when past its middle', () => {
+      expect(moveToColumn(order, 'a', 'y', false)).toEqual({
+        todo: ['b', 'c'],
+        doing: ['x', 'a', 'y'],
+        done: [],
+      })
+      expect(moveToColumn(order, 'a', 'y', true).doing).toEqual(['x', 'y', 'a'])
     })
+
+    it('appends the card when it hovers the column itself', () => {
+      expect(moveToColumn(order, 'a', columnDropId('done'), false)).toEqual({
+        todo: ['b', 'c'],
+        doing: ['x', 'y'],
+        done: ['a'],
+      })
+      expect(moveToColumn(order, 'a', columnDropId('doing'), false).doing).toEqual(['x', 'y', 'a'])
+    })
+
+    it('returns the same object when the card stays in its column or a side is unknown', () => {
+      expect(moveToColumn(order, 'a', 'c', true)).toBe(order)
+      expect(moveToColumn(order, 'a', columnDropId('todo'), false)).toBe(order)
+      expect(moveToColumn(order, 'a', 'missing', false)).toBe(order)
+      expect(moveToColumn(order, 'missing', 'x', false)).toBe(order)
+    })
+
+    it('does not change the order it was given', () => {
+      const before = structuredClone(order)
+
+      moveToColumn(order, 'a', 'y', false)
+
+      expect(order).toEqual(before)
+    })
+  })
+
+  describe('reorderInColumn', () => {
+    it('moves the card to the place of the card it was dropped on', () => {
+      expect(reorderInColumn(order, 'a', 'c').todo).toEqual(['b', 'c', 'a'])
+      expect(reorderInColumn(order, 'c', 'a').todo).toEqual(['c', 'a', 'b'])
+      expect(reorderInColumn(order, 'a', 'b').todo).toEqual(['b', 'a', 'c'])
+    })
+
+    it('returns the same object when nothing moves', () => {
+      expect(reorderInColumn(order, 'a', 'a')).toBe(order)
+      expect(reorderInColumn(order, 'a', columnDropId('todo'))).toBe(order)
+      expect(reorderInColumn(order, 'a', 'x')).toBe(order)
+    })
+  })
+
+  describe('targetOf', () => {
+    it('describes where the card ended up as a move request', () => {
+      expect(targetOf(order, 'a')).toEqual({ statusId: 'todo', beforeTaskId: 'b' })
+      expect(targetOf(order, 'c')).toEqual({ statusId: 'todo', beforeTaskId: null })
+      expect(targetOf(moveToColumn(order, 'a', 'y', false), 'a')).toEqual({
+        statusId: 'doing',
+        beforeTaskId: 'y',
+      })
+      expect(targetOf(order, 'missing')).toBeNull()
+    })
+  })
+
+  describe('isSamePlace', () => {
+    it('recognises a card dropped back where it was', () => {
+      expect(isSamePlace(tasks, 'a', { statusId: 'todo', beforeTaskId: 'b' })).toBe(true)
+      expect(isSamePlace(tasks, 'c', { statusId: 'todo', beforeTaskId: null })).toBe(true)
+    })
+
+    it('sees a different neighbour or column as a move', () => {
+      expect(isSamePlace(tasks, 'a', { statusId: 'todo', beforeTaskId: 'c' })).toBe(false)
+      expect(isSamePlace(tasks, 'a', { statusId: 'todo', beforeTaskId: null })).toBe(false)
+      expect(isSamePlace(tasks, 'c', { statusId: 'doing', beforeTaskId: null })).toBe(false)
+      expect(isSamePlace(tasks, 'missing', { statusId: 'todo', beforeTaskId: null })).toBe(false)
+    })
+  })
+
+  it('follows a drag across columns and then down past a card', () => {
+    // "a" hovers "x" and lands before it, then is dropped on "y".
+    const hovering = moveToColumn(order, 'a', 'x', false)
+    const dropped = reorderInColumn(hovering, 'a', 'y')
+
+    expect(dropped.doing).toEqual(['x', 'y', 'a'])
+    expect(targetOf(dropped, 'a')).toEqual({ statusId: 'doing', beforeTaskId: null })
   })
 })
 

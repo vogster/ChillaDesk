@@ -1,3 +1,4 @@
+import type { Task } from '@chillawiki/shared'
 import {
   closestCorners,
   DndContext,
@@ -9,6 +10,7 @@ import {
   useSensors,
   type Announcements,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
@@ -16,10 +18,35 @@ import { useEffect, useMemo, useState } from 'react'
 import { errorMessage } from '../../api/client'
 import { Alert, Spinner } from '../../components/ui'
 import { BoardColumn } from './board/BoardColumn'
-import { describeDragItem, groupByStatus, planMove } from './board/moves'
+import {
+  columnOf,
+  describeDragItem,
+  groupByStatus,
+  isSamePlace,
+  moveToColumn,
+  reorderInColumn,
+  targetOf,
+  toOrder,
+  type BoardOrder,
+} from './board/moves'
 import { TaskCardPreview } from './board/TaskCard'
 import { useProjectContext } from './ProjectLayout'
 import { useMoveTask, useStatuses, useTasks } from './taskQueries'
+
+/**
+ * The card order shown instead of the loaded one: while a card is dragged, and after the
+ * drop until the saved order arrives (`basedOn` is the task list it was made from).
+ */
+interface LocalOrder {
+  order: BoardOrder
+  basedOn: Task[]
+}
+
+/** Whether the dragged card has passed the middle of the card it is over. */
+function isPastMiddle({ active, over }: DragOverEvent): boolean {
+  const dragged = active.rect.current.translated
+  return Boolean(over && dragged && dragged.top > over.rect.top + over.rect.height / 2)
+}
 
 export function BoardPage() {
   const { project, canEdit } = useProjectContext()
@@ -27,6 +54,7 @@ export function BoardPage() {
   const tasks = useTasks(project.id)
   const moveTask = useMoveTask(project.id)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [local, setLocal] = useState<LocalOrder | null>(null)
 
   const sensors = useSensors(
     // A small threshold keeps a plain click on a card from starting a drag.
@@ -37,17 +65,32 @@ export function BoardPage() {
   )
 
   const items = tasks.data?.items
-  const columns = useMemo(
+  const loaded = useMemo(
     () => groupByStatus(statuses.data ?? [], items ?? []),
     [statuses.data, items],
   )
+
+  // The local order wins during a drag, and afterwards for as long as the task list is still
+  // the one it was made from. Once the list changes (the move was applied, or refused and
+  // rolled back) the loaded order takes over again, with no frame in between.
+  const localOrder = local && (draggingId !== null || local.basedOn === items) ? local.order : null
+  const columns = useMemo(() => {
+    if (!localOrder) return loaded
+    const byId = new Map((items ?? []).map((task) => [task.id, task]))
+    return new Map(
+      Object.entries(localOrder).map(([statusId, ids]) => [
+        statusId,
+        ids.flatMap((id) => byId.get(id) ?? []),
+      ]),
+    )
+  }, [localOrder, loaded, items])
 
   // A task in a column this page has not heard of means someone just added the column.
   const refetchStatuses = statuses.refetch
   const hasUnknownStatus =
     statuses.isSuccess &&
     !statuses.isFetching &&
-    (items ?? []).some((task) => !columns.has(task.statusId))
+    (items ?? []).some((task) => !loaded.has(task.statusId))
   useEffect(() => {
     if (hasUnknownStatus) void refetchStatuses()
   }, [hasUnknownStatus, refetchStatuses])
@@ -56,12 +99,13 @@ export function BoardPage() {
   if (statuses.isError) return <Alert>{errorMessage(statuses.error)}</Alert>
   if (tasks.isError) return <Alert>{errorMessage(tasks.error)}</Alert>
 
-  const dragging = tasks.data.items.find((task) => task.id === draggingId)
-  const statusOf = (statusId: string) => statuses.data.find((status) => status.id === statusId)
+  const taskList = tasks.data.items
+  const dragging = taskList.find((task) => task.id === draggingId)
+  const statusOf = (statusId: string | undefined) =>
+    statuses.data.find((status) => status.id === statusId)
 
   // dnd-kit's default announcements read out raw ids; these use task and column names.
-  const name = (id: string | number) =>
-    describeDragItem(statuses.data, tasks.data.items, String(id))
+  const name = (id: string | number) => describeDragItem(statuses.data, taskList, String(id))
   const announcements: Announcements = {
     onDragStart: ({ active }) => `Picked up ${name(active.id)}.`,
     onDragOver: ({ active, over }) => {
@@ -78,21 +122,59 @@ export function BoardPage() {
     onDragCancel: ({ active }) => `Moving ${name(active.id)} was cancelled.`,
   }
 
-  const handleDragStart = (event: DragStartEvent) => setDraggingId(String(event.active.id))
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragStart = (event: DragStartEvent) => {
+    setDraggingId(String(event.active.id))
+    setLocal({ order: toOrder(loaded), basedOn: taskList })
+  }
+
+  // As soon as the card is over another column it moves there, so that column makes room
+  // for it and the drop lands where the card already is.
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event
+    if (!over) return
+    setLocal((current) => {
+      if (!current) return current
+      const order = moveToColumn(
+        current.order,
+        String(active.id),
+        String(over.id),
+        isPastMiddle(event),
+      )
+      return order === current.order ? current : { ...current, order }
+    })
+  }
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    const taskId = String(active.id)
     setDraggingId(null)
-    if (!event.over) return
-    const target = planMove(tasks.data.items, String(event.active.id), String(event.over.id))
-    if (target) moveTask.mutate({ taskId: String(event.active.id), target })
+    if (!local || !over) {
+      setLocal(null)
+      return
+    }
+
+    const order = reorderInColumn(local.order, taskId, String(over.id))
+    const target = targetOf(order, taskId)
+    if (!target || isSamePlace(taskList, taskId, target)) {
+      setLocal(null)
+      return
+    }
+    // Kept until the task list changes, so the card never shows in its old place.
+    setLocal({ order, basedOn: taskList })
+    moveTask.move(taskId, target)
+  }
+
+  const handleDragCancel = () => {
+    setDraggingId(null)
+    setLocal(null)
   }
 
   return (
     <div className="space-y-3">
       {moveTask.isError && <Alert>{errorMessage(moveTask.error)}</Alert>}
-      {tasks.data.total > tasks.data.items.length && (
+      {tasks.data.total > taskList.length && (
         <p className="text-sm text-slate-500">
-          Showing the first {tasks.data.items.length} of {tasks.data.total} tasks. Use the list to
-          find the rest.
+          Showing the first {taskList.length} of {tasks.data.total} tasks. Use the list to find the
+          rest.
         </p>
       )}
       <DndContext
@@ -100,8 +182,9 @@ export function BoardPage() {
         accessibility={{ announcements }}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
-        onDragCancel={() => setDraggingId(null)}
+        onDragCancel={handleDragCancel}
       >
         <div className="flex items-start gap-4 overflow-x-auto pb-4">
           {statuses.data.map((status) => (
@@ -115,7 +198,13 @@ export function BoardPage() {
           ))}
         </div>
         <DragOverlay>
-          {dragging && <TaskCardPreview task={dragging} status={statusOf(dragging.statusId)} />}
+          {dragging && (
+            <TaskCardPreview
+              task={dragging}
+              // The column the card is over, so "overdue" matches where it would land.
+              status={statusOf(localOrder ? columnOf(localOrder, dragging.id) : dragging.statusId)}
+            />
+          )}
         </DragOverlay>
       </DndContext>
     </div>

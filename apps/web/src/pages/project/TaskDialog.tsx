@@ -182,10 +182,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
               value={task.statusId}
               disabled={moveTask.isPending}
               onChange={(event) =>
-                moveTask.mutate({
-                  taskId: task.id,
-                  target: { statusId: event.target.value, beforeTaskId: null },
-                })
+                moveTask.move(task.id, { statusId: event.target.value, beforeTaskId: null })
               }
             >
               {statuses.data?.map((status) => (

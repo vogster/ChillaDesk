@@ -22,29 +22,79 @@ function column(tasks: Task[], statusId: string): Task[] {
 }
 
 /**
- * Translates a drag-and-drop gesture into a move request.
- * `overId` is either a task id or a column drop id. Returns null when nothing would change.
+ * The ids of the cards in each column, in the order shown. While a card is dragged the board
+ * keeps its own copy of this, so the card can sit in the column under the pointer before
+ * anything is saved.
  */
-export function planMove(tasks: Task[], activeId: string, overId: string): MoveTaskRequest | null {
-  const active = tasks.find((task) => task.id === activeId)
-  if (!active || activeId === overId) return null
+export type BoardOrder = Readonly<Record<string, readonly string[]>>
 
-  if (overId.startsWith(COLUMN_PREFIX)) {
-    const statusId = overId.slice(COLUMN_PREFIX.length)
-    const last = column(tasks, statusId).at(-1)
-    return last?.id === activeId ? null : { statusId, beforeTaskId: null }
+export function toOrder(columns: Map<string, Task[]>): BoardOrder {
+  return Object.fromEntries(
+    [...columns].map(([statusId, items]) => [statusId, items.map((item) => item.id)]),
+  )
+}
+
+/** The column a drag id belongs to: a card's column, or the column a drop target stands for. */
+export function columnOf(order: BoardOrder, id: string): string | undefined {
+  if (id.startsWith(COLUMN_PREFIX)) {
+    const statusId = id.slice(COLUMN_PREFIX.length)
+    return statusId in order ? statusId : undefined
   }
+  return Object.keys(order).find((statusId) => order[statusId]?.includes(id))
+}
 
-  const over = tasks.find((task) => task.id === overId)
-  if (!over) return null
+/**
+ * Moves the dragged card into the column it is hovering, if that is not its own: next to the
+ * hovered card (after it when `placeAfter`), or at the end when the column itself is hovered.
+ * Returns the same object when nothing changes.
+ */
+export function moveToColumn(
+  order: BoardOrder,
+  activeId: string,
+  overId: string,
+  placeAfter: boolean,
+): BoardOrder {
+  const from = columnOf(order, activeId)
+  const to = columnOf(order, overId)
+  if (!from || !to || from === to) return order
 
-  const target = column(tasks, over.statusId)
-  const movingDown = active.statusId === over.statusId && byPosition(active, over) < 0
-  if (!movingDown) return { statusId: over.statusId, beforeTaskId: over.id }
+  const target = order[to] ?? []
+  const overIndex = target.indexOf(overId)
+  const index = overIndex < 0 ? target.length : overIndex + (placeAfter ? 1 : 0)
+  return {
+    ...order,
+    [from]: (order[from] ?? []).filter((id) => id !== activeId),
+    [to]: [...target.slice(0, index), activeId, ...target.slice(index)],
+  }
+}
 
-  // Dragging down past a card means landing after it, i.e. before the card that follows.
-  const following = target[target.indexOf(over) + 1]
-  return { statusId: over.statusId, beforeTaskId: following?.id ?? null }
+/** Within one column, moves the dragged card to the place of the card it was dropped on. */
+export function reorderInColumn(order: BoardOrder, activeId: string, overId: string): BoardOrder {
+  const statusId = columnOf(order, activeId)
+  if (!statusId || activeId === overId || columnOf(order, overId) !== statusId) return order
+
+  const ids = order[statusId] ?? []
+  const to = ids.indexOf(overId)
+  if (to < 0) return order
+  const without = ids.filter((id) => id !== activeId)
+  return { ...order, [statusId]: [...without.slice(0, to), activeId, ...without.slice(to)] }
+}
+
+/** Where a card sits in the order, as the request that would put it there. */
+export function targetOf(order: BoardOrder, taskId: string): MoveTaskRequest | null {
+  const statusId = columnOf(order, taskId)
+  if (!statusId) return null
+  const ids = order[statusId] ?? []
+  return { statusId, beforeTaskId: ids[ids.indexOf(taskId) + 1] ?? null }
+}
+
+/** Whether the task is already where the request would put it, so there is nothing to save. */
+export function isSamePlace(tasks: Task[], taskId: string, target: MoveTaskRequest): boolean {
+  const task = tasks.find((item) => item.id === taskId)
+  if (!task || task.statusId !== target.statusId) return false
+  const siblings = column(tasks, task.statusId)
+  const following = siblings[siblings.indexOf(task) + 1]
+  return (following?.id ?? null) === target.beforeTaskId
 }
 
 /**

@@ -89,6 +89,13 @@ export function useUpdateTask(projectId: string, taskId: string) {
   })
 }
 
+interface MoveVariables {
+  taskId: string
+  target: MoveTaskRequest
+  /** The board as it was before the move, to go back to if the server refuses it. */
+  previous: TaskList | undefined
+}
+
 /** Moves a task, updating the unfiltered list (the board) immediately and rolling back on failure. */
 export function useMoveTask(projectId: string) {
   const queryClient = useQueryClient()
@@ -98,34 +105,42 @@ export function useMoveTask(projectId: string) {
   // True while this is the only move in flight; the count includes the move asking.
   const isLastMove = () => queryClient.isMutating({ mutationKey }) === 1
 
-  return useMutation({
+  const mutation = useMutation({
     mutationKey,
-    mutationFn: ({ taskId, target }: { taskId: string; target: MoveTaskRequest }) =>
-      moveTask(projectId, taskId, target),
-    onMutate: async ({ taskId, target }) => {
-      await queryClient.cancelQueries({ queryKey: boardKey })
-      const previous = queryClient.getQueryData<TaskList>(boardKey)
-      if (previous) {
-        queryClient.setQueryData<TaskList>(boardKey, {
-          ...previous,
-          items: applyMove(previous.items, taskId, target),
-        })
-      }
-      // The open task dialog shows the new column at once as well.
-      queryClient.setQueryData<Task>(taskKeys.detail(projectId, taskId), (task) =>
-        task ? { ...task, statusId: target.statusId } : task,
-      )
-      return { previous }
-    },
-    onError: (_error, _variables, context) => {
+    mutationFn: ({ taskId, target }: MoveVariables) => moveTask(projectId, taskId, target),
+    onError: (_error, { previous }) => {
       // With other moves still pending the snapshot is out of date and would undo them;
       // the refetch after the last one settles puts everything right instead.
-      if (context?.previous && isLastMove()) queryClient.setQueryData(boardKey, context.previous)
+      if (previous && isLastMove()) queryClient.setQueryData(boardKey, previous)
     },
     onSuccess: (task) => queryClient.setQueryData(taskKeys.detail(projectId, task.id), task),
     // Refetching between two moves could show the server's state from before the second.
     onSettled: () => (isLastMove() ? refresh() : undefined),
   })
+
+  /**
+   * Starts the move. The cache is updated here, in the caller's own event handler, rather
+   * than in `onMutate`: that runs a moment later, and a dropped card would be drawn in its
+   * old place for a frame first.
+   */
+  const move = (taskId: string, target: MoveTaskRequest) => {
+    // A fetch already under way would overwrite the update with the old order.
+    void queryClient.cancelQueries({ queryKey: boardKey })
+    const previous = queryClient.getQueryData<TaskList>(boardKey)
+    if (previous) {
+      queryClient.setQueryData<TaskList>(boardKey, {
+        ...previous,
+        items: applyMove(previous.items, taskId, target),
+      })
+    }
+    // The open task dialog shows the new column at once as well.
+    queryClient.setQueryData<Task>(taskKeys.detail(projectId, taskId), (task) =>
+      task ? { ...task, statusId: target.statusId } : task,
+    )
+    mutation.mutate({ taskId, target, previous })
+  }
+
+  return { ...mutation, move }
 }
 
 export function useDeleteTask(projectId: string, taskId: string) {
