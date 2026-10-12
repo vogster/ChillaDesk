@@ -12,6 +12,7 @@ describe('loadConfig', () => {
       trustProxy: false,
       registrationEnabled: true,
       cookieSecure: 'auto',
+      rateLimitMax: 600,
     })
   })
 
@@ -25,6 +26,7 @@ describe('loadConfig', () => {
       TRUST_PROXY: 'true',
       REGISTRATION_ENABLED: 'false',
       COOKIE_SECURE: 'true',
+      RATE_LIMIT_MAX: '2000',
     })
 
     expect(config).toEqual({
@@ -36,6 +38,7 @@ describe('loadConfig', () => {
       trustProxy: true,
       registrationEnabled: false,
       cookieSecure: true,
+      rateLimitMax: 2000,
     })
   })
 
@@ -51,6 +54,10 @@ describe('loadConfig', () => {
 
   it('lets COOKIE_SECURE be switched off explicitly', () => {
     expect(loadConfig({ COOKIE_SECURE: 'false' }).cookieSecure).toBe(false)
+  })
+
+  it('rejects a rate limit that would block every request', () => {
+    expect(() => loadConfig({ RATE_LIMIT_MAX: '0' })).toThrow(/RATE_LIMIT_MAX/)
   })
 
   it('rejects a non-postgres DATABASE_URL', () => {

@@ -46,7 +46,7 @@ export async function buildApp({
   trustProxy = false,
   registrationEnabled = true,
   cookieSecure = 'auto',
-  rateLimitMax = 300,
+  rateLimitMax = 600,
   authRateLimitMax = 10,
   accountRateLimitMax = 10,
   memberInviteRateLimitMax = 20,

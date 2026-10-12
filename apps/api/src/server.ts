@@ -16,6 +16,7 @@ const app = await buildApp({
   trustProxy: config.trustProxy,
   registrationEnabled: config.registrationEnabled,
   cookieSecure: config.cookieSecure,
+  rateLimitMax: config.rateLimitMax,
 })
 late.log = app.log
 

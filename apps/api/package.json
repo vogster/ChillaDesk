@@ -1,6 +1,6 @@
 {
   "name": "@chillawiki/api",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,9 @@
     "build": "tsdown",
     "start": "node dist/server.mjs",
     "test": "vitest run --coverage",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "stack-check": "node scripts/stack-check.mjs",
+    "mcp-smoke": "node scripts/mcp-smoke.mjs"
   },
   "dependencies": {
     "@chillawiki/shared": "workspace:*",

@@ -22,6 +22,7 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((value) => value === 'true'),
+  RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(600),
 })
 
 export interface AppConfig {
@@ -40,6 +41,11 @@ export interface AppConfig {
   cookieSecure: boolean | 'auto'
   /** Turn off once your team has signed up to stop strangers from creating accounts. */
   registrationEnabled: boolean
+  /**
+   * Requests per minute allowed from one client address across the whole API. Everyone
+   * behind the same NAT shares it, so a team in one office needs more than a single user.
+   */
+  rateLimitMax: number
 }
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -61,5 +67,6 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     trustProxy: parsed.TRUST_PROXY,
     registrationEnabled: parsed.REGISTRATION_ENABLED,
     cookieSecure: parsed.COOKIE_SECURE,
+    rateLimitMax: parsed.RATE_LIMIT_MAX,
   }
 }

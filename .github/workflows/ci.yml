@@ -24,21 +24,27 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-  docker:
+  # Builds the images, starts the whole stack on a real PostgreSQL and drives it end to end,
+  # including the concurrent operations the unit tests cannot cover.
+  stack:
     runs-on: ubuntu-latest
     needs: check
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - name: Build API image
-        uses: docker/build-push-action@v6
+      - uses: actions/setup-node@v4
         with:
-          context: .
-          target: api
-          push: false
-      - name: Build web image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: web
-          push: false
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Start the stack
+        run: |
+          echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)" > .env
+          docker compose up -d --build --wait
+      - name: End-to-end check
+        run: pnpm --filter @chillawiki/api stack-check http://localhost:8080
+      - name: Logs
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop the stack
+        if: always()
+        run: docker compose down --volumes

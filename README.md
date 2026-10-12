@@ -8,8 +8,8 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **REST API** with OpenAPI docs — ready for a mobile client
 - **MCP server** — let AI agents read and update your projects
 
-> Status: early development. Everything listed above works; a packaged release is next
-> (see the roadmap).
+> Status: 0.1.0, the first usable release. Everything listed above works. Expect rough
+> edges, and back up your data before upgrading.
 
 ## Quick start (Docker)
 
@@ -18,10 +18,32 @@ cp .env.example .env   # then set POSTGRES_PASSWORD
 docker compose up -d --build
 ```
 
-Open http://localhost:8080. API docs live at http://localhost:8080/api/docs.
+Open http://localhost:8080 and sign up; whoever creates a project owns it. API docs live at
+http://localhost:8080/api/docs.
 
-The compose file serves plain HTTP. For anything beyond your own machine, put an HTTPS
-reverse proxy in front of it and set `COOKIE_SECURE=true`.
+This starts three containers: PostgreSQL (data in the `db-data` volume), the API, and Caddy
+serving the web app and proxying `/api`. Database migrations run when the API starts.
+
+### Running it for a team
+
+- **HTTPS.** The compose file serves plain HTTP on one port. Put your own HTTPS reverse proxy
+  (Caddy, nginx, Traefik, a cloud load balancer) in front of it and set `COOKIE_SECURE=true`,
+  so the session cookie never travels unencrypted.
+- **Sign-ups.** Anyone who can reach the site can register. Once your team is in, set
+  `REGISTRATION_ENABLED=false` and restart.
+- **Backups.** Everything is in PostgreSQL:
+
+  ```bash
+  docker compose exec -T db pg_dump -U chillawiki chillawiki > chillawiki-backup.sql
+  ```
+
+  To restore into an empty database:
+  `docker compose exec -T db psql -U chillawiki chillawiki < chillawiki-backup.sql`.
+
+- **Upgrading.** Back up, pull the new version, then `docker compose up -d --build`.
+- **Checking an installation.** `pnpm --filter @chillawiki/api stack-check http://localhost:8080`
+  drives a running instance end to end (it creates and removes throwaway data, so use it on
+  a test instance).
 
 ### Configuration
 
@@ -31,6 +53,7 @@ reverse proxy in front of it and set `COOKIE_SECURE=true`.
 | `CHILLAWIKI_PORT`      | `8080`          | Host port of the web UI                                           |
 | `COOKIE_SECURE`        | `auto`          | `true` behind an HTTPS proxy, so the session cookie is HTTPS-only |
 | `REGISTRATION_ENABLED` | `true`          | Set to `false` once your team has signed up                       |
+| `RATE_LIMIT_MAX`       | `600`           | Requests per minute from one address (a shared NAT counts as one) |
 | `DATABASE_URL`         | embedded PGlite | PostgreSQL connection string (set by compose)                     |
 | `TRUST_PROXY`          | `false`         | Number of reverse proxies in front of the API (compose: `1`)      |
 | `LOG_LEVEL`            | `info`          | `fatal` … `trace`, or `silent`                                    |

@@ -26,6 +26,7 @@ services:
       TRUST_PROXY: '1'
       COOKIE_SECURE: ${COOKIE_SECURE:-auto}
       REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-600}
     depends_on:
       db:
         condition: service_healthy
