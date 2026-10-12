@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import {
   type AnyPgColumn,
+  boolean,
   date,
   doublePrecision,
   index,
@@ -241,5 +242,46 @@ export const taskLabels = pgTable(
   (table) => [
     primaryKey({ columns: [table.taskId, table.labelId] }),
     index('task_labels_label_id_idx').on(table.labelId),
+  ],
+)
+
+export const notificationType = pgEnum('notification_type', [
+  'task_assigned',
+  'task_commented',
+  'mentioned',
+])
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** The recipient. */
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: notificationType('type').notNull(),
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'cascade' }),
+    wikiPageId: uuid('wiki_page_id').references(() => wikiPages.id, { onDelete: 'cascade' }),
+    excerpt: text('excerpt').notNull().default(''),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    /** Set once the email went out, or once it was decided not to send one. */
+    emailedAt: timestamp('emailed_at', { withTimezone: true }),
+    /** Whether an email really went out; counted to cap how many one person gets. */
+    emailSent: boolean('email_sent').notNull().default(false),
+    emailAttempts: integer('email_attempts').notNull().default(0),
+    /** While sending: nobody else tries before this. After a failure: when to retry. */
+    emailNextAttemptAt: timestamp('email_next_attempt_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index('notifications_user_idx').on(table.userId, table.createdAt),
+    // The mail worker looks for rows that still need an email.
+    index('notifications_outbox_idx')
+      .on(table.createdAt)
+      .where(sql`${table.emailedAt} is null`),
   ],
 )

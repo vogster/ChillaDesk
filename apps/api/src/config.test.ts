@@ -13,6 +13,7 @@ describe('loadConfig', () => {
       registrationEnabled: true,
       cookieSecure: 'auto',
       rateLimitMax: 600,
+      mail: null,
     })
   })
 
@@ -39,6 +40,7 @@ describe('loadConfig', () => {
       registrationEnabled: false,
       cookieSecure: true,
       rateLimitMax: 2000,
+      mail: null,
     })
   })
 
@@ -58,6 +60,24 @@ describe('loadConfig', () => {
 
   it('rejects a rate limit that would block every request', () => {
     expect(() => loadConfig({ RATE_LIMIT_MAX: '0' })).toThrow(/RATE_LIMIT_MAX/)
+  })
+
+  it('turns notification emails on only when SMTP is fully configured', () => {
+    const mail = {
+      SMTP_URL: 'smtp://user:secret@mail.example.com:587',
+      MAIL_FROM: 'ChillaWiki <wiki@example.com>',
+      PUBLIC_URL: 'https://wiki.example.com',
+    }
+
+    expect(loadConfig({}).mail).toBeNull()
+    expect(loadConfig(mail).mail).toEqual({
+      smtpUrl: mail.SMTP_URL,
+      from: mail.MAIL_FROM,
+      publicUrl: mail.PUBLIC_URL,
+    })
+    expect(() => loadConfig({ SMTP_URL: mail.SMTP_URL })).toThrow(/MAIL_FROM and PUBLIC_URL/)
+    expect(() => loadConfig({ ...mail, SMTP_URL: 'mail.example.com' })).toThrow(/SMTP_URL/)
+    expect(() => loadConfig({ ...mail, PUBLIC_URL: 'wiki.example.com' })).toThrow(/PUBLIC_URL/)
   })
 
   it('rejects a non-postgres DATABASE_URL', () => {

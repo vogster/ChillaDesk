@@ -16,6 +16,7 @@ import { containsPattern } from '../../db/like'
 import { projectMembers, projects, statuses, taskLabels, tasks, users } from '../../db/schema'
 import { invalid, notFound } from '../../errors'
 import { loadLabelsOfTasks, setTaskLabels } from '../labels/service'
+import { notifyAssignment, notifyMentions } from '../notifications/service'
 import { getProject } from '../projects/service'
 import { toStatus } from './statuses.service'
 
@@ -296,6 +297,17 @@ export async function createTask(
       .returning({ id: tasks.id })
     if (!created) throw new Error('Insert returned no task row')
     await setTaskLabels(tx, projectId, created.id, input.labelIds)
+
+    const subject = { projectId, actorId: userId, taskId: created.id }
+    await notifyAssignment(tx, subject, input.assigneeId, input.title)
+    // The assignee has just been told about this task; a mention in it adds nothing.
+    await notifyMentions(
+      tx,
+      subject,
+      input.description,
+      '',
+      input.assigneeId ? [input.assigneeId] : [],
+    )
     return loadTask(tx, projectId, created.id)
   })
 }
@@ -311,13 +323,36 @@ export async function updateTask(
   return db.transaction(async (tx) => {
     if (fields.assigneeId !== undefined) await assertAssignable(tx, projectId, fields.assigneeId)
 
+    // The previous values decide who hears about the change: only a new assignee and only
+    // people not already mentioned in the description.
+    const [before] = await tx
+      .select({ assigneeId: tasks.assigneeId, description: tasks.description })
+      .from(tasks)
+      .where(inProject(projectId, taskId))
+      .for('update')
+    if (!before) throw notFound('Task')
+
     const [updated] = await tx
       .update(tasks)
       .set({ ...fields, updatedAt: new Date() })
       .where(inProject(projectId, taskId))
-      .returning({ id: tasks.id })
+      .returning({ title: tasks.title })
     if (!updated) throw notFound('Task')
     if (labelIds !== undefined) await setTaskLabels(tx, projectId, taskId, labelIds)
+
+    const subject = { projectId, actorId: userId, taskId }
+    const newAssignee =
+      fields.assigneeId && fields.assigneeId !== before.assigneeId ? fields.assigneeId : null
+    await notifyAssignment(tx, subject, newAssignee, updated.title)
+    if (fields.description !== undefined) {
+      await notifyMentions(
+        tx,
+        subject,
+        fields.description,
+        before.description,
+        newAssignee ? [newAssignee] : [],
+      )
+    }
     return loadTask(tx, projectId, taskId)
   })
 }

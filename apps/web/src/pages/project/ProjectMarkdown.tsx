@@ -1,6 +1,7 @@
 import type { Project } from '@chillawiki/shared'
 import { useMemo } from 'react'
 import { Markdown } from '../../components/Markdown'
+import { useMembers } from './projectQueries'
 import { MISSING_PAGE_ATTRIBUTE, remarkProjectLinks } from './wiki/projectLinks'
 import { useWikiPages } from './wiki/wikiQueries'
 
@@ -13,11 +14,12 @@ interface ProjectMarkdownProps {
 
 /**
  * Markdown written inside a project: `[[Page title]]` links to the wiki page of that name
- * and task keys such as `CHL-12` link to the task.
+ * task keys such as `CHL-12` link to the task, and `@email` of a member reads as `@Name`.
  */
 export function ProjectMarkdown({ project, children, linksLeaveInNewTab }: ProjectMarkdownProps) {
   // The page list is only needed to resolve titles, so plain text does not fetch it.
   const pages = useWikiPages(project.id, '', { enabled: children.includes('[[') })
+  const members = useMembers(project.id, { enabled: children.includes('@') })
   const plugins = useMemo(
     () => [
       remarkProjectLinks({
@@ -26,9 +28,10 @@ export function ProjectMarkdown({ project, children, linksLeaveInNewTab }: Proje
         pages: pages.data,
         // Viewers cannot create pages, so a title without a page stays plain text for them.
         linkMissingPages: project.role !== 'viewer',
+        members: members.data,
       }),
     ],
-    [project.id, project.key, project.role, pages.data],
+    [project.id, project.key, project.role, pages.data, members.data],
   )
   return (
     <Markdown

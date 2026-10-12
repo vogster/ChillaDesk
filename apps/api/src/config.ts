@@ -23,7 +23,24 @@ const envSchema = z.object({
     .default('true')
     .transform((value) => value === 'true'),
   RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(600),
+  SMTP_URL: z
+    .string()
+    .regex(/^smtps?:\/\//, 'SMTP_URL must be an smtp:// or smtps:// URL')
+    .optional(),
+  MAIL_FROM: z.string().min(3).optional(),
+  PUBLIC_URL: z
+    .string()
+    .regex(/^https?:\/\//, 'PUBLIC_URL must be an http:// or https:// URL')
+    .optional(),
 })
+
+export interface MailConfig {
+  smtpUrl: string
+  /** The sender, e.g. `ChillaWiki <wiki@example.com>`. */
+  from: string
+  /** Where people open ChillaWiki; emails link there. */
+  publicUrl: string
+}
 
 export interface AppConfig {
   host: string
@@ -46,6 +63,8 @@ export interface AppConfig {
    * behind the same NAT shares it, so a team in one office needs more than a single user.
    */
   rateLimitMax: number
+  /** Null until SMTP is configured: notifications then stay in the app only. */
+  mail: MailConfig | null
 }
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -58,6 +77,10 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   }
 
   const parsed = result.data
+  const { SMTP_URL: smtpUrl, MAIL_FROM: from, PUBLIC_URL: publicUrl } = parsed
+  if (smtpUrl && !(from && publicUrl)) {
+    throw new Error('Invalid configuration: SMTP_URL needs MAIL_FROM and PUBLIC_URL as well')
+  }
   return {
     host: parsed.HOST,
     port: parsed.PORT,
@@ -68,5 +91,6 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     registrationEnabled: parsed.REGISTRATION_ENABLED,
     cookieSecure: parsed.COOKIE_SECURE,
     rateLimitMax: parsed.RATE_LIMIT_MAX,
+    mail: smtpUrl && from && publicUrl ? { smtpUrl, from, publicUrl } : null,
   }
 }

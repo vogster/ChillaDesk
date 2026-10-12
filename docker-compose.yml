@@ -27,6 +27,10 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-auto}
       REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-600}
+      # Optional: set all three in .env to send notification emails.
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      PUBLIC_URL: ${PUBLIC_URL:-}
     depends_on:
       db:
         condition: service_healthy

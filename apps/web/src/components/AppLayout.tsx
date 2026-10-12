@@ -2,6 +2,7 @@ import type { User } from '@chillawiki/shared'
 import type { FormEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useLogout } from '../auth/useAuth'
+import { NotificationBell } from '../pages/notifications/NotificationBell'
 import { Button } from './ui'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -68,6 +69,7 @@ export function AppLayout({ user }: { user: User }) {
           </nav>
           <SearchBox />
           <div className="ml-auto flex items-center gap-3">
+            <NotificationBell />
             <NavLink to="/tokens" className={navLinkClass}>
               API tokens
             </NavLink>

@@ -2,6 +2,7 @@ import { commentRequestSchema, type Comment } from '@chillawiki/shared'
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../api/client'
 import { Alert, Button, Spinner } from '../../components/ui'
+import { MentionTextarea } from './mentions/MentionTextarea'
 import type { ProjectContext } from './ProjectLayout'
 import { ProjectMarkdown } from './ProjectMarkdown'
 import { useCommentMutations, useComments } from './taskQueries'
@@ -90,7 +91,8 @@ function CommentItem({ context, comment, mutations }: CommentItemProps) {
           <label htmlFor={`comment-${comment.id}`} className="sr-only">
             Edit comment
           </label>
-          <textarea
+          <MentionTextarea
+            projectId={project.id}
             id={`comment-${comment.id}`}
             name="body"
             rows={3}
@@ -181,11 +183,12 @@ export function TaskComments({ context, taskId }: TaskCommentsProps) {
           <label htmlFor="new-comment" className="sr-only">
             Add a comment
           </label>
-          <textarea
+          <MentionTextarea
+            projectId={context.project.id}
             id="new-comment"
             name="body"
             rows={3}
-            placeholder="Add a comment… Markdown is supported."
+            placeholder="Add a comment… Markdown is supported, @ mentions a member."
             aria-invalid={invalid ? true : undefined}
             aria-describedby={invalid ? 'new-comment-error' : undefined}
             className={textAreaClass}

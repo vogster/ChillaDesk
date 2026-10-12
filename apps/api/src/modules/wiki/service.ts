@@ -13,6 +13,7 @@ import type { Db, Executor, Tx } from '../../db/client'
 import { containsPattern } from '../../db/like'
 import { projects, users, wikiPages, wikiPageVersions } from '../../db/schema'
 import { conflict, invalid, isForeignKeyViolation, isUniqueViolation, notFound } from '../../errors'
+import { notifyMentions } from '../notifications/service'
 import { getProject } from '../projects/service'
 
 const author = { id: users.id, name: users.name, email: users.email }
@@ -156,6 +157,11 @@ export async function createPage(
         .returning()
       if (!created) throw new Error('Insert returned no wiki page row')
       await recordVersion(tx, created, userId)
+      await notifyMentions(
+        tx,
+        { projectId, actorId: userId, wikiPageId: created.id },
+        created.content,
+      )
       return loadPage(tx, projectId, created.id)
     })
   } catch (error) {
@@ -227,7 +233,15 @@ export async function updatePage(
           ...(textChanged ? { updatedById: userId, updatedAt: new Date() } : {}),
         })
         .where(eq(wikiPages.id, pageId))
-      if (textChanged) await recordVersion(tx, { id: pageId, version, title, content }, userId)
+      if (textChanged) {
+        await recordVersion(tx, { id: pageId, version, title, content }, userId)
+        await notifyMentions(
+          tx,
+          { projectId, actorId: userId, wikiPageId: pageId },
+          content,
+          current.content,
+        )
+      }
       return loadPage(tx, projectId, pageId)
     })
   } catch (error) {

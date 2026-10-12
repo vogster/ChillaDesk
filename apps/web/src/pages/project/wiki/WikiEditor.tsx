@@ -11,6 +11,7 @@ import { parseForm, type FieldErrors } from '../../../components/form'
 import { Alert, Button, selectClass, Spinner, TextField } from '../../../components/ui'
 import { useDraft } from '../../../hooks/useDraft'
 import { NotFoundPage } from '../../NotFoundPage'
+import { MentionTextarea } from '../mentions/MentionTextarea'
 import { useProjectContext } from '../ProjectLayout'
 import { ProjectMarkdown } from '../ProjectMarkdown'
 import { descendantIds, wikiPagePath } from './wikiModel'
@@ -188,7 +189,8 @@ function EditorForm({
             <label htmlFor="wiki-content" className="sr-only">
               Content
             </label>
-            <textarea
+            <MentionTextarea
+              projectId={project.id}
               id="wiki-content"
               value={text.content}
               onChange={(event) => draft.set({ ...text, content: event.target.value })}

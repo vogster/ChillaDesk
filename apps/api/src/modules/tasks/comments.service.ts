@@ -3,6 +3,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import type { Db, Executor } from '../../db/client'
 import { comments, users } from '../../db/schema'
 import { forbidden, notFound } from '../../errors'
+import { notifyComment, notifyMentions } from '../notifications/service'
 import { getProject } from '../projects/service'
 import { assertTaskInProject } from './service'
 
@@ -60,12 +61,20 @@ export async function addComment(
 ): Promise<Comment> {
   await getProject(db, userId, projectId, 'member')
   await assertTaskInProject(db, projectId, taskId)
-  const [created] = await db
-    .insert(comments)
-    .values({ taskId, authorId: userId, body: input.body })
-    .returning({ id: comments.id })
-  if (!created) throw new Error('Insert returned no comment row')
-  return loadComment(db, taskId, created.id)
+  return db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(comments)
+      .values({ taskId, authorId: userId, body: input.body })
+      .returning({ id: comments.id })
+    if (!created) throw new Error('Insert returned no comment row')
+
+    // Someone mentioned in the comment gets that notification, not a second one for the
+    // comment itself.
+    const subject = { projectId, actorId: userId, taskId }
+    const mentioned = await notifyMentions(tx, subject, input.body)
+    await notifyComment(tx, subject, input.body, mentioned)
+    return loadComment(tx, taskId, created.id)
+  })
 }
 
 export async function updateComment(
@@ -81,11 +90,14 @@ export async function updateComment(
   const existing = await loadComment(db, taskId, commentId)
   if (existing.author?.id !== userId) throw forbidden('Only the author can edit a comment')
 
-  await db
-    .update(comments)
-    .set({ body: input.body, updatedAt: new Date() })
-    .where(onTask(taskId, commentId))
-  return loadComment(db, taskId, commentId)
+  return db.transaction(async (tx) => {
+    await tx
+      .update(comments)
+      .set({ body: input.body, updatedAt: new Date() })
+      .where(onTask(taskId, commentId))
+    await notifyMentions(tx, { projectId, actorId: userId, taskId }, input.body, existing.body)
+    return loadComment(tx, taskId, commentId)
+  })
 }
 
 /** Authors remove their own comments; project owners can remove anyone's. */

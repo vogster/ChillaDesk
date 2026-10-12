@@ -8,7 +8,7 @@ import type {
 } from '@chillawiki/shared'
 import { and, asc, eq } from 'drizzle-orm'
 import type { Db, Tx } from '../../db/client'
-import { projectMembers, projects, tasks, users } from '../../db/schema'
+import { notifications, projectMembers, projects, tasks, users } from '../../db/schema'
 import { conflict, forbidden, isUniqueViolation, notFound } from '../../errors'
 import { createDefaultStatuses } from '../tasks/statuses.service'
 
@@ -224,5 +224,9 @@ export async function removeMember(
       .update(tasks)
       .set({ assigneeId: null })
       .where(and(eq(tasks.projectId, projectId), eq(tasks.assigneeId, memberId)))
+    // Their notifications quote the project's tasks and pages, which are no longer theirs to read.
+    await tx
+      .delete(notifications)
+      .where(and(eq(notifications.projectId, projectId), eq(notifications.userId, memberId)))
   })
 }

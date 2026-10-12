@@ -15,6 +15,8 @@ const STYLES = [
   '[&_pre_code]:bg-transparent [&_pre_code]:p-0',
   '[&_blockquote]:border-l-2 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:text-slate-600 dark:[&_blockquote]:border-slate-600 dark:[&_blockquote]:text-slate-400',
   '[&_table]:my-2 [&_td]:border [&_th]:border [&_td]:border-slate-300 [&_th]:border-slate-300 [&_td]:px-2 [&_th]:px-2 [&_td]:py-1 [&_th]:py-1 dark:[&_td]:border-slate-700 dark:[&_th]:border-slate-700',
+  // A mention of a project member, see `MENTION_CLASS`.
+  '[&_.mention]:rounded [&_.mention]:bg-indigo-50 [&_.mention]:px-1 [&_.mention]:font-medium [&_.mention]:text-indigo-700 dark:[&_.mention]:bg-indigo-950 dark:[&_.mention]:text-indigo-300',
   '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
 ].join(' ')
 

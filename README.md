@@ -5,6 +5,8 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **Tasks** — per-project to-do lists
 - **Kanban** — the same tasks as a board with custom columns
 - **Wiki** — Markdown pages per project, linked to tasks
+- **Labels, search and “My tasks”** across all your projects
+- **Mentions and notifications** — in the app, and by email if you configure SMTP
 - **REST API** with OpenAPI docs — ready for a mobile client
 - **MCP server** — let AI agents read and update your projects
 
@@ -57,6 +59,22 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 | `DATABASE_URL`         | embedded PGlite | PostgreSQL connection string (set by compose)                     |
 | `TRUST_PROXY`          | `false`         | Number of reverse proxies in front of the API (compose: `1`)      |
 | `LOG_LEVEL`            | `info`          | `fatal` … `trace`, or `silent`                                    |
+| `SMTP_URL`             | — (no email)    | `smtp://user:password@host:587`; turns notification emails on     |
+| `MAIL_FROM`            | —               | Sender of the emails, e.g. `ChillaWiki <wiki@example.com>`        |
+| `PUBLIC_URL`           | —               | Address people open ChillaWiki at; links in emails point there    |
+
+### Mentions and notifications
+
+Write `@` in a task description, a comment or a wiki page and pick a project member; the
+text keeps their email (`@ann@example.com`) and readers see `@Ann`. You get a notification
+when someone assigns you a task, mentions you, or comments on a task you created or are
+assigned to. They are listed under the bell in the header.
+
+Emails are optional: set `SMTP_URL`, `MAIL_FROM` and `PUBLIC_URL` together and the API
+sends each notification that has not been read in the app yet. Without them nothing is sent.
+Accounts are not verified by email, so anyone who can register can make the server write to
+an address of their choosing: close sign-ups (`REGISTRATION_ENABLED=false`) before turning
+email on. One person gets at most 30 emails an hour; the rest wait for them in the app.
 
 ## API and authentication
 
@@ -101,6 +119,7 @@ name, people by email and wiki pages by title.
 | -------------------------------------- | -------------------------------------------------- |
 | `list_projects`, `get_project`         | Projects, their board statuses and members         |
 | `list_tasks`, `get_task`               | Tasks with filters; one task with its comments     |
+| `my_tasks`, `search`                   | Your tasks, and search, across every project       |
 | `create_task`, `update_task`           | Create, edit, assign and move tasks (write tokens) |
 | `add_comment`                          | Comment on a task (write tokens)                   |
 | `list_wiki_pages`, `get_wiki_page`     | List, search and read wiki pages                   |
@@ -136,8 +155,9 @@ docker/          Caddy config for the web image
 - [x] Tasks: list view, kanban board, comments, filters
 - [x] Wiki: page tree, Markdown editor, versions, `[[links]]` and task references
 - [x] MCP server and personal API tokens
-- [ ] Production release: verified Docker images, deployment guide
-- [ ] Later: task labels, mobile app, realtime updates, attachments, notifications
+- [x] Docker release with a verified stack
+- [x] Task labels, “My tasks”, search, mentions and notifications
+- [ ] Later: realtime updates, translations, mobile app, attachments
 
 ## License
 

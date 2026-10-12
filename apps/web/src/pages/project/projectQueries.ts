@@ -27,8 +27,12 @@ export const useProject = (projectId: string) =>
     retry: false,
   })
 
-export const useMembers = (projectId: string) =>
-  useQuery({ queryKey: projectKeys.members(projectId), queryFn: () => fetchMembers(projectId) })
+export const useMembers = (projectId: string, { enabled = true }: { enabled?: boolean } = {}) =>
+  useQuery({
+    queryKey: projectKeys.members(projectId),
+    queryFn: () => fetchMembers(projectId),
+    enabled,
+  })
 
 export function useCreateProject() {
   const queryClient = useQueryClient()

@@ -11,6 +11,7 @@ import { parseForm, type FieldErrors } from '../../components/form'
 import { Modal } from '../../components/Modal'
 import { Alert, Button, selectClass, Spinner } from '../../components/ui'
 import { TaskLabels } from './labels/TaskLabels'
+import { MentionTextarea } from './mentions/MentionTextarea'
 import type { ProjectContext } from './ProjectLayout'
 import { ProjectMarkdown } from './ProjectMarkdown'
 import { useMembers } from './projectQueries'
@@ -128,7 +129,8 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
             <label htmlFor="task-description" className="mb-1 block text-sm font-medium">
               Description
             </label>
-            <textarea
+            <MentionTextarea
+              projectId={project.id}
               id="task-description"
               name="description"
               defaultValue={task.description}

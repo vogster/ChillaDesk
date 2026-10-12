@@ -1,4 +1,9 @@
-import type { WikiPageSummary } from '@chillawiki/shared'
+import {
+  MENTION_EMAIL_SOURCE,
+  MENTION_PREFIX_CLASS,
+  type ProjectMember,
+  type WikiPageSummary,
+} from '@chillawiki/shared'
 
 export interface TreeNode {
   page: WikiPageSummary
@@ -70,16 +75,21 @@ export interface LinkContext {
   pages: WikiPageSummary[] | undefined
   /** Whether a title without a page becomes a link to the form that creates it. */
   linkMissingPages: boolean
+  /** Who can be mentioned. Undefined while loading: `@email` is then left as plain text. */
+  members?: ProjectMember[] | undefined
 }
 
 export type LinkPart =
-  { kind: 'text'; value: string } | { kind: 'link'; label: string; href: string; missing: boolean }
+  | { kind: 'text'; value: string }
+  | { kind: 'link'; label: string; href: string; missing: boolean }
+  | { kind: 'mention'; label: string; email: string }
 
 type Link = Omit<Extract<LinkPart, { kind: 'link' }>, 'kind'>
 
 /**
- * Splits a run of plain text into text and links: `[[Page title]]` links to the wiki page
- * of that name and a task key such as `CHL-12` to the task.
+ * Splits a run of plain text into text, links and mentions: `[[Page title]]` links to the
+ * wiki page of that name, a task key such as `CHL-12` to the task, and `@email` of a member
+ * is a mention.
  *
  * The pattern is a single alternation applied once, so a link is never scanned again (a
  * title may itself contain a task key), and neither branch can backtrack across the input.
@@ -88,10 +98,28 @@ export function splitLinks(text: string, context: LinkContext): LinkPart[] {
   const { projectId, projectKey, pages, linkMissingPages } = context
   const byLowerTitle = new Map((pages ?? []).map((page) => [page.title.toLowerCase(), page]))
   // Up to nine digits: every such number fits the integer column behind it.
+  const byEmail = new Map(
+    (context.members ?? []).map((member) => [member.email.toLowerCase(), member]),
+  )
   const pattern = new RegExp(
-    `\\[\\[([^[\\]\\n]+)\\]\\]|(?<![\\w-])${projectKey}-([1-9]\\d{0,8})(?![\\w-])`,
+    [
+      '\\[\\[([^[\\]\\n]+)\\]\\]',
+      `(?<![\\w-])${projectKey}-([1-9]\\d{0,8})(?![\\w-])`,
+      `(?<![^${MENTION_PREFIX_CLASS}])@(${MENTION_EMAIL_SOURCE})`,
+    ].join('|'),
     'g',
   )
+
+  const partFor = (match: RegExpExecArray): LinkPart | null => {
+    const email = match[3]
+    if (email === undefined) {
+      const link = linkFor(match)
+      return link && { kind: 'link', ...link }
+    }
+    // Only a member is shown as a mention; any other address stays as it was written.
+    const member = byEmail.get(email.toLowerCase())
+    return member ? { kind: 'mention', label: `@${member.name}`, email: member.email } : null
+  }
 
   const linkFor = ([whole, rawTitle, taskNumber]: RegExpExecArray): Link | null => {
     if (taskNumber !== undefined) {
@@ -109,12 +137,12 @@ export function splitLinks(text: string, context: LinkContext): LinkPart[] {
   const parts: LinkPart[] = []
   let textStart = 0
   for (const match of text.matchAll(pattern)) {
-    const link = linkFor(match)
-    if (!link) continue
+    const part = partFor(match)
+    if (!part) continue
     if (match.index > textStart) {
       parts.push({ kind: 'text', value: text.slice(textStart, match.index) })
     }
-    parts.push({ kind: 'link', ...link })
+    parts.push(part)
     textStart = match.index + match[0].length
   }
   if (textStart < text.length) parts.push({ kind: 'text', value: text.slice(textStart) })

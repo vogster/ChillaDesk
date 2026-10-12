@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { buildApp } from './app'
 import { loadConfig } from './config'
 import { createDatabase } from './db/client'
+import { createMailSender, startMailWorker } from './modules/notifications/mailer'
 
 const config = loadConfig(process.env)
 
@@ -34,12 +35,25 @@ try {
 }
 app.log.info({ driver: database.driver }, 'database connected and migrated')
 
+const stopMailWorker = config.mail
+  ? startMailWorker({
+      db: database.db,
+      send: createMailSender(config.mail.smtpUrl, config.mail.from),
+      publicUrl: config.mail.publicUrl,
+      log: app.log,
+    })
+  : undefined
+app.log.info(
+  config.mail ? 'notification emails are on' : 'SMTP_URL is not set, notifications stay in the app',
+)
+
 let shuttingDown = false
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return
   shuttingDown = true
   app.log.info({ signal }, 'shutting down')
   try {
+    await stopMailWorker?.()
     await app.close()
     await database.close()
     process.exit(0)
