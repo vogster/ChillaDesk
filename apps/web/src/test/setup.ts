@@ -10,4 +10,6 @@ afterEach(() => {
   vi.restoreAllMocks()
   // Editors keep unsaved drafts here; one test's draft must not appear in the next.
   sessionStorage.clear()
+  // The chosen interface language is kept here.
+  localStorage.clear()
 })

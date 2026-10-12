@@ -4,6 +4,7 @@ import { redirectTarget } from './auth/redirect'
 import { useCurrentUser } from './auth/useAuth'
 import { AppLayout } from './components/AppLayout'
 import { Alert, Button, Spinner } from './components/ui'
+import { I18nProvider } from './i18n'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { NotificationsPage } from './pages/notifications/NotificationsPage'
@@ -33,7 +34,16 @@ function GuestOnly({ signedIn }: { signedIn: boolean }) {
   return signedIn ? <Navigate to={redirectTarget(location.state)} replace /> : <Outlet />
 }
 
+/** The whole app; the language is known before anything is drawn. */
 export function App() {
+  return (
+    <I18nProvider>
+      <AppRoutes />
+    </I18nProvider>
+  )
+}
+
+function AppRoutes() {
   const currentUser = useCurrentUser()
   const location = useLocation()
 

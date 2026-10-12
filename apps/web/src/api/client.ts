@@ -1,5 +1,6 @@
 import { errorResponseSchema, type ErrorCode, type ErrorResponse } from '@chillawiki/shared'
 import type { z } from 'zod'
+import { currentMessages } from '../i18n/messages'
 
 export type ApiErrorCode = ErrorCode | 'NETWORK_ERROR' | 'UNEXPECTED_RESPONSE'
 
@@ -75,5 +76,10 @@ export async function apiRequest<T = void>(
 
 /** Message suitable for showing to the user, whatever was thrown. */
 export function errorMessage(error: unknown): string {
-  return error instanceof ApiError ? error.message : 'Something went wrong. Please try again.'
+  const { errors } = currentMessages().common
+  if (!(error instanceof ApiError)) return errors.generic
+  // The server answers in English: its text is translated where a translation is known,
+  // else replaced by a general one for that kind of error, else shown as it came.
+  const general = errors.byCode[error.code as keyof typeof errors.byCode] as string | undefined
+  return errors.serverText(error.message) ?? (general || error.message)
 }

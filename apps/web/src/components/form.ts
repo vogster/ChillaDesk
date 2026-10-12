@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import { currentMessages } from '../i18n/messages'
 
 export type FieldErrors = Record<string, string>
 
@@ -9,9 +10,12 @@ export function parseForm<T>(schema: z.ZodType<T>, values: unknown): ParseResult
   const result = schema.safeParse(values)
   if (result.success) return { ok: true, data: result.data }
 
+  const { serverText } = currentMessages().common.errors
   const errors = result.error.issues.reduce<FieldErrors>((collected, issue) => {
     const field = issue.path.join('.')
-    return field in collected ? collected : { ...collected, [field]: issue.message }
+    // The schemas' own messages are written in English; zod's follow the language by itself.
+    const message = serverText(issue.message) ?? issue.message
+    return field in collected ? collected : { ...collected, [field]: message }
   }, {})
   return { ok: false, errors }
 }
