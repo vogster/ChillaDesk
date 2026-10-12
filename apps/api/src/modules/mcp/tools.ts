@@ -11,6 +11,7 @@ import {
   wikiListQuerySchema,
   type Status,
   type Task,
+  type LiveResource,
   type TaskInContext,
   type WikiPage,
 } from '@chillawiki/shared'
@@ -38,6 +39,8 @@ import {
 export interface ToolContext {
   db: Db
   auth: AuthContext
+  /** Write tools report the project they changed, so open screens can refresh. */
+  changed?(projectId: string, resource: LiveResource): void
 }
 
 export interface ToolDefinition {
@@ -276,7 +279,7 @@ export const TOOLS: ToolDefinition[] = [
       dueDate: dueDateSchema.optional().describe('YYYY-MM-DD'),
       labels: z.array(z.string()).optional().describe('Names of existing labels; see get_project.'),
     },
-    run: async (input, { db, auth }) => {
+    run: async (input, { db, auth, changed }) => {
       const userId = auth.user.id
       const found = await projectByKey(db, userId, input.project)
       const status = input.status
@@ -297,6 +300,7 @@ export const TOOLS: ToolDefinition[] = [
         ),
       })
       const task = await createTask(db, userId, found.id, request)
+      changed?.(found.id, 'tasks')
       return describeTask(task, await listStatuses(db, userId, found.id))
     },
   }),
@@ -324,7 +328,7 @@ export const TOOLS: ToolDefinition[] = [
         .optional()
         .describe('The complete new set of label names; an empty list removes all labels.'),
     },
-    run: async (input, { db, auth }) => {
+    run: async (input, { db, auth, changed }) => {
       const userId = auth.user.id
       const { project: found, task } = await taskByKey(db, userId, input.key)
       const assigneeId =
@@ -356,14 +360,17 @@ export const TOOLS: ToolDefinition[] = [
         Object.keys(changes).length > 0 ? validate(updateTaskRequestSchema, changes) : undefined
 
       let updated = task
-      if (patch) updated = await updateTask(db, userId, found.id, task.id, patch)
-      if (status) {
-        if (status.id !== updated.statusId) {
+      try {
+        if (patch) updated = await updateTask(db, userId, found.id, task.id, patch)
+        if (status && status.id !== updated.statusId) {
           updated = await moveTask(db, userId, found.id, task.id, {
             statusId: status.id,
             beforeTaskId: null,
           })
         }
+      } finally {
+        // Also when the move fails after the fields were saved.
+        if (updated !== task) changed?.(found.id, 'tasks')
       }
       return describeTask(updated, await listStatuses(db, userId, found.id))
     },
@@ -375,10 +382,11 @@ export const TOOLS: ToolDefinition[] = [
     description: 'Adds a Markdown comment to a task.',
     readOnly: false,
     inputSchema: { key: taskKey, body: z.string().min(1).max(10_000) },
-    run: async (input, { db, auth }) => {
+    run: async (input, { db, auth, changed }) => {
       const { project: found, task } = await taskByKey(db, auth.user.id, input.key)
       const request = validate(commentRequestSchema, { body: input.body })
       const comment = await addComment(db, auth.user.id, found.id, task.id, request)
+      changed?.(found.id, 'tasks')
       return { task: task.key, body: comment.body, createdAt: comment.createdAt }
     },
   }),
@@ -434,7 +442,7 @@ export const TOOLS: ToolDefinition[] = [
       content: z.string().max(200_000).default('').describe('Markdown.'),
       parent: z.string().optional().describe('Title of the page to nest this one under.'),
     },
-    run: async (input, { db, auth }) => {
+    run: async (input, { db, auth, changed }) => {
       const userId = auth.user.id
       const found = await projectByKey(db, userId, input.project)
       const parent = input.parent
@@ -445,7 +453,9 @@ export const TOOLS: ToolDefinition[] = [
         content: input.content,
         parentId: parent?.id ?? null,
       })
-      return describePage(await createPage(db, userId, found.id, request))
+      const created = await createPage(db, userId, found.id, request)
+      changed?.(found.id, 'wiki')
+      return describePage(created)
     },
   }),
 
@@ -468,7 +478,7 @@ export const TOOLS: ToolDefinition[] = [
         .optional()
         .describe('Version the edit is based on. Omit to overwrite whatever is there.'),
     },
-    run: async (input, { db, auth }) => {
+    run: async (input, { db, auth, changed }) => {
       const userId = auth.user.id
       const found = await projectByKey(db, userId, input.project)
       const page = await wikiPageByTitle(db, userId, found.id, input.title)
@@ -478,7 +488,9 @@ export const TOOLS: ToolDefinition[] = [
         ...(input.newTitle !== undefined ? { title: input.newTitle } : {}),
         baseVersion: input.baseVersion ?? page.version,
       })
-      return describePage(await updatePage(db, userId, found.id, page.id, request))
+      const updated = await updatePage(db, userId, found.id, page.id, request)
+      changed?.(found.id, 'wiki')
+      return describePage(updated)
     },
   }),
 ]

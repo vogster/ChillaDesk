@@ -16,6 +16,8 @@ import { AppError } from './errors'
 import { registerErrorHandlers } from './http/error-handler'
 import { MCP_PATH, registerAuth, SESSION_COOKIE } from './modules/auth/plugin'
 import { authRoutes } from './modules/auth/routes'
+import { createEventBus, type EventBus } from './modules/events/bus'
+import { eventRoutes, membersAmong, resourceOfRoute } from './modules/events/routes'
 import { labelRoutes } from './modules/labels/routes'
 import { mcpRoutes } from './modules/mcp/routes'
 import { notificationRoutes } from './modules/notifications/routes'
@@ -26,6 +28,15 @@ import { statusRoutes } from './modules/tasks/statuses.routes'
 import { tokenRoutes } from './modules/tokens/routes'
 import { wikiRoutes } from './modules/wiki/routes'
 import { healthRoutes } from './routes/health'
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    /** Pushes changes to the event streams open on this process. */
+    events: EventBus
+  }
+}
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
 export interface AppOptions {
   database: Database
@@ -41,6 +52,8 @@ export interface AppOptions {
   accountRateLimitMax?: number
   /** Members one user can add per minute; bounds probing for registered emails. */
   memberInviteRateLimitMax?: number
+  /** How long one event stream lives before the client has to reconnect. */
+  eventStreamLifetimeMs?: number
 }
 
 export async function buildApp({
@@ -53,6 +66,7 @@ export async function buildApp({
   authRateLimitMax = 10,
   accountRateLimitMax = 10,
   memberInviteRateLimitMax = 20,
+  eventStreamLifetimeMs,
 }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: logLevel },
@@ -94,6 +108,22 @@ export async function buildApp({
 
   registerAuth(app, db)
 
+  const events = createEventBus({
+    membersAmong: membersAmong(db),
+    onError: (error) => app.log.warn({ err: error }, 'live event was not delivered'),
+  })
+  app.decorate('events', events)
+  // Open streams would otherwise keep the server from closing.
+  app.addHook('preClose', async () => events.closeAll())
+  // Every successful change under /api/projects/:projectId is announced to that project.
+  app.addHook('onResponse', async (request, reply) => {
+    if (SAFE_METHODS.has(request.method) || reply.statusCode >= 400) return
+    const { projectId } = (request.params ?? {}) as { projectId?: unknown }
+    if (typeof projectId === 'string') {
+      void events.publishProject(projectId, resourceOfRoute(request.routeOptions.url ?? ''))
+    }
+  })
+
   await app.register(healthRoutes, { prefix: '/api', database })
   await app.register(authRoutes, {
     prefix: '/api/auth',
@@ -114,7 +144,12 @@ export async function buildApp({
   await app.register(tokenRoutes, { prefix: '/api/tokens', db })
   await app.register(overviewRoutes, { prefix: '/api', db })
   await app.register(notificationRoutes, { prefix: '/api/notifications', db })
-  await app.register(mcpRoutes, { prefix: MCP_PATH, db })
+  await app.register(mcpRoutes, { prefix: MCP_PATH, db, events })
+  await app.register(eventRoutes, {
+    prefix: '/api/events',
+    events,
+    ...(eventStreamLifetimeMs !== undefined ? { maxLifetimeMs: eventStreamLifetimeMs } : {}),
+  })
   await app.register(wikiRoutes, { prefix: '/api/projects/:projectId/wiki', db })
 
   return app

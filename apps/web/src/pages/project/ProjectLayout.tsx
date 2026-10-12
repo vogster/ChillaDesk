@@ -36,7 +36,9 @@ export function ProjectLayout({ currentUser }: { currentUser: User }) {
   const openTaskId = taskParam.success ? taskParam.data : null
 
   if (project.isPending) return <Spinner />
-  if (project.isError) {
+  // Only when there is nothing to show: a failed reload in the background must not take
+  // the board, or a half-written comment, off the screen.
+  if (project.isError && !project.data) {
     // A malformed id fails validation; for the visitor that is also just a missing page.
     const missing =
       project.error instanceof ApiError &&

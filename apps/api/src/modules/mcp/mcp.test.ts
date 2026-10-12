@@ -726,3 +726,31 @@ describe('unexpected failures', () => {
     expect(failed).toBe(true)
   })
 })
+
+describe('live updates', () => {
+  it('announces what a write tool changed, and nothing for a read', async () => {
+    const { fixture, key, token } = await setup()
+    const received: unknown[] = []
+    const stop = ctx.app.events.subscribe({
+      userId: fixture.owner.id,
+      send: (event) => void received.push(event),
+      close: () => undefined,
+    })
+    const title = 'Made by an assistant'
+
+    await expectData(call(token, 'list_tasks', { project: key }))
+    await expectData(call(token, 'create_task', { project: key, title }))
+    await expectData(call(token, 'update_task', { key: `${key}-1` }))
+    await expectData(call(token, 'update_task', { key: `${key}-1`, priority: 'high' }))
+    await expectData(call(token, 'add_comment', { key: `${key}-1`, body: 'Done' }))
+    await expectData(call(token, 'create_wiki_page', { project: key, title: 'Notes' }))
+    await expectData(
+      call(token, 'update_wiki_page', { project: key, title: 'Notes', content: 'x' }),
+    )
+
+    await expect
+      .poll(() => (received as { resource: string }[]).map((event) => event.resource))
+      .toEqual(['tasks', 'tasks', 'tasks', 'wiki', 'wiki'])
+    stop()
+  })
+})

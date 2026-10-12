@@ -7,6 +7,7 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **Wiki** — Markdown pages per project, linked to tasks
 - **Labels, search and “My tasks”** across all your projects
 - **Mentions and notifications** — in the app, and by email if you configure SMTP
+- **Live updates** — boards, tasks and pages refresh as your teammates change them
 - **REST API** with OpenAPI docs — ready for a mobile client
 - **MCP server** — let AI agents read and update your projects
 
@@ -31,6 +32,8 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 - **HTTPS.** The compose file serves plain HTTP on one port. Put your own HTTPS reverse proxy
   (Caddy, nginx, Traefik, a cloud load balancer) in front of it and set `COOKIE_SECURE=true`,
   so the session cookie never travels unencrypted.
+  Live updates use server-sent events (`/api/events`), a long-lived response: the proxy
+  must not buffer it (nginx: `proxy_buffering off` for that path).
 - **Sign-ups.** Anyone who can reach the site can register. Once your team is in, set
   `REGISTRATION_ENABLED=false` and restart.
 - **Backups.** Everything is in PostgreSQL:
@@ -82,6 +85,12 @@ Every endpoint is described in the OpenAPI document at `/api/docs`. Log in with
 `POST /api/auth/login`: browsers get an HTTP-only session cookie, and other clients
 (mobile apps, scripts) send the returned token as `Authorization: Bearer <token>`.
 Errors always have the shape `{ "error": { "code", "message", "details"? } }`.
+
+`GET /api/events` is a server-sent event stream that says in which project something
+changed (`{"type":"project_changed","projectId":"…","resource":"tasks"}`), so a client knows
+what to reload. One user can hold ten streams open.
+Events are delivered by the API process a client is connected to, so run a single API
+container (as the compose file does) if you rely on them.
 
 ### API tokens
 
@@ -157,7 +166,8 @@ docker/          Caddy config for the web image
 - [x] MCP server and personal API tokens
 - [x] Docker release with a verified stack
 - [x] Task labels, “My tasks”, search, mentions and notifications
-- [ ] Later: realtime updates, translations, mobile app, attachments
+- [x] Live updates over server-sent events
+- [ ] Later: translations, mobile app, attachments
 
 ## License
 

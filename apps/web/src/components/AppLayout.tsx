@@ -2,6 +2,7 @@ import type { User } from '@chillawiki/shared'
 import type { FormEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useLogout } from '../auth/useAuth'
+import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { NotificationBell } from '../pages/notifications/NotificationBell'
 import { Button } from './ui'
 
@@ -46,6 +47,7 @@ function SearchBox() {
 
 export function AppLayout({ user }: { user: User }) {
   const logout = useLogout()
+  useLiveUpdates()
   const navigate = useNavigate()
 
   const handleLogout = () => {

@@ -3,10 +3,19 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { FastifyBaseLogger, FastifyPluginAsync, FastifyReply } from 'fastify'
 import packageJson from '../../../package.json' with { type: 'json' }
 import type { Db } from '../../db/client'
+import type { LiveResource } from '@chillawiki/shared'
 import type { AuthContext } from '../auth/service'
+import type { EventBus } from '../events/bus'
 import { runToolForClient, TOOLS } from './tools'
 
-function createServer(db: Db, auth: AuthContext, log: FastifyBaseLogger): McpServer {
+function createServer(
+  db: Db,
+  auth: AuthContext,
+  events: EventBus,
+  log: FastifyBaseLogger,
+): McpServer {
+  const changed = (projectId: string, resource: LiveResource) =>
+    void events.publishProject(projectId, resource)
   const server = new McpServer(
     { name: 'chillawiki', version: packageJson.version },
     {
@@ -26,7 +35,7 @@ function createServer(db: Db, auth: AuthContext, log: FastifyBaseLogger): McpSer
         inputSchema: definition.inputSchema,
         annotations: { readOnlyHint: definition.readOnly, openWorldHint: false },
       },
-      (input: unknown) => runToolForClient(definition, input, { db, auth }, log),
+      (input: unknown) => runToolForClient(definition, input, { db, auth, changed }, log),
     )
   }
   return server
@@ -42,7 +51,10 @@ function jsonRpcError(reply: FastifyReply, status: number, message: string) {
  * Stateless: every POST gets its own server and is answered with plain JSON, so there are
  * no sessions to keep, any API replica can answer, and a revoked token stops working at once.
  */
-export const mcpRoutes: FastifyPluginAsync<{ db: Db }> = async (app, { db }) => {
+export const mcpRoutes: FastifyPluginAsync<{ db: Db; events: EventBus }> = async (
+  app,
+  { db, events },
+) => {
   app.post('/', { schema: { hide: true } }, async (request, reply) => {
     // Only personal API tokens: they carry a scope and can be revoked one by one. A browser
     // session has neither, and nothing in the web app needs this endpoint.
@@ -60,7 +72,7 @@ export const mcpRoutes: FastifyPluginAsync<{ db: Db }> = async (app, { db }) => 
       return jsonRpcError(reply, 400, 'Batch requests are not supported')
     }
 
-    const server = createServer(db, request.auth, request.log)
+    const server = createServer(db, request.auth, events, request.log)
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
