@@ -4,6 +4,7 @@ import { z } from 'zod'
 export const liveResourceSchema = z.enum([
   'project',
   'members',
+  'invites',
   'statuses',
   'labels',
   'tasks',

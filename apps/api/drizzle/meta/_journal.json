@@ -64,6 +64,13 @@
       "when": 1791908238034,
       "tag": "0008_user_profile",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791908704837,
+      "tag": "0009_project_invites",
+      "breakpoints": true
     }
   ]
 }

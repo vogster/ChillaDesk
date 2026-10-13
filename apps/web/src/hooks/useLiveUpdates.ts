@@ -24,6 +24,7 @@ const AFFECTED: Record<LiveResource, string[][]> = {
   project: [[]],
   // Removing a member unassigns their tasks; a deleted column or label changes tasks too.
   members: [['members'], ['tasks']],
+  invites: [['invites']],
   statuses: [['statuses'], ['tasks']],
   labels: [['labels'], ['tasks']],
   tasks: [['tasks']],

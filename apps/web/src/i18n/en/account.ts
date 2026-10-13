@@ -23,6 +23,29 @@ export const account = {
     changePassword: 'Change password',
     passwordChanged: 'Password changed. Your other devices were signed out.',
   },
+  invites: {
+    heading: 'Invite links',
+    hint: 'Anyone with the link who has an account, or creates one, can join this project. A link works for a week and for any number of people.',
+    role: 'Join as',
+    create: 'Create invite link',
+    created: 'Send this link to the people you want here. It is shown only now.',
+    linkLabel: 'Invite link',
+    copy: 'Copy link',
+    copied: 'Copied',
+    listLabel: 'Open invite links',
+    validUntil: (date: string) => `valid until ${date}`,
+    revoke: 'Revoke',
+    revokeLabel: (role: string, date: string) => `Revoke the ${role} link valid until ${date}`,
+    page: {
+      title: 'Invitation',
+      invitation: (project: string, role: string) =>
+        `You are invited to join the project “${project}” as ${role}.`,
+      join: 'Join the project',
+      alreadyMember: (project: string) => `You are already in the project “${project}”.`,
+      open: 'Open the project',
+      invalid: 'This invite link does not work any more. Ask for a new one.',
+    },
+  },
 }
 
 export type AccountMessages = typeof account

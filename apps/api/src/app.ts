@@ -18,6 +18,7 @@ import { MCP_PATH, registerAuth, SESSION_COOKIE } from './modules/auth/plugin'
 import { authRoutes } from './modules/auth/routes'
 import { createEventBus, type EventBus } from './modules/events/bus'
 import { eventRoutes, membersAmong, resourceOfRoute } from './modules/events/routes'
+import { inviteRoutes, projectInviteRoutes } from './modules/invites/routes'
 import { labelRoutes } from './modules/labels/routes'
 import { mcpRoutes } from './modules/mcp/routes'
 import { notificationRoutes } from './modules/notifications/routes'
@@ -52,6 +53,8 @@ export interface AppOptions {
   accountRateLimitMax?: number
   /** Members one user can add per minute; bounds probing for registered emails. */
   memberInviteRateLimitMax?: number
+  /** Invite links one client may look up or accept per minute. */
+  inviteRateLimitMax?: number
   /** How long one event stream lives before the client has to reconnect. */
   eventStreamLifetimeMs?: number
 }
@@ -66,6 +69,7 @@ export async function buildApp({
   authRateLimitMax = 10,
   accountRateLimitMax = 10,
   memberInviteRateLimitMax = 20,
+  inviteRateLimitMax = 30,
   eventStreamLifetimeMs,
 }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
@@ -138,6 +142,8 @@ export async function buildApp({
     db,
     memberInviteRateLimitMax,
   })
+  await app.register(projectInviteRoutes, { prefix: '/api/projects/:projectId/invites', db })
+  await app.register(inviteRoutes, { prefix: '/api/invites', db, rateLimitMax: inviteRateLimitMax })
   await app.register(labelRoutes, { prefix: '/api/projects/:projectId/labels', db })
   await app.register(statusRoutes, { prefix: '/api/projects/:projectId/statuses', db })
   await app.register(taskRoutes, { prefix: '/api/projects/:projectId/tasks', db })

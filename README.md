@@ -35,6 +35,8 @@ serving the web app and proxying `/api`. Database migrations run when the API st
   so the session cookie never travels unencrypted.
   Live updates use server-sent events (`/api/events`), a long-lived response: the proxy
   must not buffer it (nginx: `proxy_buffering off` for that path).
+- **Inviting people.** An owner adds someone by email, or creates an invite link on the
+  members page: whoever opens it within a week, signs in or signs up, joins the project.
 - **Sign-ups.** Anyone who can reach the site can register. Once your team is in, set
   `REGISTRATION_ENABLED=false` and restart.
 - **Backups.** Everything is in PostgreSQL:

@@ -6,6 +6,7 @@ import { useProfileLocale } from './auth/useProfileLocale'
 import { AppLayout } from './components/AppLayout'
 import { Alert, Button, Spinner } from './components/ui'
 import { I18nProvider, useT } from './i18n'
+import { InvitePage } from './pages/InvitePage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { NotificationsPage } from './pages/notifications/NotificationsPage'
@@ -85,6 +86,7 @@ function AppRoutes() {
         <Route path="/my-tasks" element={<MyTasksPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/invite/:token" element={<InvitePage />} />
         <Route path="/projects/:projectId" element={user && <ProjectLayout currentUser={user} />}>
           <Route index element={<BoardPage />} />
           <Route path="list" element={<ListPage />} />

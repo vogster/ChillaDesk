@@ -57,6 +57,7 @@ describe('projects list', () => {
         'POST /api/projects': () => ok(project, 201),
         [`GET ${projectUrl}`]: () => ok(project),
         [`GET ${projectUrl}/members`]: () => ok([makeMember(ann, 'owner')]),
+        [`GET ${projectUrl}/invites`]: () => ok([]),
       }),
     )
     const { user } = renderApp('/')
@@ -114,6 +115,7 @@ describe('project page', () => {
       [`GET ${projectUrl}`]: () => ok(project),
       [`GET ${projectUrl}/members`]: () =>
         ok([makeMember(ann, 'owner'), makeMember(bob, 'member')]),
+      [`GET ${projectUrl}/invites`]: () => ok([]),
       ...extra,
     })
 
@@ -267,6 +269,7 @@ describe('member list stays in sync', () => {
     return signedIn({
       [`GET ${projectUrl}`]: () => ok(makeProject({ role: ownRole })),
       [`GET ${projectUrl}/members`]: () => ok(members),
+      [`GET ${projectUrl}/invites`]: () => ok([]),
       [`POST ${projectUrl}/members`]: (body) => {
         const { email } = body as { email: string }
         if (email !== 'cat@example.com') {

@@ -80,6 +80,25 @@ export const projectMembers = pgTable(
   ],
 )
 
+/** A link that lets whoever opens it join a project. */
+export const projectInvites = pgTable(
+  'project_invites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    /** `member` or `viewer`; never `owner`. */
+    role: projectRole('role').notNull(),
+    /** SHA-256 of the token in the link; the token itself is never stored. */
+    tokenHash: text('token_hash').notNull().unique(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [index('project_invites_project_id_idx').on(table.projectId)],
+)
+
 /** A board column. */
 export const statuses = pgTable(
   'statuses',

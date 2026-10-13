@@ -2,6 +2,10 @@
 const EXACT: Record<string, string> = {
   'Invalid email or password': 'Неверный email или пароль',
   'The current password is wrong': 'Текущий пароль неверен',
+  'This invite link is not valid any more': 'Эта ссылка-приглашение больше не действует',
+  'This project has too many invite links, revoke some first':
+    'У проекта слишком много ссылок-приглашений. Сначала отзовите часть.',
+  'Invite not found': 'Приглашение не найдено',
   'An account with this email already exists': 'Аккаунт с таким email уже существует',
   'Registration is disabled on this server': 'Регистрация на этом сервере отключена',
   'This user is already a member of the project': 'Этот пользователь уже участвует в проекте',
