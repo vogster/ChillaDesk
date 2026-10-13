@@ -21,12 +21,18 @@ export const membersAmong =
 /**
  * Which part of a project a route changes, from its pattern: the segment after
  * `/api/projects/:projectId`, e.g. `tasks` for `/api/projects/:projectId/tasks/:taskId/move`.
+ * Null for routes whose changes nobody else needs to hear about.
  */
-export function resourceOfRoute(routePattern: string): LiveResource {
+export function resourceOfRoute(routePattern: string): LiveResource | null {
   const [, segment] = /\/:projectId\/([^/]+)/.exec(routePattern) ?? []
+  // Personal things under a project concern nobody else, so nothing is announced.
+  if (segment && PERSONAL_SEGMENTS.has(segment)) return null
   const parsed = liveResourceSchema.safeParse(segment)
   return parsed.success ? parsed.data : 'project'
 }
+
+/** Parts of a project that belong to one person: their saved filters. */
+const PERSONAL_SEGMENTS = new Set(['filters'])
 
 /** A client that reads slower than events arrive is dropped once this much is waiting. */
 const MAX_BUFFERED_BYTES = 64_000

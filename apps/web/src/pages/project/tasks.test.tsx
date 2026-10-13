@@ -3,6 +3,7 @@ import type {
   Comment,
   Label,
   Project,
+  SavedFilter,
   Status,
   Task,
   TaskEvent,
@@ -562,7 +563,7 @@ describe('task list', () => {
     makeTask(3, { title: 'Write tests', statusId: done.id }),
   ]
   const rows = () => screen.getAllByRole('row').slice(1)
-  const titles = () => rows().map((row) => within(row).getAllByRole('cell')[1]?.textContent)
+  const titles = () => rows().map((row) => within(row).getByRole('link').textContent)
 
   it('lists tasks with their status, priority, assignee and due date', async () => {
     server({ tasks })
@@ -1232,5 +1233,245 @@ describe('links between tasks', () => {
     expect(await within(section).findByRole('alert')).toHaveTextContent(
       'These two tasks are linked already',
     )
+  })
+})
+
+describe('working with the task list', () => {
+  const tasks = [
+    makeTask(1, { title: 'Write docs', priority: 'high' }),
+    makeTask(2, { title: 'Fix login', statusId: doing.id }),
+    makeTask(3, { title: 'Write tests' }),
+  ]
+  const listPath = `/projects/${project.id}/list`
+  const listRequests = (calls: { key: string }[]) =>
+    calls.filter((call) => call.key.startsWith(`GET ${url}/tasks?`)).map((call) => call.key)
+
+  it('sorts by a column on a click and turns the order around on the next', async () => {
+    const { calls } = server({ tasks })
+    const { user } = renderApp(listPath)
+    await screen.findByText('3 tasks')
+    const heading = () => screen.getByRole('columnheader', { name: /Priority/ })
+    expect(heading()).not.toHaveAttribute('aria-sort')
+
+    await user.click(within(heading()).getByRole('button'))
+    await waitFor(() => expect(heading()).toHaveAttribute('aria-sort', 'descending'))
+    await user.click(within(heading()).getByRole('button'))
+    await waitFor(() => expect(heading()).toHaveAttribute('aria-sort', 'ascending'))
+
+    expect(listRequests(calls)).toEqual([
+      `GET ${url}/tasks?sort=priority&order=desc`,
+      `GET ${url}/tasks?sort=priority&order=asc`,
+    ])
+    expect(screen.getByRole('columnheader', { name: 'Assignee' })).not.toContainElement(
+      screen.queryByRole('button', { name: 'Assignee' }),
+    )
+  })
+
+  it('opens with the filters and the order of the address', async () => {
+    const { calls } = server({ tasks })
+    renderApp(`${listPath}?priority=high&sort=due&order=desc&statusId=not-an-id`)
+
+    await screen.findByText('1 task')
+
+    expect(screen.getByLabelText('Priority')).toHaveValue('high')
+    expect(screen.getByLabelText('Status')).toHaveValue('')
+    expect(screen.getByRole('columnheader', { name: /Due/ })).toHaveAttribute(
+      'aria-sort',
+      'descending',
+    )
+    expect(listRequests(calls)).toEqual([`GET ${url}/tasks?priority=high&sort=due&order=desc`])
+  })
+
+  describe('bulk actions', () => {
+    function bulkServer(role: Project['role'] = 'owner') {
+      return server({
+        role,
+        tasks,
+        extra: { [`POST ${url}/tasks/bulk`]: () => ok({ affected: 2 }) },
+      })
+    }
+    const tick = async (user: ReturnType<typeof renderApp>['user'], key: string) =>
+      user.click(await screen.findByRole('checkbox', { name: `Select ${key}` }))
+
+    it('applies one action to the ticked tasks and clears the selection', async () => {
+      const { bodyOf } = bulkServer()
+      const { user } = renderApp(listPath)
+
+      await tick(user, 'CHL-1')
+      await tick(user, 'CHL-3')
+      const bar = screen.getByRole('group', { name: 'Actions for the selected tasks' })
+      expect(within(bar).getByRole('status')).toHaveTextContent('2 selected')
+      await user.selectOptions(within(bar).getByLabelText('Move to…'), 'Done')
+
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('group', { name: 'Actions for the selected tasks' }),
+        ).not.toBeInTheDocument(),
+      )
+      expect(bodyOf(`POST ${url}/tasks/bulk`)).toEqual({
+        taskIds: [tasks[0]?.id, tasks[2]?.id],
+        action: { type: 'update', patch: { statusId: done.id } },
+      })
+      expect(screen.getByRole('checkbox', { name: 'Select CHL-1' })).not.toBeChecked()
+    })
+
+    it('assigns, unassigns and sets a priority', async () => {
+      const { calls } = bulkServer()
+      const { user } = renderApp(listPath)
+      const act = async (label: string, option: string) => {
+        await tick(user, 'CHL-2')
+        const bar = screen.getByRole('group', { name: 'Actions for the selected tasks' })
+        await user.selectOptions(within(bar).getByLabelText(label), option)
+        await waitFor(() => expect(bar).not.toBeInTheDocument())
+      }
+
+      await act('Assign to…', 'Bob')
+      await act('Assign to…', 'Unassigned')
+      await act('Set priority…', 'Urgent')
+
+      const patches = calls
+        .filter((call) => call.key === `POST ${url}/tasks/bulk`)
+        .map((call) => (call.body as { action: { patch: unknown } }).action.patch)
+      expect(patches).toEqual([
+        { assigneeId: bob.id },
+        { assigneeId: null },
+        { priority: 'urgent' },
+      ])
+    })
+
+    it('selects everything on screen at once and asks before deleting', async () => {
+      const { calls, bodyOf } = bulkServer()
+      const { user } = renderApp(listPath)
+
+      await user.click(await screen.findByRole('checkbox', { name: 'Select all tasks' }))
+      const bar = screen.getByRole('group', { name: 'Actions for the selected tasks' })
+      expect(within(bar).getByRole('status')).toHaveTextContent('3 selected')
+      await user.click(within(bar).getByRole('button', { name: 'Delete' }))
+      expect(within(bar).getByText(/Delete 3 tasks with their comments/)).toBeInTheDocument()
+      expect(calls.some((call) => call.key === `POST ${url}/tasks/bulk`)).toBe(false)
+
+      await user.click(within(bar).getByRole('button', { name: 'Yes, delete' }))
+
+      await waitFor(() =>
+        expect(bodyOf(`POST ${url}/tasks/bulk`)).toEqual({
+          taskIds: tasks.map((task) => task.id),
+          action: { type: 'delete' },
+        }),
+      )
+    })
+
+    it('keeps the selection and says why when the server refuses', async () => {
+      server({
+        tasks,
+        extra: {
+          [`POST ${url}/tasks/bulk`]: () => apiError(404, 'NOT_FOUND', 'Task not found'),
+        },
+      })
+      const { user } = renderApp(listPath)
+
+      await tick(user, 'CHL-1')
+      const bar = screen.getByRole('group', { name: 'Actions for the selected tasks' })
+      await user.selectOptions(within(bar).getByLabelText('Set priority…'), 'Low')
+
+      expect(await within(bar).findByRole('alert')).toHaveTextContent('Task not found')
+      expect(screen.getByRole('checkbox', { name: 'Select CHL-1' })).toBeChecked()
+    })
+
+    it('offers nothing to tick to someone who cannot change tasks', async () => {
+      bulkServer('viewer')
+      renderApp(listPath)
+
+      await screen.findByText('3 tasks')
+
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('saved filters', () => {
+    const filter = (number: number, name: string, query: string): SavedFilter => ({
+      id: `eeeeeeee-eeee-4eee-8eee-${String(number).padStart(12, '0')}`,
+      name,
+      query,
+    })
+
+    function filterServer(initial: SavedFilter[]) {
+      let saved = initial
+      const routes: ApiRoutes = {
+        [`GET ${url}/filters`]: () => ok(saved),
+        [`POST ${url}/filters`]: (body) => {
+          const input = body as { name: string; query: string }
+          const created = filter(saved.length + 1, input.name, input.query)
+          saved = [...saved, created]
+          return ok(created, 201)
+        },
+      }
+      for (const existing of initial) {
+        routes[`DELETE ${url}/filters/${existing.id}`] = () => {
+          saved = saved.filter((other) => other.id !== existing.id)
+          return noContent()
+        }
+      }
+      return server({ tasks, extra: routes })
+    }
+
+    it('saves what is on screen under a name and offers it afterwards', async () => {
+      const { bodyOf } = filterServer([])
+      const { user } = renderApp(listPath)
+      await screen.findByText('3 tasks')
+      // Nothing to save while nothing is filtered or sorted.
+      expect(screen.queryByRole('button', { name: 'Save filter' })).not.toBeInTheDocument()
+
+      await user.selectOptions(screen.getByLabelText('Priority'), 'High')
+      await user.click(await screen.findByRole('button', { name: 'Save filter' }))
+      await user.type(screen.getByLabelText('Name of the filter'), 'Important')
+      await user.click(screen.getByRole('button', { name: 'Save filter' }))
+
+      const select = await screen.findByLabelText('Saved filters')
+      expect(select).toHaveDisplayValue('Important')
+      expect(bodyOf(`POST ${url}/filters`)).toEqual({ name: 'Important', query: 'priority=high' })
+      expect(
+        screen.getByRole('button', { name: 'Delete the filter “Important”' }),
+      ).toBeInTheDocument()
+    })
+
+    it('applies a saved filter and deletes it', async () => {
+      const { calls } = filterServer([filter(1, 'Urgent first', 'sort=priority&order=desc')])
+      const { user } = renderApp(listPath)
+      await screen.findByText('3 tasks')
+
+      await user.selectOptions(await screen.findByLabelText('Saved filters'), 'Urgent first')
+
+      await waitFor(() =>
+        expect(screen.getByRole('columnheader', { name: /Priority/ })).toHaveAttribute(
+          'aria-sort',
+          'descending',
+        ),
+      )
+      expect(listRequests(calls)).toEqual([`GET ${url}/tasks?sort=priority&order=desc`])
+
+      await user.click(screen.getByRole('button', { name: 'Delete the filter “Urgent first”' }))
+      await waitFor(() => expect(screen.queryByLabelText('Saved filters')).not.toBeInTheDocument())
+    })
+
+    it('asks for a name and shows what the server refuses', async () => {
+      server({
+        tasks,
+        extra: {
+          [`GET ${url}/filters`]: () => ok([]),
+          [`POST ${url}/filters`]: () =>
+            apiError(409, 'CONFLICT', 'You already have a filter named "Mine"'),
+        },
+      })
+      const { user } = renderApp(`${listPath}?priority=low`)
+
+      await user.click(await screen.findByRole('button', { name: 'Save filter' }))
+      await user.click(screen.getByRole('button', { name: 'Save filter' }))
+      expect(screen.getByLabelText('Name of the filter')).toBeInvalid()
+
+      await user.type(screen.getByLabelText('Name of the filter'), 'Mine')
+      await user.click(screen.getByRole('button', { name: 'Save filter' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('You already have a filter named')
+    })
   })
 })

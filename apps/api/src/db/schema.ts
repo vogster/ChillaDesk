@@ -167,6 +167,25 @@ export const tasks = pgTable(
   ],
 )
 
+/** A named set of task-list filters; each person has their own per project. */
+export const savedFilters = pgTable(
+  'saved_filters',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    /** The query string of the list, as the web app builds it. */
+    query: text('query').notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [uniqueIndex('saved_filters_name_idx').on(table.userId, table.projectId, table.name)],
+)
+
 /** One line of a task's checklist. */
 export const checklistItems = pgTable(
   'checklist_items',

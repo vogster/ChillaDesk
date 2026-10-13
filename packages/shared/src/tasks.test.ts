@@ -66,10 +66,17 @@ describe('moveTaskRequestSchema', () => {
 describe('taskListQuerySchema', () => {
   it('coerces numbers from the query string and applies defaults', () => {
     expect(taskListQuerySchema.parse({ limit: '20', offset: '40' })).toEqual({
+      sort: 'board',
+      order: 'asc',
       limit: 20,
       offset: 40,
     })
-    expect(taskListQuerySchema.parse({})).toEqual({ limit: 500, offset: 0 })
+    expect(taskListQuerySchema.parse({})).toEqual({
+      sort: 'board',
+      order: 'asc',
+      limit: 500,
+      offset: 0,
+    })
   })
 
   it('accepts a user id or "none" as the assignee filter', () => {

@@ -64,6 +64,28 @@ export const tasks = {
     empty: 'No tasks yet. Add one on the board.',
     count: (total: number) => `${total} ${total === 1 ? 'task' : 'tasks'}`,
     showing: (shown: number, total: number) => `Showing ${shown} of ${total} tasks`,
+    sortBy: (column: string) => `Sort by ${column}`,
+    selectAll: 'Select all tasks',
+    selectTask: (key: string) => `Select ${key}`,
+    bulk: {
+      label: 'Actions for the selected tasks',
+      selected: (count: number) => `${count} selected`,
+      moveTo: 'Move to…',
+      assignTo: 'Assign to…',
+      setPriority: 'Set priority…',
+      delete: 'Delete',
+      deleteConfirm: (count: number) =>
+        `Delete ${count} ${count === 1 ? 'task' : 'tasks'} with their comments? This cannot be undone.`,
+      clear: 'Clear selection',
+    },
+    saved: {
+      label: 'Saved filters',
+      choose: 'Saved filters…',
+      save: 'Save filter',
+      name: 'Name of the filter',
+      cancel: 'Cancel',
+      delete: (name: string) => `Delete the filter “${name}”`,
+    },
     columns: {
       key: 'Key',
       title: 'Title',

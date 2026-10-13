@@ -1,4 +1,6 @@
 import {
+  bulkTasksRequestSchema,
+  bulkTasksResultSchema,
   checklistItemSchema,
   createChecklistItemSchema,
   createTaskLinkSchema,
@@ -16,6 +18,7 @@ import {
   listChecklist,
   updateChecklistItem,
 } from './checklist.service'
+import { bulkTasks } from './bulk.service'
 import { addLink, listLinks, removeLink } from './links.service'
 
 const taskParams = z.object({ projectId: z.uuid(), taskId: z.uuid() })
@@ -39,6 +42,23 @@ export const taskExtraRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { 
     requireAuth(request)
   })
   const userOf = (request: Parameters<typeof requireAuth>[0]) => requireAuth(request).user.id
+
+  app.post(
+    '/bulk',
+    {
+      schema: {
+        tags: ['tasks'],
+        summary: 'Change or delete several tasks at once',
+        description:
+          'All of the tasks are changed, or none: one that cannot be changed stops the lot. ' +
+          'Each change is recorded and announced like a change to that task alone.',
+        params: z.object({ projectId: z.uuid() }),
+        body: bulkTasksRequestSchema,
+        response: { 200: bulkTasksResultSchema, ...withConflict },
+      },
+    },
+    (request) => bulkTasks(db, userOf(request), request.params.projectId, request.body),
+  )
 
   const checklistTags = ['task checklist']
 

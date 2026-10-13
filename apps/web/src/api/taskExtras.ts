@@ -1,8 +1,13 @@
 import {
+  bulkTasksResultSchema,
   checklistItemSchema,
+  savedFilterSchema,
   taskLinkSchema,
+  type BulkTasksRequest,
   type ChecklistItem,
+  type CreateSavedFilter,
   type CreateTaskLink,
+  type SavedFilter,
   type TaskLink,
   type UpdateChecklistItem,
 } from '@chilladesk/shared'
@@ -62,3 +67,28 @@ export const addTaskLink = (
 
 export const removeTaskLink = (projectId: string, taskId: string, linkId: string): Promise<void> =>
   apiRequest(`${taskUrl(projectId, taskId)}/links/${linkId}`, { method: 'DELETE' })
+
+/** One action on several tasks; it applies to all of them or to none. */
+export const bulkTasks = (
+  projectId: string,
+  request: BulkTasksRequest,
+): Promise<{ affected: number }> =>
+  apiRequest(`/projects/${projectId}/tasks/bulk`, {
+    method: 'POST',
+    body: request,
+    schema: bulkTasksResultSchema,
+  })
+
+const filtersUrl = (projectId: string) => `/projects/${projectId}/filters`
+
+export const fetchSavedFilters = (projectId: string): Promise<SavedFilter[]> =>
+  apiRequest(filtersUrl(projectId), { schema: z.array(savedFilterSchema) })
+
+export const createSavedFilter = (
+  projectId: string,
+  input: CreateSavedFilter,
+): Promise<SavedFilter> =>
+  apiRequest(filtersUrl(projectId), { method: 'POST', body: input, schema: savedFilterSchema })
+
+export const deleteSavedFilter = (projectId: string, filterId: string): Promise<void> =>
+  apiRequest(`${filtersUrl(projectId)}/${filterId}`, { method: 'DELETE' })

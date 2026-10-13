@@ -34,6 +34,9 @@ const EXACT: Record<string, string> = {
   'A task cannot be linked to itself': 'Задачу нельзя связать с ней самой',
   'Checklist item not found': 'Пункт чек-листа не найден',
   'Link not found': 'Связь не найдена',
+  'You have too many saved filters in this project, delete some first':
+    'У вас слишком много сохранённых фильтров в этом проекте. Сначала удалите часть.',
+  'Tasks must not repeat': 'Задачи не должны повторяться',
   'Must not contain null characters': 'Текст не должен содержать нулевых символов',
   'At least one field is required': 'Нужно изменить хотя бы одно поле',
   'Labels must not repeat': 'Метки не должны повторяться',
@@ -60,6 +63,7 @@ const ROLES: Record<string, string> = {
 
 /** Server texts with a name inside. Each pattern is anchored and has no nested repetition. */
 const PATTERNS: [RegExp, (...groups: string[]) => string][] = [
+  [/^You already have a filter named "(.+)"$/, (name) => `У вас уже есть фильтр «${name}»`],
   [/^A label named "(.+)" already exists$/, (name) => `Метка «${name}» уже есть`],
   [/^A page titled "(.+)" already exists$/, (title) => `Страница «${title}» уже есть`],
   [/^Project key "(.+)" is already taken$/, (key) => `Ключ проекта «${key}» уже занят`],

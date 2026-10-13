@@ -8,11 +8,13 @@ import {
   type Comment,
   type CreateStatusRequest,
   type MoveTaskRequest,
+  type SortOrder,
   type Status,
   type Task,
   type TaskEvent,
   type TaskList,
   type TaskPriority,
+  type TaskSort,
   type TaskWatchers,
   type UpdateStatusRequest,
   type UpdateTaskRequest,
@@ -30,6 +32,8 @@ export interface TaskFilters {
   priority?: TaskPriority
   labelId?: string
   q?: string
+  sort?: TaskSort
+  order?: SortOrder
 }
 
 /** What the create form sends; the server fills in the rest. */

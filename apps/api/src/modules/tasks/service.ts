@@ -10,7 +10,21 @@ import type {
   UpdateTaskRequest,
   UserSummary,
 } from '@chilladesk/shared'
-import { and, asc, count, eq, ilike, isNull, lt, max, ne, or, sql, type SQL } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  isNull,
+  lt,
+  max,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import type { Db, Executor, Tx } from '../../db/client'
 import { containsPattern } from '../../db/like'
@@ -177,6 +191,36 @@ function filters(projectId: string, query: TaskListQuery): SQL | undefined {
   )
 }
 
+/** The order of a task list. Every order ends in a unique column, so paging is stable. */
+function orderOf({ sort, order }: Pick<TaskListQuery, 'sort' | 'order'>): SQL[] {
+  const dir = order === 'desc' ? desc : asc
+  const board = [asc(statuses.position), asc(statuses.id), asc(tasks.position), asc(tasks.number)]
+  switch (sort) {
+    case 'board':
+      return order === 'desc'
+        ? [desc(statuses.position), desc(statuses.id), desc(tasks.position), desc(tasks.number)]
+        : board
+    case 'number':
+      return [dir(tasks.number)]
+    case 'title':
+      return [dir(sql`lower(${tasks.title})`), asc(tasks.number)]
+    case 'priority':
+      return [dir(tasks.priority), asc(tasks.number)]
+    case 'due':
+      // Whichever way round, a task without a date is not what was asked for first.
+      return [
+        order === 'desc'
+          ? sql`${tasks.dueDate} desc nulls last`
+          : sql`${tasks.dueDate} asc nulls last`,
+        asc(tasks.number),
+      ]
+    case 'updated':
+      return [dir(tasks.updatedAt), asc(tasks.number)]
+    case 'created':
+      return [dir(tasks.createdAt), asc(tasks.number)]
+  }
+}
+
 export async function listTasks(
   db: Db,
   userId: string,
@@ -188,8 +232,7 @@ export async function listTasks(
   const [rows, [counted]] = await Promise.all([
     selectTasks(db)
       .where(where)
-      // The ids break ties so that paging never repeats or skips a row.
-      .orderBy(asc(statuses.position), asc(statuses.id), asc(tasks.position), asc(tasks.number))
+      .orderBy(...orderOf(query))
       .limit(query.limit)
       .offset(query.offset),
     db.select({ total: count() }).from(tasks).where(where),

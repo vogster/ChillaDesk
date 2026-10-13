@@ -78,6 +78,28 @@ export const tasks: TasksMessages = {
     empty: 'Задач пока нет. Добавьте первую на доске.',
     count: (total) => `${total} ${ruPlural(total, 'задача', 'задачи', 'задач')}`,
     showing: (shown, total) => `Показано ${shown} из ${total} ${ofTasks(total)}`,
+    sortBy: (column) => `Сортировать по столбцу «${column}»`,
+    selectAll: 'Выбрать все задачи',
+    selectTask: (key) => `Выбрать задачу ${key}`,
+    bulk: {
+      label: 'Действия с выбранными задачами',
+      selected: (count) => `Выбрано: ${count}`,
+      moveTo: 'Перенести в…',
+      assignTo: 'Назначить…',
+      setPriority: 'Приоритет…',
+      delete: 'Удалить',
+      deleteConfirm: (count) =>
+        `Удалить ${count} ${ruPlural(count, 'задачу', 'задачи', 'задач')} вместе с комментариями? Это действие нельзя отменить.`,
+      clear: 'Снять выбор',
+    },
+    saved: {
+      label: 'Сохранённые фильтры',
+      choose: 'Сохранённые фильтры…',
+      save: 'Сохранить фильтр',
+      name: 'Название фильтра',
+      cancel: 'Отмена',
+      delete: (name) => `Удалить фильтр «${name}»`,
+    },
     columns: {
       key: 'Ключ',
       title: 'Название',

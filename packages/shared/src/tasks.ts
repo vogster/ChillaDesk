@@ -115,6 +115,21 @@ export type MoveTaskRequest = z.infer<typeof moveTaskRequestSchema>
 
 export const TASK_PAGE_MAX = 500
 
+/** `board` is the order of the board: column by column, top to bottom. */
+export const taskSortSchema = z.enum([
+  'board',
+  'number',
+  'title',
+  'priority',
+  'due',
+  'updated',
+  'created',
+])
+export type TaskSort = z.infer<typeof taskSortSchema>
+
+export const sortOrderSchema = z.enum(['asc', 'desc'])
+export type SortOrder = z.infer<typeof sortOrderSchema>
+
 export const taskListQuerySchema = z.object({
   statusId: z.uuid().optional(),
   /** A user id, or `none` for unassigned tasks. */
@@ -124,6 +139,9 @@ export const taskListQuerySchema = z.object({
   labelId: z.uuid().optional(),
   /** Case-insensitive match in the title or description. */
   q: textSchema.trim().min(1).max(200).optional(),
+  sort: taskSortSchema.default('board'),
+  /** Tasks without a due date come last either way. */
+  order: sortOrderSchema.default('asc'),
   limit: z.coerce.number().int().min(1).max(TASK_PAGE_MAX).default(TASK_PAGE_MAX),
   offset: z.coerce.number().int().min(0).default(0),
 })
@@ -157,3 +175,44 @@ export const taskWatchersSchema = z.object({
   watchers: z.array(userSummarySchema),
 })
 export type TaskWatchers = z.infer<typeof taskWatchersSchema>
+
+/** One action on several tasks at once; it applies to all of them or to none. */
+export const bulkTasksRequestSchema = z.object({
+  taskIds: z
+    .array(z.uuid())
+    .min(1)
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, 'Tasks must not repeat'),
+  action: z.discriminatedUnion('type', [
+    z.object({
+      type: z.literal('update'),
+      patch: z
+        .object({
+          /** Moves the tasks to the end of this column. */
+          statusId: z.uuid().optional(),
+          assigneeId: z.uuid().nullable().optional(),
+          priority: taskPrioritySchema.optional(),
+        })
+        .refine((patch) => Object.keys(patch).length > 0, 'At least one field is required'),
+    }),
+    z.object({ type: z.literal('delete') }),
+  ]),
+})
+export type BulkTasksRequest = z.infer<typeof bulkTasksRequestSchema>
+
+export const bulkTasksResultSchema = z.object({ affected: z.number().int() })
+
+/** A named set of list filters a person keeps for themselves in a project. */
+export const savedFilterSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  /** The query string of the task list, e.g. `priority=high&sort=due`. */
+  query: z.string(),
+})
+export type SavedFilter = z.infer<typeof savedFilterSchema>
+
+export const createSavedFilterSchema = z.object({
+  name: textSchema.trim().min(1).max(60),
+  query: textSchema.max(500),
+})
+export type CreateSavedFilter = z.infer<typeof createSavedFilterSchema>

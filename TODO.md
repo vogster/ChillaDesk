@@ -22,7 +22,7 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 - [x] **Task history** — who changed the assignee, column or due date, and when. The wiki has
       history, tasks do not.
 - [x] **Watching a task** — only the creator and the assignee are notified today.
-- [ ] **Saved filters and sorting** in the list; bulk actions on several tasks.
+- [x] **Saved filters and sorting** in the list; bulk actions on several tasks.
 - [ ] **Sprints or milestones** with a simple report.
 
 ## Integrations
