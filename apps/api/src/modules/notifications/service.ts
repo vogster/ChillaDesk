@@ -5,7 +5,7 @@ import {
   type NotificationList,
   type NotificationListQuery,
   type NotificationType,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { and, count, desc, eq, inArray, isNull } from 'drizzle-orm'
 import type { Db, Executor } from '../../db/client'
 import { notifications, projectMembers, projects, tasks, users, wikiPages } from '../../db/schema'

@@ -1,4 +1,4 @@
-import type { Task } from '@chillawiki/shared'
+import type { Task } from '@chilladesk/shared'
 import {
   closestCorners,
   DndContext,

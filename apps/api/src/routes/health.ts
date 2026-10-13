@@ -1,4 +1,4 @@
-import { healthResponseSchema } from '@chillawiki/shared'
+import { healthResponseSchema } from '@chilladesk/shared'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import packageJson from '../../package.json' with { type: 'json' }
 import type { Database } from '../db/client'

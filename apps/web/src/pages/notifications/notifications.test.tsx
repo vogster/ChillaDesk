@@ -1,4 +1,4 @@
-import type { Notification, NotificationList } from '@chillawiki/shared'
+import type { Notification, NotificationList } from '@chilladesk/shared'
 import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {

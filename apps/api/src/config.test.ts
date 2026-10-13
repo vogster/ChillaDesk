@@ -65,7 +65,7 @@ describe('loadConfig', () => {
   it('turns notification emails on only when SMTP is fully configured', () => {
     const mail = {
       SMTP_URL: 'smtp://user:secret@mail.example.com:587',
-      MAIL_FROM: 'ChillaWiki <wiki@example.com>',
+      MAIL_FROM: 'ChillaDesk <wiki@example.com>',
       PUBLIC_URL: 'https://wiki.example.com',
     }
 

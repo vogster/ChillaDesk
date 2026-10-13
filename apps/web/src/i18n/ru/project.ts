@@ -12,7 +12,7 @@ export const project: ProjectMessages = {
     remove: 'Удалить',
     addByEmail: 'Добавить участника по эл. почте',
     emailPlaceholder: 'kollega@example.com',
-    accountHint: 'У человека уже должна быть учётная запись ChillaWiki',
+    accountHint: 'У человека уже должна быть учётная запись ChillaDesk',
     role: 'Роль',
   },
   settings: {
@@ -29,7 +29,7 @@ export const project: ProjectMessages = {
   },
   columns: {
     heading: 'Колонки доски',
-    hint: 'Тип подсказывает ChillaWiki, в каких колонках лежит завершённая работа, как бы они ни назывались.',
+    hint: 'Тип подсказывает ChillaDesk, в каких колонках лежит завершённая работа, как бы они ни назывались.',
     category: {
       todo: 'Не начато',
       in_progress: 'В работе',

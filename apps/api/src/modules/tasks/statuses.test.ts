@@ -1,4 +1,4 @@
-import { statusSchema, type Status } from '@chillawiki/shared'
+import { statusSchema, type Status } from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createTestContext, type TestContext } from '../../test/harness'
 

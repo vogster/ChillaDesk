@@ -3,7 +3,7 @@ import {
   taskInContextSchema,
   type SearchResults,
   type TaskInContext,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { z } from 'zod'
 import { apiRequest } from './client'
 

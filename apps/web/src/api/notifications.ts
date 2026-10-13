@@ -1,4 +1,4 @@
-import { notificationListSchema, type NotificationList } from '@chillawiki/shared'
+import { notificationListSchema, type NotificationList } from '@chilladesk/shared'
 import { apiRequest } from './client'
 
 export const fetchNotifications = (): Promise<NotificationList> =>

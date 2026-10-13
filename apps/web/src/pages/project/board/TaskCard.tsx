@@ -1,4 +1,4 @@
-import type { Status, Task } from '@chillawiki/shared'
+import type { Status, Task } from '@chilladesk/shared'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { ReactNode } from 'react'

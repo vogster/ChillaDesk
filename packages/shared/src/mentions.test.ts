@@ -33,7 +33,7 @@ describe('findMentions', () => {
     ['a plain email address', 'Write to ann@example.com please'],
     ['an email glued to a word', 'mail:x@ann@example.com'],
     ['a bare at-sign or a name without a domain', 'Hi @ann and @ and @ann@localhost'],
-    ['a social handle', 'follow @chillawiki'],
+    ['a social handle', 'follow @chilladesk'],
   ])('does not treat %s as a mention', (_label, text) => {
     expect(findMentions(text)).toEqual([])
   })

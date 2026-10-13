@@ -1,4 +1,4 @@
-import type { Status, Task } from '@chillawiki/shared'
+import type { Status, Task } from '@chilladesk/shared'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useState, type FormEvent } from 'react'

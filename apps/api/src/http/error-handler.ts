@@ -1,4 +1,4 @@
-import type { ErrorCode, ErrorResponse } from '@chillawiki/shared'
+import type { ErrorCode, ErrorResponse } from '@chilladesk/shared'
 import type { FastifyError, FastifyInstance } from 'fastify'
 import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod'
 import { AppError } from '../errors'

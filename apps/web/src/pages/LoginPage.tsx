@@ -1,4 +1,4 @@
-import { loginRequestSchema } from '@chillawiki/shared'
+import { loginRequestSchema } from '@chilladesk/shared'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router'
 import { errorMessage } from '../api/client'

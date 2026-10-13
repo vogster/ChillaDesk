@@ -2,7 +2,7 @@ import {
   createApiTokenRequestSchema,
   type ApiToken,
   type CreatedApiToken,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../api/client'
@@ -30,7 +30,7 @@ function mcpConfig(token: string): string {
   return JSON.stringify(
     {
       mcpServers: {
-        chillawiki: {
+        chilladesk: {
           type: 'http',
           url: `${window.location.origin}/api/mcp`,
           headers: { Authorization: `Bearer ${token}` },

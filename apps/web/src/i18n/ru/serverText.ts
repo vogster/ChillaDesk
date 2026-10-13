@@ -18,7 +18,7 @@ const EXACT: Record<string, string> = {
     'Для этого действия нужен вход в систему, а не API-токен',
   'Cross-site request blocked': 'Запрос с другого сайта заблокирован',
   'Too many open event streams, close some first':
-    'Открыто слишком много вкладок с ChillaWiki. Закройте лишние.',
+    'Открыто слишком много вкладок с ChillaDesk. Закройте лишние.',
   'Must not contain null characters': 'Текст не должен содержать нулевых символов',
   'At least one field is required': 'Нужно изменить хотя бы одно поле',
   'Labels must not repeat': 'Метки не должны повторяться',

@@ -4,7 +4,7 @@ import {
   type SearchResults,
   type TaskInContext,
   type WikiSearchHit,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { and, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
 import type { Db } from '../../db/client'
 import { containsPattern } from '../../db/like'

@@ -1,4 +1,4 @@
-import type { ErrorCode, ErrorResponse } from '@chillawiki/shared'
+import type { ErrorCode, ErrorResponse } from '@chilladesk/shared'
 
 const STATUS_BY_CODE = {
   VALIDATION_ERROR: 400,

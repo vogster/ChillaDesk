@@ -4,7 +4,7 @@ import {
   type LoginRequest,
   type RegisterRequest,
   type User,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { ApiError, apiRequest } from './client'
 
 /** Resolves to null when nobody is signed in. */

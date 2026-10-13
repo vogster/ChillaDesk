@@ -12,7 +12,7 @@ export const project = {
     remove: 'Remove',
     addByEmail: 'Add a member by email',
     emailPlaceholder: 'teammate@example.com',
-    accountHint: 'They need a ChillaWiki account first',
+    accountHint: 'They need a ChillaDesk account first',
     role: 'Role',
   },
   settings: {
@@ -27,7 +27,7 @@ export const project = {
   },
   columns: {
     heading: 'Board columns',
-    hint: 'The kind tells ChillaWiki which columns hold finished work, whatever they are called.',
+    hint: 'The kind tells ChillaDesk which columns hold finished work, whatever they are called.',
     /** The kind of a column, by status category. */
     category: {
       todo: 'Not started',

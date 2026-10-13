@@ -1,4 +1,4 @@
-import { MENTION_PREFIX_CLASS } from '@chillawiki/shared'
+import { MENTION_PREFIX_CLASS } from '@chilladesk/shared'
 import { splitLinks, type LinkContext, type LinkPart } from './wikiModel'
 
 /** The few fields of a Markdown syntax-tree node (mdast) this plugin reads or writes. */

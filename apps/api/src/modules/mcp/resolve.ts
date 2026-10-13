@@ -1,4 +1,4 @@
-import type { Label, Project, ProjectMember, Status, Task, WikiPage } from '@chillawiki/shared'
+import type { Label, Project, ProjectMember, Status, Task, WikiPage } from '@chilladesk/shared'
 import type { Db } from '../../db/client'
 import { invalid, notFound } from '../../errors'
 import { listLabels } from '../labels/service'

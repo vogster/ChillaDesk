@@ -1,4 +1,4 @@
-import type { Project, ProjectRole } from '@chillawiki/shared'
+import type { Project, ProjectRole } from '@chilladesk/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addMember,

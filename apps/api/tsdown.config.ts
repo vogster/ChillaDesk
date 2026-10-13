@@ -6,5 +6,5 @@ export default defineConfig({
   platform: 'node',
   target: 'node22',
   // Workspace packages ship TypeScript sources, so they must be bundled in.
-  deps: { alwaysBundle: [/^@chillawiki\//] },
+  deps: { alwaysBundle: [/^@chilladesk\//] },
 })

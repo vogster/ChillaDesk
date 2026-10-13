@@ -14,14 +14,14 @@ COPY apps/web/package.json apps/web/package.json
 COPY packages/shared/package.json packages/shared/package.json
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm turbo run build --filter=@chillawiki/api --filter=@chillawiki/web
+RUN pnpm turbo run build --filter=@chilladesk/api --filter=@chilladesk/web
 
 # ---- production dependencies of the API only ----
 FROM base AS api-deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/shared/package.json packages/shared/package.json
-RUN pnpm install --frozen-lockfile --prod --filter=@chillawiki/api...
+RUN pnpm install --frozen-lockfile --prod --filter=@chilladesk/api...
 
 # ---- API runtime ----
 FROM node:24-alpine AS api

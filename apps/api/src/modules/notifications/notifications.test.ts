@@ -4,7 +4,7 @@ import {
   type NotificationList,
   type Task,
   type WikiPage,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   createTestContext,

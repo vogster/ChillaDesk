@@ -1,6 +1,6 @@
-// End-to-end check of a running ChillaWiki stack (e.g. `docker compose up`), including the
+// End-to-end check of a running ChillaDesk stack (e.g. `docker compose up`), including the
 // concurrent operations that the unit tests cannot exercise on their single-connection database.
-// Usage: node scripts/stack-check.mjs [http://localhost:8080]   (or: pnpm --filter @chillawiki/api stack-check)
+// Usage: node scripts/stack-check.mjs [http://localhost:8080]   (or: pnpm --filter @chilladesk/api stack-check)
 // It registers throwaway accounts, so run it against a disposable instance.
 import { randomBytes } from 'node:crypto'
 import process from 'node:process'

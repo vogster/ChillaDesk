@@ -1,4 +1,4 @@
-import { liveEventSchema, type LiveEvent, type LiveResource } from '@chillawiki/shared'
+import { liveEventSchema, type LiveEvent, type LiveResource } from '@chilladesk/shared'
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 

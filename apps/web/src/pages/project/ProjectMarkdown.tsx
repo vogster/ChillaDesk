@@ -1,4 +1,4 @@
-import type { Project } from '@chillawiki/shared'
+import type { Project } from '@chilladesk/shared'
 import { useMemo } from 'react'
 import { Markdown } from '../../components/Markdown'
 import { useMembers } from './projectQueries'

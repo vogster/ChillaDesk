@@ -1,4 +1,4 @@
-import type { Task, WikiPage } from '@chillawiki/shared'
+import type { Task, WikiPage } from '@chilladesk/shared'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { notifications } from '../../db/schema'
@@ -313,14 +313,14 @@ describe('createMailSender', () => {
     const delivered: unknown[] = []
     const send = createMailSender(
       { jsonTransport: true },
-      'ChillaWiki <wiki@example.com>',
+      'ChillaDesk <wiki@example.com>',
       (info) => void delivered.push(info),
     )
 
     await send({ to: 'max@example.com', subject: 'Hello', text: 'Body' })
 
     expect(JSON.parse(String((delivered[0] as { message: string }).message))).toMatchObject({
-      from: { address: 'wiki@example.com', name: 'ChillaWiki' },
+      from: { address: 'wiki@example.com', name: 'ChillaDesk' },
       to: [{ address: 'max@example.com' }],
       subject: 'Hello',
       text: 'Body',

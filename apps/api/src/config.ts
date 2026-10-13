@@ -36,9 +36,9 @@ const envSchema = z.object({
 
 export interface MailConfig {
   smtpUrl: string
-  /** The sender, e.g. `ChillaWiki <wiki@example.com>`. */
+  /** The sender, e.g. `ChillaDesk <wiki@example.com>`. */
   from: string
-  /** Where people open ChillaWiki; emails link there. */
+  /** Where people open ChillaDesk; emails link there. */
   publicUrl: string
 }
 

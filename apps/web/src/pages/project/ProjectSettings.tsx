@@ -1,4 +1,4 @@
-import { updateProjectRequestSchema, type Project } from '@chillawiki/shared'
+import { updateProjectRequestSchema, type Project } from '@chilladesk/shared'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { errorMessage } from '../../api/client'

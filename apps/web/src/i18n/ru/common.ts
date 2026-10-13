@@ -2,7 +2,7 @@ import type { CommonMessages } from '../en/common'
 import { serverText } from './serverText'
 
 export const common: CommonMessages = {
-  appName: 'ChillaWiki',
+  appName: 'ChillaDesk',
   language: 'Язык',
   loading: 'Загрузка…',
   save: 'Сохранить',

@@ -12,7 +12,7 @@ import {
   type TaskPriority,
   type UpdateStatusRequest,
   type UpdateTaskRequest,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { z } from 'zod'
 import { apiRequest } from './client'
 

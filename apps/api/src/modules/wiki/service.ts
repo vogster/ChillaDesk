@@ -7,7 +7,7 @@ import type {
   WikiPageSummary,
   WikiVersion,
   WikiVersionSummary,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import type { Db, Executor, Tx } from '../../db/client'
 import { containsPattern } from '../../db/like'

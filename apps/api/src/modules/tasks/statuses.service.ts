@@ -3,7 +3,7 @@ import type {
   Status,
   StatusCategory,
   UpdateStatusRequest,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { and, asc, eq, gt, max, sql } from 'drizzle-orm'
 import type { Db, Executor, Tx } from '../../db/client'
 import { projects, statuses, tasks } from '../../db/schema'

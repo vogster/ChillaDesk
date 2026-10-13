@@ -1,4 +1,4 @@
-import { taskListSchema, taskSchema, type Task, type TaskList } from '@chillawiki/shared'
+import { taskListSchema, taskSchema, type Task, type TaskList } from '@chilladesk/shared'
 import { inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { tasks as tasksTable } from '../../db/schema'

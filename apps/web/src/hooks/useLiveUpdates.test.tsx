@@ -1,4 +1,4 @@
-import type { LiveResource } from '@chillawiki/shared'
+import type { LiveResource } from '@chilladesk/shared'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'

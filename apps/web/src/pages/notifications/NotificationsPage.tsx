@@ -1,4 +1,4 @@
-import type { Notification } from '@chillawiki/shared'
+import type { Notification } from '@chilladesk/shared'
 import { Link } from 'react-router'
 import { errorMessage } from '../../api/client'
 import { Alert, Button, Spinner } from '../../components/ui'

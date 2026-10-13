@@ -5,7 +5,7 @@ import {
   registerRequestSchema,
   userSchema,
   type AuthResponse,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import type { FastifyReply } from 'fastify'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'

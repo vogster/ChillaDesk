@@ -1,4 +1,4 @@
-import { taskPrioritySchema, type TaskPriority } from '@chillawiki/shared'
+import { taskPrioritySchema, type TaskPriority } from '@chilladesk/shared'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { errorMessage } from '../../api/client'

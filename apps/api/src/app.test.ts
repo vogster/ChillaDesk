@@ -1,4 +1,4 @@
-import { healthResponseSchema } from '@chillawiki/shared'
+import { healthResponseSchema } from '@chilladesk/shared'
 import { afterEach, describe, expect, it } from 'vitest'
 import { buildApp } from './app'
 import { createMemoryDatabase, type Database } from './db/client'
@@ -49,7 +49,7 @@ describe('OpenAPI document', () => {
 
     expect(response.statusCode).toBe(200)
     const document = response.json<{ info: { title: string }; paths: Record<string, unknown> }>()
-    expect(document.info.title).toBe('ChillaWiki API')
+    expect(document.info.title).toBe('ChillaDesk API')
     expect(document.paths).toHaveProperty('/api/health')
     await app.close()
     await database.close()

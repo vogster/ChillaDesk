@@ -3,7 +3,7 @@ import {
   type CreateLabelRequest,
   type Label,
   type UpdateLabelRequest,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { z } from 'zod'
 import { apiRequest } from './client'
 

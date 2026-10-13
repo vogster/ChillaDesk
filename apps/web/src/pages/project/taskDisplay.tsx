@@ -1,4 +1,4 @@
-import type { Status, Task, TaskPriority, UserSummary } from '@chillawiki/shared'
+import type { Status, Task, TaskPriority, UserSummary } from '@chilladesk/shared'
 import { currentMessages, intlLocale, useT } from '../../i18n'
 
 /** The name of a priority in the current language, for code outside components. */

@@ -1,4 +1,4 @@
-import type { WikiPageSummary } from '@chillawiki/shared'
+import type { WikiPageSummary } from '@chilladesk/shared'
 import { describe, expect, it } from 'vitest'
 import { buildTree, descendantIds, splitLinks, type LinkContext, type TreeNode } from './wikiModel'
 

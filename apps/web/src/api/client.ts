@@ -1,4 +1,4 @@
-import { errorResponseSchema, type ErrorCode, type ErrorResponse } from '@chillawiki/shared'
+import { errorResponseSchema, type ErrorCode, type ErrorResponse } from '@chilladesk/shared'
 import type { z } from 'zod'
 import { currentMessages } from '../i18n/messages'
 

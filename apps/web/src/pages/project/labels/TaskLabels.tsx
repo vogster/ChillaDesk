@@ -1,4 +1,4 @@
-import { createLabelRequestSchema, type Label, type Task } from '@chillawiki/shared'
+import { createLabelRequestSchema, type Label, type Task } from '@chilladesk/shared'
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../../api/client'
 import { Alert, Button, selectClass } from '../../../components/ui'

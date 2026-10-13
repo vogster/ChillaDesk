@@ -1,4 +1,4 @@
-import type { MoveTaskRequest, Status, Task } from '@chillawiki/shared'
+import type { MoveTaskRequest, Status, Task } from '@chilladesk/shared'
 import type { DragItem } from '../../../i18n/en/tasks'
 import { currentMessages } from '../../../i18n/messages'
 

@@ -4,7 +4,7 @@ import {
   type ApiToken,
   type CreateApiTokenRequest,
   type CreatedApiToken,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { z } from 'zod'
 import { apiRequest } from './client'
 

@@ -1,4 +1,4 @@
-import type { Comment } from '@chillawiki/shared'
+import type { Comment } from '@chilladesk/shared'
 import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {

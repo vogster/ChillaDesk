@@ -1,4 +1,4 @@
-import type { ApiToken } from '@chillawiki/shared'
+import type { ApiToken } from '@chilladesk/shared'
 import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ann, apiError, mockApi, noContent, ok, renderApp, type ApiRoutes } from '../test/render'
@@ -88,7 +88,7 @@ describe('API tokens page', () => {
       expiresInDays: 365,
     })
     const config = JSON.parse(screen.getByLabelText('MCP client configuration').textContent ?? '')
-    expect(config.mcpServers.chillawiki).toEqual({
+    expect(config.mcpServers.chilladesk).toEqual({
       type: 'http',
       url: `${window.location.origin}/api/mcp`,
       headers: { Authorization: `Bearer ${SECRET}` },

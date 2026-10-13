@@ -1,4 +1,4 @@
-import { commentRequestSchema, type Comment } from '@chillawiki/shared'
+import { commentRequestSchema, type Comment } from '@chilladesk/shared'
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../api/client'
 import { Alert, Button, Spinner } from '../../components/ui'

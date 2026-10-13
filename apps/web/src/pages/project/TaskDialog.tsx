@@ -4,7 +4,7 @@ import {
   updateTaskRequestSchema,
   type Task,
   type TaskPriority,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { ApiError, errorMessage } from '../../api/client'
 import { parseForm, type FieldErrors } from '../../components/form'

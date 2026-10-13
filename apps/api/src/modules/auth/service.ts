@@ -5,7 +5,7 @@ import {
   type LoginRequest,
   type RegisterRequest,
   type User,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { and, eq, gt, isNull, lt, lte, or } from 'drizzle-orm'
 import type { Db } from '../../db/client'
 import { apiTokens, sessions, users } from '../../db/schema'

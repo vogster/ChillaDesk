@@ -1,4 +1,4 @@
-import type { ProjectMember } from '@chillawiki/shared'
+import type { ProjectMember } from '@chilladesk/shared'
 import {
   useId,
   useRef,

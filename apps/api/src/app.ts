@@ -90,7 +90,7 @@ export async function buildApp({
   await app.register(swagger, {
     openapi: {
       info: {
-        title: 'ChillaWiki API',
+        title: 'ChillaDesk API',
         description: 'Tasks, kanban boards and wiki for your projects.',
         version: packageJson.version,
       },

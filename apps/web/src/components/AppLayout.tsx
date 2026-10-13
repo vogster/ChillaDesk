@@ -1,4 +1,4 @@
-import type { User } from '@chillawiki/shared'
+import type { User } from '@chilladesk/shared'
 import type { FormEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useLogout } from '../auth/useAuth'
@@ -62,7 +62,7 @@ export function AppLayout({ user }: { user: User }) {
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
           <Link to="/" className="text-lg font-semibold tracking-tight">
-            ChillaWiki
+            ChillaDesk
           </Link>
           <nav aria-label={t.shell.nav.main} className="flex items-center gap-4">
             <NavLink to="/" end className={navLinkClass}>

@@ -1,4 +1,4 @@
-import type { Project, User } from '@chillawiki/shared'
+import type { Project, User } from '@chilladesk/shared'
 import { Link, NavLink, Outlet, useOutletContext, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { ApiError, errorMessage } from '../../api/client'

@@ -1,4 +1,4 @@
-import type { Status, Task } from '@chillawiki/shared'
+import type { Status, Task } from '@chilladesk/shared'
 import { describe, expect, it } from 'vitest'
 import {
   applyMove,

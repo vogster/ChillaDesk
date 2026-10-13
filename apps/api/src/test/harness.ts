@@ -1,4 +1,4 @@
-import type { AuthResponse, Project, Status } from '@chillawiki/shared'
+import type { AuthResponse, Project, Status } from '@chilladesk/shared'
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify'
 import { buildApp, type AppOptions } from '../app'
 import { createMemoryDatabase, type Database } from '../db/client'

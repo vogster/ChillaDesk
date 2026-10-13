@@ -41,7 +41,7 @@ jobs:
           echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)" > .env
           docker compose up -d --build --wait
       - name: End-to-end check
-        run: pnpm --filter @chillawiki/api stack-check http://localhost:8080
+        run: pnpm --filter @chilladesk/api stack-check http://localhost:8080
       - name: Logs
         if: failure()
         run: docker compose logs --no-color

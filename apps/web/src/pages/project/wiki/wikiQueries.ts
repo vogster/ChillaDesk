@@ -1,4 +1,4 @@
-import type { UpdateWikiPageRequest, WikiPage } from '@chillawiki/shared'
+import type { UpdateWikiPageRequest, WikiPage } from '@chilladesk/shared'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createWikiPage,

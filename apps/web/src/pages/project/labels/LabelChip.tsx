@@ -1,4 +1,4 @@
-import { labelColorSchema, type Label, type LabelColor } from '@chillawiki/shared'
+import { labelColorSchema, type Label, type LabelColor } from '@chilladesk/shared'
 import { currentMessages, useT } from '../../../i18n'
 
 const COLOR_STYLES: Record<LabelColor, string> = {

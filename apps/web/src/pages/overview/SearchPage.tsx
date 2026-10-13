@@ -1,4 +1,4 @@
-import { searchQuerySchema } from '@chillawiki/shared'
+import { searchQuerySchema } from '@chilladesk/shared'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router'
 import { errorMessage } from '../../api/client'

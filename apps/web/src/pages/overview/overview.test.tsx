@@ -1,4 +1,4 @@
-import type { TaskInContext, WikiSearchHit } from '@chillawiki/shared'
+import type { TaskInContext, WikiSearchHit } from '@chilladesk/shared'
 import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {

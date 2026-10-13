@@ -1,4 +1,4 @@
-import { emailSchema } from '@chillawiki/shared'
+import { emailSchema } from '@chilladesk/shared'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, errorMessage } from '../api/client'
 import { parseForm } from '../components/form'

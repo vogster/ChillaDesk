@@ -1,4 +1,4 @@
-import type { LiveEvent, Task } from '@chillawiki/shared'
+import type { LiveEvent, Task } from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createTestContext, type TestContext, type TestUser } from '../../test/harness'
 import { createEventBus, type Subscriber } from './bus'

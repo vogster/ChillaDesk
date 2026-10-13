@@ -3,7 +3,7 @@ import {
   type Project,
   type WikiPage,
   type WikiPageSummary,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { ApiError, errorMessage } from '../../../api/client'
@@ -231,7 +231,7 @@ function EditorForm({
 }
 
 const draftKeyFor = (projectId: string, page: string) =>
-  `chillawiki:wiki-draft:${projectId}:${page}`
+  `chilladesk:wiki-draft:${projectId}:${page}`
 
 function NewPageForm({ project, parents }: { project: Project; parents: WikiPageSummary[] }) {
   const t = useT()

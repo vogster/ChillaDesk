@@ -1,4 +1,4 @@
-import type { Project, ProjectMember, Status, Task, User, WikiPage } from '@chillawiki/shared'
+import type { Project, ProjectMember, Status, Task, User, WikiPage } from '@chilladesk/shared'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

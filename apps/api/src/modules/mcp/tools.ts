@@ -14,7 +14,7 @@ import {
   type LiveResource,
   type TaskInContext,
   type WikiPage,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { z } from 'zod'
 import type { Db } from '../../db/client'
 import { AppError, forbidden, invalid } from '../../errors'

@@ -1,4 +1,4 @@
-import { projectMemberSchema, projectSchema, type Project } from '@chillawiki/shared'
+import { projectMemberSchema, projectSchema, type Project } from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createTestContext, type TestContext, type TestUser } from '../../test/harness'
 

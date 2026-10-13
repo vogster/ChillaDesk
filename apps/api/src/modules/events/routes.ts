@@ -1,4 +1,4 @@
-import { liveResourceSchema, type LiveEvent, type LiveResource } from '@chillawiki/shared'
+import { liveResourceSchema, type LiveEvent, type LiveResource } from '@chilladesk/shared'
 import { and, eq, inArray } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import type { Db } from '../../db/client'

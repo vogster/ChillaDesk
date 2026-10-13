@@ -3,7 +3,7 @@ import {
   type ApiToken,
   type CreateApiTokenRequest,
   type CreatedApiToken,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { and, count, desc, eq } from 'drizzle-orm'
 import type { Db } from '../../db/client'
 import { apiTokens } from '../../db/schema'

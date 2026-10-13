@@ -3,7 +3,7 @@ import {
   statusCategorySchema,
   type Status,
   type StatusCategory,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../api/client'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../../components/form'

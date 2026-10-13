@@ -5,7 +5,7 @@ import {
   type ProjectMember,
   type ProjectRole,
   type User,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { errorMessage } from '../../api/client'

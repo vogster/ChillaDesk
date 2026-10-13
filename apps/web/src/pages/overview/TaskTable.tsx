@@ -1,4 +1,4 @@
-import type { TaskInContext } from '@chillawiki/shared'
+import type { TaskInContext } from '@chilladesk/shared'
 import { Link } from 'react-router'
 import { useT } from '../../i18n'
 import { LabelList } from '../project/labels/LabelChip'

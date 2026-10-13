@@ -1,4 +1,4 @@
-import { createLabelRequestSchema, type Label, type LabelColor } from '@chillawiki/shared'
+import { createLabelRequestSchema, type Label, type LabelColor } from '@chilladesk/shared'
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../../api/client'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../../../components/form'

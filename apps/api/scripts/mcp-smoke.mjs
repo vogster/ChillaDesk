@@ -1,17 +1,17 @@
-// Connects to a running ChillaWiki as a real MCP client and exercises a few tools.
-// Usage: CHILLAWIKI_TOKEN=cw_pat_... node scripts/mcp-smoke.mjs [http://localhost:3000/api/mcp]
+// Connects to a running ChillaDesk as a real MCP client and exercises a few tools.
+// Usage: CHILLADESK_TOKEN=cw_pat_... node scripts/mcp-smoke.mjs [http://localhost:3000/api/mcp]
 import process from 'node:process'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
 const url = new URL(process.argv[2] ?? 'http://localhost:3000/api/mcp')
-const token = process.env.CHILLAWIKI_TOKEN
+const token = process.env.CHILLADESK_TOKEN
 if (!token) {
-  process.stderr.write('Set CHILLAWIKI_TOKEN to a ChillaWiki API token.\n')
+  process.stderr.write('Set CHILLADESK_TOKEN to a ChillaDesk API token.\n')
   process.exit(2)
 }
 
-const client = new Client({ name: 'chillawiki-smoke', version: '1.0.0' })
+const client = new Client({ name: 'chilladesk-smoke', version: '1.0.0' })
 await client.connect(
   new StreamableHTTPClientTransport(url, {
     requestInit: { headers: { Authorization: `Bearer ${token}` } },

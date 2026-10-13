@@ -3,7 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { FastifyBaseLogger, FastifyPluginAsync, FastifyReply } from 'fastify'
 import packageJson from '../../../package.json' with { type: 'json' }
 import type { Db } from '../../db/client'
-import type { LiveResource } from '@chillawiki/shared'
+import type { LiveResource } from '@chilladesk/shared'
 import type { AuthContext } from '../auth/service'
 import type { EventBus } from '../events/bus'
 import { runToolForClient, TOOLS } from './tools'
@@ -17,10 +17,10 @@ function createServer(
   const changed = (projectId: string, resource: LiveResource) =>
     void events.publishProject(projectId, resource)
   const server = new McpServer(
-    { name: 'chillawiki', version: packageJson.version },
+    { name: 'chilladesk', version: packageJson.version },
     {
       instructions:
-        'ChillaWiki holds projects with tasks on a kanban board and a Markdown wiki. ' +
+        'ChillaDesk holds projects with tasks on a kanban board and a Markdown wiki. ' +
         'Projects are addressed by key (e.g. CHL), tasks by key (e.g. CHL-12), statuses by name, ' +
         'people by email and wiki pages by title. Start with list_projects and get_project.',
     },
@@ -63,7 +63,7 @@ export const mcpRoutes: FastifyPluginAsync<{ db: Db; events: EventBus }> = async
       return jsonRpcError(
         reply,
         401,
-        'Send a ChillaWiki API token as "Authorization: Bearer <token>"',
+        'Send a ChillaDesk API token as "Authorization: Bearer <token>"',
       )
     }
 

@@ -1,4 +1,4 @@
-import type { CreateLabelRequest, Label, UpdateLabelRequest } from '@chillawiki/shared'
+import type { CreateLabelRequest, Label, UpdateLabelRequest } from '@chilladesk/shared'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import type { Db, Executor, Tx } from '../../db/client'
 import { labels, taskLabels } from '../../db/schema'

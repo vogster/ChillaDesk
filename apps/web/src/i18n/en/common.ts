@@ -1,6 +1,6 @@
 /** Words used all over the app. Screens keep their own texts in the other files here. */
 export const common = {
-  appName: 'ChillaWiki',
+  appName: 'ChillaDesk',
   language: 'Language',
   loading: 'Loading…',
   save: 'Save',

@@ -5,7 +5,7 @@ import type {
   ProjectMember,
   ProjectRole,
   UpdateProjectRequest,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { and, asc, eq } from 'drizzle-orm'
 import type { Db, Tx } from '../../db/client'
 import { notifications, projectMembers, projects, tasks, users } from '../../db/schema'

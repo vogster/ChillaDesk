@@ -1,4 +1,4 @@
-import { errorResponseSchema } from '@chillawiki/shared'
+import { errorResponseSchema } from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { conflict, isForeignKeyViolation, isUniqueViolation } from '../errors'
 import { createTestContext, type TestContext } from '../test/harness'

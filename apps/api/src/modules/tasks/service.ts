@@ -8,7 +8,7 @@ import type {
   TaskListQuery,
   UpdateTaskRequest,
   UserSummary,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { and, asc, count, eq, ilike, isNull, lt, max, ne, or, sql, type SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import type { Db, Executor, Tx } from '../../db/client'

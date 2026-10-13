@@ -3,7 +3,7 @@ import {
   MENTION_PREFIX_CLASS,
   type ProjectMember,
   type WikiPageSummary,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 
 export interface TreeNode {
   page: WikiPageSummary

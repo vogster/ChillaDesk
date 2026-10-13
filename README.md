@@ -1,4 +1,4 @@
-# ChillaWiki
+# ChillaDesk
 
 A lightweight, self-hosted project tracker — a small and simple alternative to Jira.
 
@@ -40,14 +40,14 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 - **Backups.** Everything is in PostgreSQL:
 
   ```bash
-  docker compose exec -T db pg_dump -U chillawiki chillawiki > chillawiki-backup.sql
+  docker compose exec -T db pg_dump -U chillawiki chillawiki > chilladesk-backup.sql
   ```
 
   To restore into an empty database:
-  `docker compose exec -T db psql -U chillawiki chillawiki < chillawiki-backup.sql`.
+  `docker compose exec -T db psql -U chillawiki chillawiki < chilladesk-backup.sql`.
 
 - **Upgrading.** Back up, pull the new version, then `docker compose up -d --build`.
-- **Checking an installation.** `pnpm --filter @chillawiki/api stack-check http://localhost:8080`
+- **Checking an installation.** `pnpm --filter @chilladesk/api stack-check http://localhost:8080`
   drives a running instance end to end (it creates and removes throwaway data, so use it on
   a test instance).
 
@@ -56,7 +56,7 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 | Variable               | Default         | Purpose                                                           |
 | ---------------------- | --------------- | ----------------------------------------------------------------- |
 | `POSTGRES_PASSWORD`    | — (required)    | Password of the bundled PostgreSQL (URL-safe characters)          |
-| `CHILLAWIKI_PORT`      | `8080`          | Host port of the web UI                                           |
+| `CHILLADESK_PORT`      | `8080`          | Host port of the web UI                                           |
 | `COOKIE_SECURE`        | `auto`          | `true` behind an HTTPS proxy, so the session cookie is HTTPS-only |
 | `REGISTRATION_ENABLED` | `true`          | Set to `false` once your team has signed up                       |
 | `RATE_LIMIT_MAX`       | `600`           | Requests per minute from one address (a shared NAT counts as one) |
@@ -64,8 +64,8 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 | `TRUST_PROXY`          | `false`         | Number of reverse proxies in front of the API (compose: `1`)      |
 | `LOG_LEVEL`            | `info`          | `fatal` … `trace`, or `silent`                                    |
 | `SMTP_URL`             | — (no email)    | `smtp://user:password@host:587`; turns notification emails on     |
-| `MAIL_FROM`            | —               | Sender of the emails, e.g. `ChillaWiki <wiki@example.com>`        |
-| `PUBLIC_URL`           | —               | Address people open ChillaWiki at; links in emails point there    |
+| `MAIL_FROM`            | —               | Sender of the emails, e.g. `ChillaDesk <wiki@example.com>`        |
+| `PUBLIC_URL`           | —               | Address people open ChillaDesk at; links in emails point there    |
 
 ### Mentions and notifications
 
@@ -106,16 +106,16 @@ signed-in session, so a leaked token cannot outlive its own revocation.
 
 ## AI assistants (MCP)
 
-ChillaWiki is a [Model Context Protocol](https://modelcontextprotocol.io) server, so an
+ChillaDesk is a [Model Context Protocol](https://modelcontextprotocol.io) server, so an
 assistant such as Claude can read and update your projects. Create an API token, then add the
 server to your MCP client (the tokens page shows this snippet filled in):
 
 ```json
 {
   "mcpServers": {
-    "chillawiki": {
+    "chilladesk": {
       "type": "http",
-      "url": "https://your-chillawiki.example.com/api/mcp",
+      "url": "https://your-chilladesk.example.com/api/mcp",
       "headers": { "Authorization": "Bearer cw_pat_…" }
     }
   }

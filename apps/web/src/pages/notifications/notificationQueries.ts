@@ -1,4 +1,4 @@
-import type { NotificationList } from '@chillawiki/shared'
+import type { NotificationList } from '@chilladesk/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchNotifications, markNotificationsRead } from '../../api/notifications'
 

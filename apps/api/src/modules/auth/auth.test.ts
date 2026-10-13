@@ -1,4 +1,4 @@
-import { authResponseSchema, userSchema } from '@chillawiki/shared'
+import { authResponseSchema, userSchema } from '@chilladesk/shared'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { sessions, users } from '../../db/schema'

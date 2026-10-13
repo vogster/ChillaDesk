@@ -1,4 +1,4 @@
-import { labelSchema, type Label, type Task, type TaskList } from '@chillawiki/shared'
+import { labelSchema, type Label, type Task, type TaskList } from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createTestContext, type ProjectFixture, type TestContext } from '../../test/harness'
 

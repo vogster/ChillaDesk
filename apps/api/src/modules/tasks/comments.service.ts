@@ -1,4 +1,4 @@
-import type { Comment, CommentRequest } from '@chillawiki/shared'
+import type { Comment, CommentRequest } from '@chilladesk/shared'
 import { and, asc, eq } from 'drizzle-orm'
 import type { Db, Executor } from '../../db/client'
 import { comments, users } from '../../db/schema'

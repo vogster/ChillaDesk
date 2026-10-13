@@ -1,3 +1,8 @@
+# The project used to be called ChillaWiki. The compose project and the database keep that
+# name, so containers and the data volume of an existing installation are found again
+# whatever the folder is called.
+name: chillawiki
+
 services:
   db:
     image: postgres:17-alpine
@@ -41,7 +46,8 @@ services:
       target: web
     restart: unless-stopped
     ports:
-      - '${CHILLAWIKI_PORT:-8080}:80'
+      # CHILLAWIKI_PORT is the name this setting had before the project was renamed.
+      - '${CHILLADESK_PORT:-${CHILLAWIKI_PORT:-8080}}:80'
     depends_on:
       api:
         condition: service_healthy

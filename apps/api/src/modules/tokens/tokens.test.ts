@@ -4,7 +4,7 @@ import {
   createdApiTokenSchema,
   type ApiToken,
   type CreatedApiToken,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { apiTokens } from '../../db/schema'

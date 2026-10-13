@@ -5,7 +5,7 @@ import type {
   TaskList,
   UpdateStatusRequest,
   UpdateTaskRequest,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addComment,

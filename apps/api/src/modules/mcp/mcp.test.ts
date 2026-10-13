@@ -1,4 +1,4 @@
-import type { CreatedApiToken } from '@chillawiki/shared'
+import type { CreatedApiToken } from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { SESSION_COOKIE } from '../auth/plugin'
 import {
@@ -101,7 +101,7 @@ describe('protocol', () => {
 
     expect(status).toBe(200)
     expect(body.result).toMatchObject({
-      serverInfo: { name: 'chillawiki' },
+      serverInfo: { name: 'chilladesk' },
       capabilities: { tools: {} },
     })
     expect(body.result?.instructions).toContain('list_projects')

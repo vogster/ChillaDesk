@@ -7,7 +7,7 @@ import {
   type ProjectMember,
   type ProjectRole,
   type UpdateProjectRequest,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { z } from 'zod'
 import { apiRequest } from './client'
 

@@ -20,7 +20,7 @@ describe('database client', () => {
   })
 
   it('uses PGlite on disk when no DATABASE_URL is configured', async () => {
-    const dataDir = await mkdtemp(join(tmpdir(), 'chillawiki-pglite-'))
+    const dataDir = await mkdtemp(join(tmpdir(), 'chilladesk-pglite-'))
     try {
       const database = await createDatabase({ databaseUrl: undefined, pgliteDataDir: dataDir })
 

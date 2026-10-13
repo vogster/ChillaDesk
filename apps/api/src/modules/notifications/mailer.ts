@@ -1,4 +1,4 @@
-import type { NotificationType } from '@chillawiki/shared'
+import type { NotificationType } from '@chilladesk/shared'
 import {
   aliasedTable,
   and,
@@ -209,7 +209,7 @@ export interface DeliveryResult {
 }
 
 export interface DeliveryOptions {
-  /** Where people open ChillaWiki, for the link in the email. */
+  /** Where people open ChillaDesk, for the link in the email. */
   publicUrl: string
   now?: Date
   onError?: (error: unknown, notificationId: string) => void

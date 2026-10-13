@@ -1,4 +1,4 @@
-import type { CreateLabelRequest, UpdateLabelRequest } from '@chillawiki/shared'
+import type { CreateLabelRequest, UpdateLabelRequest } from '@chilladesk/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createLabel, deleteLabel, fetchLabels, updateLabel } from '../../../api/labels'
 

@@ -1,4 +1,4 @@
-import type { Project, WikiPage, WikiVersion } from '@chillawiki/shared'
+import type { Project, WikiPage, WikiVersion } from '@chilladesk/shared'
 import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {

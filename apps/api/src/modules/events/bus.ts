@@ -1,4 +1,4 @@
-import type { LiveEvent, LiveResource } from '@chillawiki/shared'
+import type { LiveEvent, LiveResource } from '@chilladesk/shared'
 
 /** One open event stream. */
 export interface Subscriber {

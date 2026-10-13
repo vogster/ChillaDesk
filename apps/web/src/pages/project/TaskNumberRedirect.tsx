@@ -1,4 +1,4 @@
-import { taskSchema } from '@chillawiki/shared'
+import { taskSchema } from '@chilladesk/shared'
 import { useQuery } from '@tanstack/react-query'
 import { Navigate, useParams } from 'react-router'
 import { ApiError, apiRequest, errorMessage } from '../../api/client'

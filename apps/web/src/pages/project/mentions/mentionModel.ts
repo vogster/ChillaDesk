@@ -1,4 +1,4 @@
-import type { ProjectMember } from '@chillawiki/shared'
+import type { ProjectMember } from '@chilladesk/shared'
 
 /** The unfinished mention the caret is in: `@` plus what was typed after it. */
 export interface MentionToken {

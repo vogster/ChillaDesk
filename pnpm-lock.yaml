@@ -193,7 +193,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@chillawiki/shared':
+      '@chilladesk/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@electric-sql/pglite':
@@ -260,7 +260,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@chillawiki/shared':
+      '@chilladesk/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@dnd-kit/core':

@@ -9,7 +9,7 @@ import {
   type WikiPageSummary,
   type WikiVersion,
   type WikiVersionSummary,
-} from '@chillawiki/shared'
+} from '@chilladesk/shared'
 import { z } from 'zod'
 import { apiRequest } from './client'
 
