@@ -37,6 +37,11 @@ const EXACT: Record<string, string> = {
   'You have too many saved filters in this project, delete some first':
     'У вас слишком много сохранённых фильтров в этом проекте. Сначала удалите часть.',
   'Tasks must not repeat': 'Задачи не должны повторяться',
+  'The file is empty': 'Файл пуст',
+  'The file is too large': 'Файл слишком большой',
+  'This project has no room for more files, remove some first':
+    'В проекте не осталось места для файлов. Сначала удалите часть.',
+  'Attachment not found': 'Файл не найден',
   'Must not contain null characters': 'Текст не должен содержать нулевых символов',
   'At least one field is required': 'Нужно изменить хотя бы одно поле',
   'Labels must not repeat': 'Метки не должны повторяться',
@@ -76,6 +81,10 @@ const PATTERNS: [RegExp, (...groups: string[]) => string][] = [
   [
     /^Too many requests, retry in (.+)$/,
     () => 'Слишком много запросов. Подождите немного и попробуйте снова.',
+  ],
+  [
+    /^At most (\d+) files can be attached here$/,
+    (max) => `Сюда можно прикрепить не больше ${max} файлов`,
   ],
   [/^(.+) not found$/, (what) => THINGS[what] ?? 'Не найдено'],
 ]

@@ -23,6 +23,21 @@ export const common = {
     member: 'Member',
     viewer: 'Viewer',
   },
+  attachments: {
+    heading: 'Attachments',
+    attach: 'Attach files',
+    uploading: 'Uploading…',
+    size: (bytes: number) =>
+      bytes < 1024
+        ? `${bytes} B`
+        : bytes < 1024 * 1024
+          ? `${Math.round(bytes / 1024)} KB`
+          : `${(bytes / (1024 * 1024)).toFixed(1)} MB`,
+    copyMarkdown: 'Copy as Markdown',
+    copyMarkdownLabel: (name: string) => `Copy the Markdown for the picture ${name}`,
+    copied: 'Copied',
+    removeLabel: (name: string) => `Remove the file ${name}`,
+  },
   errors: {
     generic: 'Something went wrong. Please try again.',
     /**

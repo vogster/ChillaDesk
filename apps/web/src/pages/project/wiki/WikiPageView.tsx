@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ApiError, errorMessage } from '../../../api/client'
+import { Attachments } from '../../../components/Attachments'
 import { Alert, Button, Spinner } from '../../../components/ui'
 import { intlLocale, useT } from '../../../i18n'
 import { NotFoundPage } from '../../NotFoundPage'
 import { useProjectContext } from '../ProjectLayout'
 import { ProjectMarkdown } from '../ProjectMarkdown'
-import { useDeleteWikiPage, useWikiPage } from './wikiQueries'
+import { useDeleteWikiPage, useWikiPage, wikiKeys } from './wikiQueries'
 
 export const isMissing = (error: unknown) =>
   error instanceof ApiError && (error.code === 'NOT_FOUND' || error.code === 'VALIDATION_ERROR')
@@ -67,6 +68,12 @@ export function WikiPageView() {
       ) : (
         <p className="text-sm text-slate-500">{t.project.wiki.page.noContent}</p>
       )}
+
+      <Attachments
+        path={`/projects/${project.id}/wiki/${data.id}/attachments`}
+        queryKey={[...wikiKeys.page(project.id, data.id), 'attachments']}
+        canEdit={canEdit}
+      />
 
       {canEdit && (
         <footer className="border-t border-slate-200 pt-4 dark:border-slate-800">

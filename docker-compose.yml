@@ -36,6 +36,12 @@ services:
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
       PUBLIC_URL: ${PUBLIC_URL:-}
+      FILES_DIR: /data/files
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+      PROJECT_FILES_MB: ${PROJECT_FILES_MB:-1024}
+    volumes:
+      # Files attached to tasks and wiki pages.
+      - api-data:/data
     depends_on:
       db:
         condition: service_healthy
@@ -54,3 +60,4 @@ services:
 
 volumes:
   db-data:
+  api-data:

@@ -1,3 +1,4 @@
+import { ATTACHMENT_URL_PATTERN } from '@chilladesk/shared'
 import type { ComponentProps } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Link } from 'react-router'
@@ -18,6 +19,7 @@ const STYLES = [
   '[&_table]:my-2 [&_td]:border [&_th]:border [&_td]:border-slate-300 [&_th]:border-slate-300 [&_td]:px-2 [&_th]:px-2 [&_td]:py-1 [&_th]:py-1 dark:[&_td]:border-slate-700 dark:[&_th]:border-slate-700',
   // A mention of a project member, see `MENTION_CLASS`.
   '[&_.mention]:rounded [&_.mention]:bg-indigo-50 [&_.mention]:px-1 [&_.mention]:font-medium [&_.mention]:text-indigo-700 dark:[&_.mention]:bg-indigo-950 dark:[&_.mention]:text-indigo-300',
+  '[&_img]:my-2 [&_img]:max-w-full [&_img]:rounded-md',
   '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
 ].join(' ')
 
@@ -41,8 +43,9 @@ interface MarkdownProps {
 
 /**
  * Renders user-written Markdown. react-markdown ignores raw HTML and unsafe URLs by default,
- * so the output is safe to show to other members. Images are left out: loading one from an
- * arbitrary address would tell that server who opened the page and when.
+ * so the output is safe to show to other members. The only pictures shown are files attached
+ * here: loading one from an arbitrary address would tell that server who opened the page and
+ * when, so any other image is left out.
  *
  * Links that start with `/` stay inside the app; all others open in a new tab.
  */
@@ -57,8 +60,11 @@ export function Markdown({
     <div className={STYLES}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, ...plugins]}
-        disallowedElements={['img']}
         components={{
+          img: ({ src, alt }) =>
+            typeof src === 'string' && ATTACHMENT_URL_PATTERN.test(src) ? (
+              <img src={src} alt={alt ?? ''} loading="lazy" />
+            ) : null,
           a: ({ node: _node, href, children: label, ...props }) => {
             const internal = href?.startsWith('/') && !href.startsWith('//')
             if (!internal || linksLeaveInNewTab) {

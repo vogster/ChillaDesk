@@ -6,6 +6,7 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **Kanban** — the same tasks as a board with custom columns
 - **Wiki** — Markdown pages per project, linked to tasks
 - **Labels, search and “My tasks”** across all your projects
+- **Attachments** — files on tasks and wiki pages, pictures shown right in the text
 - **Checklists, links between tasks, milestones**, a history of every task, and a task list
   with sorting, saved filters and bulk actions
 - **Mentions and notifications** — in the app, and by email if you configure SMTP
@@ -42,7 +43,8 @@ serving the web app and proxying `/api`. Database migrations run when the API st
   Removing a member revokes every link of the project.
 - **Sign-ups.** Anyone who can reach the site can register. Once your team is in, set
   `REGISTRATION_ENABLED=false` and restart.
-- **Backups.** Everything is in PostgreSQL:
+- **Backups.** Everything but attached files is in PostgreSQL; the files are in the
+  `api-data` volume (`/data/files` in the API container), so copy that as well:
 
   ```bash
   docker compose exec -T db pg_dump -U chillawiki chillawiki > chilladesk-backup.sql
@@ -68,6 +70,9 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 | `DATABASE_URL`         | embedded PGlite | PostgreSQL connection string (set by compose)                     |
 | `TRUST_PROXY`          | `false`         | Number of reverse proxies in front of the API (compose: `1`)      |
 | `LOG_LEVEL`            | `info`          | `fatal` … `trace`, or `silent`                                    |
+| `MAX_UPLOAD_MB`        | `10`            | Largest file that can be attached to a task or a wiki page        |
+| `PROJECT_FILES_MB`     | `1024`          | Room all the files of one project may take up together            |
+| `FILES_DIR`            | `./.data/files` | Where attached files are kept (compose: the `api-data` volume)    |
 | `SMTP_URL`             | — (no email)    | `smtp://user:password@host:587`; turns notification emails on     |
 | `MAIL_FROM`            | —               | Sender of the emails, e.g. `ChillaDesk <wiki@example.com>`        |
 | `PUBLIC_URL`           | —               | Address people open ChillaDesk at; links in emails point there    |

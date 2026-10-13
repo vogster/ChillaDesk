@@ -13,6 +13,9 @@ describe('loadConfig', () => {
       registrationEnabled: true,
       cookieSecure: 'auto',
       rateLimitMax: 600,
+      filesDir: './.data/files',
+      maxUploadMb: 10,
+      projectFilesMb: 1024,
       mail: null,
     })
   })
@@ -40,6 +43,9 @@ describe('loadConfig', () => {
       registrationEnabled: false,
       cookieSecure: true,
       rateLimitMax: 2000,
+      filesDir: './.data/files',
+      maxUploadMb: 10,
+      projectFilesMb: 1024,
       mail: null,
     })
   })

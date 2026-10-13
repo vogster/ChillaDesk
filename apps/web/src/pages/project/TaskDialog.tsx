@@ -7,6 +7,7 @@ import {
 } from '@chilladesk/shared'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { ApiError, errorMessage } from '../../api/client'
+import { Attachments } from '../../components/Attachments'
 import { parseForm, type FieldErrors } from '../../components/form'
 import { Modal } from '../../components/Modal'
 import { Alert, Button, selectClass, Spinner } from '../../components/ui'
@@ -23,7 +24,14 @@ import { TaskHistory } from './TaskHistory'
 import { TaskLinks } from './TaskLinks'
 import { TaskWatch } from './TaskWatch'
 import { formatDueDate } from './taskDisplay'
-import { useDeleteTask, useMoveTask, useStatuses, useTask, useUpdateTask } from './taskQueries'
+import {
+  taskKeys,
+  useDeleteTask,
+  useMoveTask,
+  useStatuses,
+  useTask,
+  useUpdateTask,
+} from './taskQueries'
 
 const fieldClass =
   'block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-2 focus:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900'
@@ -307,6 +315,11 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
         projectId={project.id}
         projectKey={project.key}
         taskId={task.id}
+        canEdit={canEdit}
+      />
+      <Attachments
+        path={`/projects/${project.id}/tasks/${task.id}/attachments`}
+        queryKey={[...taskKeys.detail(project.id, task.id), 'attachments']}
         canEdit={canEdit}
       />
       <TaskWatch projectId={project.id} taskId={task.id} />

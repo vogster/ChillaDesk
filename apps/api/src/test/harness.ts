@@ -1,6 +1,9 @@
 import type { AuthResponse, Project, Status } from '@chilladesk/shared'
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify'
 import { buildApp, type AppOptions } from '../app'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { eq } from 'drizzle-orm'
 import { createMemoryDatabase, type Database } from '../db/client'
 import { users } from '../db/schema'
@@ -59,6 +62,8 @@ export async function createTestContext(
   options: Partial<Omit<AppOptions, 'database'>> = {},
 ): Promise<TestContext> {
   const database = await createMemoryDatabase()
+  // Uploaded files of one test run; removed again when the context is closed.
+  const filesDir = await mkdtemp(join(tmpdir(), 'chilladesk-test-files-'))
   await database.migrate()
   // Limits are lifted by default so that only the tests about rate limiting hit them.
   const app = await buildApp({
@@ -68,6 +73,8 @@ export async function createTestContext(
     authRateLimitMax: 100_000,
     accountRateLimitMax: 100_000,
     memberInviteRateLimitMax: 100_000,
+    filesDir,
+    uploadRateLimitMax: 100_000,
     ...options,
   })
 
@@ -147,6 +154,7 @@ export async function createTestContext(
     async close() {
       await app.close()
       await database.close()
+      await rm(filesDir, { recursive: true, force: true })
     },
   }
 }

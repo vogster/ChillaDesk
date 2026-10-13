@@ -25,6 +25,21 @@ export const common: CommonMessages = {
     member: 'Участник',
     viewer: 'Наблюдатель',
   },
+  attachments: {
+    heading: 'Вложения',
+    attach: 'Прикрепить файлы',
+    uploading: 'Загрузка…',
+    size: (bytes) =>
+      bytes < 1024
+        ? `${bytes} Б`
+        : bytes < 1024 * 1024
+          ? `${Math.round(bytes / 1024)} КБ`
+          : `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} МБ`,
+    copyMarkdown: 'Скопировать для Markdown',
+    copyMarkdownLabel: (name) => `Скопировать Markdown для картинки ${name}`,
+    copied: 'Скопировано',
+    removeLabel: (name) => `Удалить файл ${name}`,
+  },
   errors: {
     generic: 'Что-то пошло не так. Попробуйте ещё раз.',
     byCode: {

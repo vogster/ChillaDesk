@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   bigserial,
   boolean,
+  check,
   date,
   doublePrecision,
   index,
@@ -183,6 +184,32 @@ export const tasks = pgTable(
     index('tasks_status_position_idx').on(table.statusId, table.position),
     index('tasks_assignee_id_idx').on(table.assigneeId),
     index('tasks_milestone_id_idx').on(table.milestoneId),
+  ],
+)
+
+/** A file attached to a task or a wiki page; its bytes are in the file store. */
+export const attachments = pgTable(
+  'attachments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    /** Exactly one of the next two is set. */
+    taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'cascade' }),
+    wikiPageId: uuid('wiki_page_id').references(() => wikiPages.id, { onDelete: 'cascade' }),
+    fileName: text('file_name').notNull(),
+    mimeType: text('mime_type').notNull(),
+    size: integer('size').notNull(),
+    /** Name of the file in the store: random, never derived from what the user sent. */
+    storageKey: text('storage_key').notNull().unique(),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index('attachments_task_idx').on(table.taskId),
+    index('attachments_wiki_page_idx').on(table.wikiPageId),
+    check('attachments_one_owner', sql`(${table.taskId} is null) <> (${table.wikiPageId} is null)`),
   ],
 )
 

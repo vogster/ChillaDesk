@@ -23,6 +23,9 @@ const envSchema = z.object({
     .default('true')
     .transform((value) => value === 'true'),
   RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(600),
+  FILES_DIR: z.string().min(1).default('./.data/files'),
+  MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(100).default(10),
+  PROJECT_FILES_MB: z.coerce.number().int().min(1).default(1024),
   SMTP_URL: z
     .string()
     .regex(/^smtps?:\/\//, 'SMTP_URL must be an smtp:// or smtps:// URL')
@@ -63,6 +66,12 @@ export interface AppConfig {
    * behind the same NAT shares it, so a team in one office needs more than a single user.
    */
   rateLimitMax: number
+  /** Directory the files attached to tasks and pages are kept in. */
+  filesDir: string
+  /** Largest file that can be attached, in megabytes. */
+  maxUploadMb: number
+  /** Megabytes all the files of one project may take up together. */
+  projectFilesMb: number
   /** Null until SMTP is configured: notifications then stay in the app only. */
   mail: MailConfig | null
 }
@@ -93,6 +102,9 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     registrationEnabled: parsed.REGISTRATION_ENABLED,
     cookieSecure: parsed.COOKIE_SECURE,
     rateLimitMax: parsed.RATE_LIMIT_MAX,
+    filesDir: parsed.FILES_DIR,
+    maxUploadMb: parsed.MAX_UPLOAD_MB,
+    projectFilesMb: parsed.PROJECT_FILES_MB,
     mail: smtpUrl && from && publicUrl ? { smtpUrl, from, publicUrl } : null,
   }
 }

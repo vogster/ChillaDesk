@@ -14,6 +14,8 @@ import type { AppConfig } from './config'
 import type { Database } from './db/client'
 import { AppError } from './errors'
 import { registerErrorHandlers } from './http/error-handler'
+import { attachmentRoutes } from './modules/attachments/routes'
+import { createFileStore, type FileStore } from './modules/attachments/storage'
 import type { AccountMail } from './modules/auth/email-flows'
 import { MCP_PATH, registerAuth, SESSION_COOKIE } from './modules/auth/plugin'
 import { authRoutes } from './modules/auth/routes'
@@ -38,6 +40,8 @@ declare module 'fastify' {
   interface FastifyInstance {
     /** Pushes changes to the event streams open on this process. */
     events: EventBus
+    /** Where the bytes of attachments are kept. */
+    files: FileStore
   }
 }
 
@@ -63,6 +67,14 @@ export interface AppOptions {
   mail?: AccountMail | undefined
   /** Invite links one client may look up or accept per minute. */
   inviteRateLimitMax?: number
+  /** Directory for attached files. */
+  filesDir?: string
+  /** Largest file that can be attached, in bytes. */
+  maxUploadBytes?: number
+  /** Bytes all the files of one project may take up together. */
+  projectQuotaBytes?: number
+  /** Files one client may upload per minute. */
+  uploadRateLimitMax?: number
   /** How long one event stream lives before the client has to reconnect. */
   eventStreamLifetimeMs?: number
 }
@@ -81,6 +93,10 @@ export async function buildApp({
   accountEmailRateLimitMax = 3,
   mail,
   eventStreamLifetimeMs,
+  filesDir = './.data/files',
+  maxUploadBytes = 10 * 1024 * 1024,
+  projectQuotaBytes = 1024 * 1024 * 1024,
+  uploadRateLimitMax = 60,
 }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: logLevel },
@@ -173,6 +189,17 @@ export async function buildApp({
     ...(eventStreamLifetimeMs !== undefined ? { maxLifetimeMs: eventStreamLifetimeMs } : {}),
   })
   await app.register(wikiRoutes, { prefix: '/api/projects/:projectId/wiki', db })
+
+  const store = createFileStore(filesDir)
+  app.decorate('files', store)
+  await app.register(attachmentRoutes, {
+    prefix: '/api/projects/:projectId',
+    db,
+    store,
+    maxUploadBytes,
+    projectQuotaBytes,
+    uploadRateLimitMax,
+  })
 
   return app
 }

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { buildApp } from './app'
 import { loadConfig } from './config'
 import { createDatabase } from './db/client'
+import { sweepFiles } from './modules/attachments/service'
 import { createMailSender, startMailWorker } from './modules/notifications/mailer'
 
 const config = loadConfig(process.env)
@@ -26,6 +27,9 @@ const app = await buildApp({
   registrationEnabled: config.registrationEnabled,
   cookieSecure: config.cookieSecure,
   rateLimitMax: config.rateLimitMax,
+  filesDir: config.filesDir,
+  maxUploadBytes: config.maxUploadMb * 1024 * 1024,
+  projectQuotaBytes: config.projectFilesMb * 1024 * 1024,
 })
 late.log = app.log
 
@@ -47,6 +51,17 @@ const stopMailWorker = mail
   ? startMailWorker({ db: database.db, ...mail, log: app.log })
   : undefined
 app.log.info(mail ? 'emails are on' : 'SMTP_URL is not set, notifications stay in the app')
+
+// Files whose task, page or project was deleted are removed from the disk now and then.
+const FILE_SWEEP_INTERVAL_MS = 60 * 60 * 1000
+const sweep = () =>
+  sweepFiles(database.db, app.files).then(
+    (removed) => removed > 0 && app.log.info({ removed }, 'removed files nothing refers to'),
+    (error: unknown) => app.log.warn({ err: error }, 'sweeping attached files failed'),
+  )
+void sweep()
+const sweepTimer = setInterval(() => void sweep(), FILE_SWEEP_INTERVAL_MS)
+sweepTimer.unref()
 
 let shuttingDown = false
 async function shutdown(signal: string): Promise<void> {

@@ -16,7 +16,7 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 
 ## Tasks
 
-- [ ] **Attachments** — files and images in tasks and wiki pages (images in Markdown are
+- [x] **Attachments** — files and images in tasks and wiki pages (images in Markdown are
       switched off entirely for now).
 - [x] **Subtasks and checklists**; links between tasks ("blocks", "duplicates").
 - [x] **Task history** — who changed the assignee, column or due date, and when. The wiki has
@@ -24,6 +24,11 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 - [x] **Watching a task** — only the creator and the assignee are notified today.
 - [x] **Saved filters and sorting** in the list; bulk actions on several tasks.
 - [x] **Sprints or milestones** with a simple report.
+
+- [ ] **Pasting and dropping pictures** straight into a description, comment or page (today a
+      picture is attached first and its Markdown copied from the list).
+- [ ] **Attachments in S3-compatible storage**, for installations with several API replicas.
+- [ ] **Reordering and rewording checklist items**; checklist and link changes in the history.
 
 ## Integrations
 

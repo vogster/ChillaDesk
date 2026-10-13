@@ -31,20 +31,11 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-/** Calls the API with the session cookie and turns every failure into an `ApiError`. */
-export async function apiRequest<T = void>(
-  path: string,
-  { method = 'GET', body, schema }: RequestOptions<T> = {},
-): Promise<T> {
+/** Sends a request and turns every failure into an `ApiError`; the body is read by the caller. */
+async function send(path: string, init: RequestInit): Promise<Response> {
   let response: Response
   try {
-    response = await fetch(`/api${path}`, {
-      method,
-      credentials: 'same-origin',
-      ...(body === undefined
-        ? {}
-        : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
-    })
+    response = await fetch(`/api${path}`, { credentials: 'same-origin', ...init })
   } catch {
     throw new ApiError('NETWORK_ERROR', 'Cannot reach the server. Check your connection.', 0)
   }
@@ -61,7 +52,10 @@ export async function apiRequest<T = void>(
       response.status,
     )
   }
+  return response
+}
 
+async function parseBody<T>(response: Response, schema: z.ZodType<T> | undefined): Promise<T> {
   if (!schema) return undefined as T
   const parsed = schema.safeParse(await readJson(response))
   if (!parsed.success) {
@@ -72,6 +66,36 @@ export async function apiRequest<T = void>(
     )
   }
   return parsed.data
+}
+
+/** Calls the API with the session cookie and turns every failure into an `ApiError`. */
+export async function apiRequest<T = void>(
+  path: string,
+  { method = 'GET', body, schema }: RequestOptions<T> = {},
+): Promise<T> {
+  const response = await send(path, {
+    method,
+    ...(body === undefined
+      ? {}
+      : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  })
+  return parseBody(response, schema)
+}
+
+/**
+ * Uploads a file as the raw body of a request, its name in a header: that is how the API
+ * takes attachments.
+ */
+export async function uploadFile<T>(path: string, file: File, schema: z.ZodType<T>): Promise<T> {
+  const response = await send(path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+      'X-File-Name': encodeURIComponent(file.name),
+    },
+    body: file,
+  })
+  return parseBody(response, schema)
 }
 
 /** Message suitable for showing to the user, whatever was thrown. */
