@@ -7,6 +7,7 @@ export const liveResourceSchema = z.enum([
   'invites',
   'statuses',
   'labels',
+  'milestones',
   'tasks',
   'wiki',
 ])

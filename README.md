@@ -6,6 +6,8 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **Kanban** — the same tasks as a board with custom columns
 - **Wiki** — Markdown pages per project, linked to tasks
 - **Labels, search and “My tasks”** across all your projects
+- **Checklists, links between tasks, milestones**, a history of every task, and a task list
+  with sorting, saved filters and bulk actions
 - **Mentions and notifications** — in the app, and by email if you configure SMTP
 - **Live updates** — boards, tasks and pages refresh as your teammates change them
 - **English and Russian** interface, following the browser language, with a switcher

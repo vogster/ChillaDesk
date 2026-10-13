@@ -17,6 +17,7 @@ import {
   type ListState,
 } from './list/listState'
 import { ListTable } from './list/ListTable'
+import { useMilestones } from './milestones/milestoneQueries'
 import { SavedFilters } from './list/SavedFilters'
 import { useProjectContext } from './ProjectLayout'
 import { useMembers } from './projectQueries'
@@ -43,6 +44,7 @@ export function ListPage() {
   const statuses = useStatuses(project.id)
   const members = useMembers(project.id)
   const labels = useLabels(project.id)
+  const milestones = useMilestones(project.id)
   const tasks = useTasks(project.id, toTaskFilters(state))
   const items = tasks.data?.items ?? []
   // Only what is on screen can be acted on: a task filtered away is not silently included.
@@ -67,6 +69,7 @@ export function ListPage() {
         statuses={statuses.data}
         members={members.data}
         labels={labels.data}
+        milestones={milestones.data}
       />
       <SavedFilters projectId={project.id} currentQuery={listQuery(state)} onApply={apply} />
 
@@ -85,6 +88,7 @@ export function ListPage() {
               taskIds={selectedIds}
               statuses={statuses.data}
               members={members.data}
+              milestones={milestones.data}
               onDone={() => setSelected(new Set())}
             />
           ) : (

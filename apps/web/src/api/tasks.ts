@@ -31,6 +31,8 @@ export interface TaskFilters {
   assigneeId?: string
   priority?: TaskPriority
   labelId?: string
+  /** A milestone id, or `none` for tasks without one. */
+  milestoneId?: string
   q?: string
   sort?: TaskSort
   order?: SortOrder

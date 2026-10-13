@@ -2,7 +2,7 @@ import { taskChangeSchema, type TaskChange, type TaskEvent } from '@chilladesk/s
 import { asc, eq, inArray } from 'drizzle-orm'
 import type { Db, Executor } from '../../db/client'
 import type { tasks } from '../../db/schema'
-import { labels, statuses, taskEvents, taskLabels, users } from '../../db/schema'
+import { labels, milestones, statuses, taskEvents, taskLabels, users } from '../../db/schema'
 import { getProject } from '../projects/service'
 import { assertTaskInProject } from './service'
 
@@ -11,7 +11,7 @@ type TaskRow = typeof tasks.$inferSelect
 /** The fields of a task whose changes are worth a line in its history. */
 export type TrackedFields = Pick<
   TaskRow,
-  'title' | 'description' | 'statusId' | 'priority' | 'assigneeId' | 'dueDate'
+  'title' | 'description' | 'statusId' | 'priority' | 'assigneeId' | 'dueDate' | 'milestoneId'
 >
 
 /** Names of the labels on a task, for comparing before and after. */
@@ -27,7 +27,7 @@ export async function labelNamesOf(db: Executor, taskId: string): Promise<string
 
 async function namesOf(
   db: Executor,
-  table: typeof users | typeof statuses,
+  table: typeof users | typeof statuses | typeof milestones,
   ids: (string | null)[],
 ): Promise<Map<string, string>> {
   const wanted = [...new Set(ids.filter((id): id is string => id !== null))]
@@ -57,6 +57,11 @@ export async function diffTask(
     from.statusId === to.statusId
       ? new Map<string, string>()
       : await namesOf(db, statuses, [from.statusId, to.statusId])
+  const goals =
+    from.milestoneId === to.milestoneId
+      ? new Map<string, string>()
+      : await namesOf(db, milestones, [from.milestoneId, to.milestoneId])
+  const goal = (id: string | null) => (id === null ? null : (goals.get(id) ?? null))
   const person = (id: string | null) => (id === null ? null : (people.get(id) ?? null))
   const [oldLabels, newLabels] = [before.labels ?? [], after.labels ?? before.labels ?? []]
   const added = newLabels.filter((name) => !oldLabels.includes(name))
@@ -77,6 +82,11 @@ export async function diffTask(
       to: person(to.assigneeId),
     },
     from.dueDate !== to.dueDate && { field: 'dueDate', from: from.dueDate, to: to.dueDate },
+    from.milestoneId !== to.milestoneId && {
+      field: 'milestone',
+      from: goal(from.milestoneId),
+      to: goal(to.milestoneId),
+    },
     (added.length > 0 || removed.length > 0) && { field: 'labels', added, removed },
   ]
   return changes.filter((change): change is TaskChange => change !== false)

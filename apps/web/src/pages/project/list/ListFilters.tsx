@@ -1,6 +1,7 @@
 import {
   taskPrioritySchema,
   type Label,
+  type Milestone,
   type ProjectMember,
   type Status,
   type TaskPriority,
@@ -19,10 +20,18 @@ interface ListFiltersProps {
   statuses: Status[] | undefined
   members: ProjectMember[] | undefined
   labels: Label[] | undefined
+  milestones: Milestone[] | undefined
 }
 
 /** The controls that narrow the task list down. */
-export function ListFilters({ state, onChange, statuses, members, labels }: ListFiltersProps) {
+export function ListFilters({
+  state,
+  onChange,
+  statuses,
+  members,
+  labels,
+  milestones,
+}: ListFiltersProps) {
   const t = useT()
   const text = t.tasks.list
   // Typing stays local and reaches the address (and the server) once it pauses.
@@ -113,6 +122,24 @@ export function ListFilters({ state, onChange, statuses, members, labels }: List
             {labels.map((label) => (
               <option key={label.id} value={label.id}>
                 {label.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {milestones && milestones.length > 0 && (
+        <label className="text-sm font-medium">
+          <span className="mb-1 block">{text.milestone}</span>
+          <select
+            className={selectClass}
+            value={state.milestoneId}
+            onChange={(event) => onChange({ milestoneId: event.target.value })}
+          >
+            <option value="">{text.anyMilestone}</option>
+            <option value="none">{text.noMilestone}</option>
+            {milestones.map((milestone) => (
+              <option key={milestone.id} value={milestone.id}>
+                {milestone.name}
               </option>
             ))}
           </select>

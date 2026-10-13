@@ -22,6 +22,7 @@ import { eventRoutes, membersAmong, resourceOfRoute } from './modules/events/rou
 import { inviteRoutes, projectInviteRoutes } from './modules/invites/routes'
 import { labelRoutes } from './modules/labels/routes'
 import { mcpRoutes } from './modules/mcp/routes'
+import { milestoneRoutes } from './modules/milestones/routes'
 import { notificationRoutes } from './modules/notifications/routes'
 import { overviewRoutes } from './modules/overview/routes'
 import { projectRoutes } from './modules/projects/routes'
@@ -157,6 +158,7 @@ export async function buildApp({
   await app.register(projectInviteRoutes, { prefix: '/api/projects/:projectId/invites', db })
   await app.register(inviteRoutes, { prefix: '/api/invites', db, rateLimitMax: inviteRateLimitMax })
   await app.register(labelRoutes, { prefix: '/api/projects/:projectId/labels', db })
+  await app.register(milestoneRoutes, { prefix: '/api/projects/:projectId/milestones', db })
   await app.register(statusRoutes, { prefix: '/api/projects/:projectId/statuses', db })
   await app.register(taskRoutes, { prefix: '/api/projects/:projectId/tasks', db })
   await app.register(taskExtraRoutes, { prefix: '/api/projects/:projectId/tasks', db })

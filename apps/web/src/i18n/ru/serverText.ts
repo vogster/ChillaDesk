@@ -46,6 +46,7 @@ const EXACT: Record<string, string> = {
 const THINGS: Record<string, string> = {
   Comment: 'Комментарий не найден',
   Label: 'Метка не найдена',
+  Milestone: 'Веха не найдена',
   Member: 'Участник не найден',
   Project: 'Проект не найден',
   Status: 'Колонка не найдена',
@@ -65,6 +66,7 @@ const ROLES: Record<string, string> = {
 const PATTERNS: [RegExp, (...groups: string[]) => string][] = [
   [/^You already have a filter named "(.+)"$/, (name) => `У вас уже есть фильтр «${name}»`],
   [/^A label named "(.+)" already exists$/, (name) => `Метка «${name}» уже есть`],
+  [/^A milestone named "(.+)" already exists$/, (name) => `Веха «${name}» уже есть`],
   [/^A page titled "(.+)" already exists$/, (title) => `Страница «${title}» уже есть`],
   [/^Project key "(.+)" is already taken$/, (key) => `Ключ проекта «${key}» уже занят`],
   [

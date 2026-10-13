@@ -27,6 +27,7 @@ const AFFECTED: Record<LiveResource, string[][]> = {
   invites: [['invites']],
   statuses: [['statuses'], ['tasks']],
   labels: [['labels'], ['tasks']],
+  milestones: [['milestones'], ['tasks']],
   tasks: [['tasks']],
   wiki: [['wiki']],
 }

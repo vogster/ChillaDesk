@@ -17,6 +17,8 @@ export interface ListState {
   assigneeId: string
   priority: TaskPriority | ''
   labelId: string
+  /** A milestone id, `none` for tasks without one, or empty for any. */
+  milestoneId: string
   sort: TaskSort
   order: SortOrder
 }
@@ -27,6 +29,7 @@ export const DEFAULT_LIST_STATE: ListState = {
   assigneeId: '',
   priority: '',
   labelId: '',
+  milestoneId: '',
   sort: 'board',
   order: 'asc',
 }
@@ -34,7 +37,7 @@ export const DEFAULT_LIST_STATE: ListState = {
 const LIST_KEYS = Object.keys(DEFAULT_LIST_STATE) as (keyof ListState)[]
 
 const id = z.uuid()
-const assignee = z.union([z.uuid(), z.literal('none')])
+const idOrNone = z.union([z.uuid(), z.literal('none')])
 
 /** Reads the list state from the address; anything it does not understand counts as unset. */
 export function parseListState(params: URLSearchParams): ListState {
@@ -45,9 +48,10 @@ export function parseListState(params: URLSearchParams): ListState {
   return {
     q: (params.get('q') ?? '').slice(0, 200),
     statusId: valid(id, 'statusId') ?? '',
-    assigneeId: valid(assignee, 'assigneeId') ?? '',
+    assigneeId: valid(idOrNone, 'assigneeId') ?? '',
     priority: valid(taskPrioritySchema, 'priority') ?? '',
     labelId: valid(id, 'labelId') ?? '',
+    milestoneId: valid(idOrNone, 'milestoneId') ?? '',
     sort: valid(taskSortSchema, 'sort') ?? DEFAULT_LIST_STATE.sort,
     order: valid(sortOrderSchema, 'order') ?? DEFAULT_LIST_STATE.order,
   }
@@ -68,8 +72,15 @@ export function withListState(params: URLSearchParams, state: ListState): URLSea
 }
 
 /** Whether anything narrows the list down (the order does not). */
-export const isFiltered = ({ q, statusId, assigneeId, priority, labelId }: ListState): boolean =>
-  [q.trim(), statusId, assigneeId, priority, labelId].some(Boolean)
+export const isFiltered = (state: ListState): boolean =>
+  [
+    state.q.trim(),
+    state.statusId,
+    state.assigneeId,
+    state.priority,
+    state.labelId,
+    state.milestoneId,
+  ].some(Boolean)
 
 export function toTaskFilters(state: ListState): TaskFilters {
   const q = state.q.trim()
@@ -79,6 +90,7 @@ export function toTaskFilters(state: ListState): TaskFilters {
     ...(state.assigneeId ? { assigneeId: state.assigneeId } : {}),
     ...(state.priority ? { priority: state.priority } : {}),
     ...(state.labelId ? { labelId: state.labelId } : {}),
+    ...(state.milestoneId ? { milestoneId: state.milestoneId } : {}),
     ...(state.sort !== 'board' || state.order !== 'asc'
       ? { sort: state.sort, order: state.order }
       : {}),

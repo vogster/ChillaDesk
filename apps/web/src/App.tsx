@@ -16,6 +16,7 @@ import { SearchPage } from './pages/overview/SearchPage'
 import { BoardPage } from './pages/project/BoardPage'
 import { ListPage } from './pages/project/ListPage'
 import { MembersPage } from './pages/project/MembersPage'
+import { MilestonesPage } from './pages/project/milestones/MilestonesPage'
 import { ProjectLayout } from './pages/project/ProjectLayout'
 import { SettingsPage } from './pages/project/SettingsPage'
 import { TaskNumberRedirect } from './pages/project/TaskNumberRedirect'
@@ -103,6 +104,7 @@ function AppRoutes() {
             <Route path=":pageId/edit" element={<WikiEditPage />} />
             <Route path=":pageId/history" element={<WikiHistory />} />
           </Route>
+          <Route path="milestones" element={<MilestonesPage />} />
           <Route path="members" element={<MembersPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

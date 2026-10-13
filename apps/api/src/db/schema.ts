@@ -135,6 +135,23 @@ export const statuses = pgTable(
   (table) => [index('statuses_project_id_idx').on(table.projectId, table.position)],
 )
 
+/** A point the project works towards; tasks are put on it. */
+export const milestones = pgTable(
+  'milestones',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    dueDate: date('due_date', { mode: 'string' }),
+    /** Set when the milestone was closed; null while it is open. */
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (table) => [uniqueIndex('milestones_project_name_idx').on(table.projectId, table.name)],
+)
+
 export const tasks = pgTable(
   'tasks',
   {
@@ -153,6 +170,7 @@ export const tasks = pgTable(
     assigneeId: uuid('assignee_id').references(() => users.id, { onDelete: 'set null' }),
     reporterId: uuid('reporter_id').references(() => users.id, { onDelete: 'set null' }),
     dueDate: date('due_date', { mode: 'string' }),
+    milestoneId: uuid('milestone_id').references(() => milestones.id, { onDelete: 'set null' }),
     /** Sort key within the status column; gaps let a move touch a single row. */
     position: doublePrecision('position').notNull(),
     createdAt: createdAt(),
@@ -164,6 +182,7 @@ export const tasks = pgTable(
     // Column lookups (end of column, neighbours, "is this status in use") filter by status only.
     index('tasks_status_position_idx').on(table.statusId, table.position),
     index('tasks_assignee_id_idx').on(table.assigneeId),
+    index('tasks_milestone_id_idx').on(table.milestoneId),
   ],
 )
 

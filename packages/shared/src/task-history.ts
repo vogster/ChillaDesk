@@ -24,6 +24,11 @@ export const taskChangeSchema = z.discriminatedUnion('field', [
     to: z.string().nullable(),
   }),
   z.object({
+    field: z.literal('milestone'),
+    from: z.string().nullable(),
+    to: z.string().nullable(),
+  }),
+  z.object({
     field: z.literal('labels'),
     added: z.array(z.string()),
     removed: z.array(z.string()),

@@ -15,6 +15,7 @@ import { TaskLabels } from './labels/TaskLabels'
 import { MentionTextarea } from './mentions/MentionTextarea'
 import type { ProjectContext } from './ProjectLayout'
 import { ProjectMarkdown } from './ProjectMarkdown'
+import { useMilestones } from './milestones/milestoneQueries'
 import { useMembers } from './projectQueries'
 import { TaskChecklist } from './TaskChecklist'
 import { TaskComments } from './TaskComments'
@@ -73,6 +74,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
   const { project, canEdit } = context
   const statuses = useStatuses(project.id)
   const members = useMembers(project.id)
+  const milestones = useMilestones(project.id)
   const updateTask = useUpdateTask(project.id, task.id)
   const moveTask = useMoveTask(project.id)
   const deleteTask = useDeleteTask(project.id, task.id)
@@ -268,6 +270,28 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
             formatDueDate(task.dueDate)
           ) : (
             text.noDueDate
+          )}
+        </Field>
+        <Field label={text.milestone} htmlFor={canEdit ? 'task-milestone' : undefined}>
+          {canEdit ? (
+            <select
+              id="task-milestone"
+              className={selectClass}
+              value={task.milestone?.id ?? ''}
+              onChange={(event) => updateTask.mutate({ milestoneId: event.target.value || null })}
+            >
+              <option value="">{text.noMilestone}</option>
+              {milestones.data
+                // A closed milestone is only offered while the task is still on it.
+                ?.filter((milestone) => !milestone.closed || milestone.id === task.milestone?.id)
+                .map((milestone) => (
+                  <option key={milestone.id} value={milestone.id}>
+                    {milestone.name}
+                  </option>
+                ))}
+            </select>
+          ) : (
+            (task.milestone?.name ?? text.noMilestone)
           )}
         </Field>
         <div className="text-xs text-slate-500 sm:col-span-2">

@@ -1,6 +1,7 @@
 import {
   taskPrioritySchema,
   type BulkTasksRequest,
+  type Milestone,
   type ProjectMember,
   type Status,
 } from '@chilladesk/shared'
@@ -19,12 +20,20 @@ interface BulkBarProps {
   taskIds: string[]
   statuses: Status[] | undefined
   members: ProjectMember[] | undefined
+  milestones: Milestone[] | undefined
   /** Called after an action went through, and for "clear". */
   onDone: () => void
 }
 
 /** What can be done to the ticked tasks all at once. */
-export function BulkBar({ projectId, taskIds, statuses, members, onDone }: BulkBarProps) {
+export function BulkBar({
+  projectId,
+  taskIds,
+  statuses,
+  members,
+  milestones,
+  onDone,
+}: BulkBarProps) {
   const t = useT()
   const text = t.tasks.list.bulk
   const queryClient = useQueryClient()
@@ -99,6 +108,27 @@ export function BulkBar({ projectId, taskIds, statuses, members, onDone }: BulkB
             </option>
           ))}
         </select>
+        {milestones && milestones.length > 0 && (
+          <select
+            aria-label={text.setMilestone}
+            className={selectClass}
+            value=""
+            disabled={run.isPending}
+            onChange={(event) =>
+              update({ milestoneId: event.target.value === 'none' ? null : event.target.value })
+            }
+          >
+            <option value="">{text.setMilestone}</option>
+            <option value="none">{t.tasks.list.noMilestone}</option>
+            {milestones
+              .filter((milestone) => !milestone.closed)
+              .map((milestone) => (
+                <option key={milestone.id} value={milestone.id}>
+                  {milestone.name}
+                </option>
+              ))}
+          </select>
+        )}
         <Button variant="secondary" onClick={() => setConfirmingDelete(true)}>
           {text.delete}
         </Button>

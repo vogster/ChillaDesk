@@ -32,6 +32,7 @@ export const tasks: TasksMessages = {
     board: 'Доска',
     list: 'Список',
     wiki: 'Вики',
+    milestones: 'Вехи',
     members: 'Участники',
     settings: 'Настройки',
   },
@@ -74,6 +75,9 @@ export const tasks: TasksMessages = {
     anyPriority: 'Любой приоритет',
     label: 'Метка',
     anyLabel: 'Любая метка',
+    milestone: 'Веха',
+    anyMilestone: 'Любая веха',
+    noMilestone: 'Без вехи',
     noMatches: 'Под эти фильтры не подходит ни одна задача.',
     empty: 'Задач пока нет. Добавьте первую на доске.',
     count: (total) => `${total} ${ruPlural(total, 'задача', 'задачи', 'задач')}`,
@@ -87,6 +91,7 @@ export const tasks: TasksMessages = {
       moveTo: 'Перенести в…',
       assignTo: 'Назначить…',
       setPriority: 'Приоритет…',
+      setMilestone: 'Веха…',
       delete: 'Удалить',
       deleteConfirm: (count) =>
         `Удалить ${count} ${ruPlural(count, 'задачу', 'задачи', 'задач')} вместе с комментариями? Это действие нельзя отменить.`,
@@ -121,6 +126,8 @@ export const tasks: TasksMessages = {
     assignee: 'Исполнитель',
     unassigned: 'Не назначен',
     dueDate: 'Срок',
+    milestone: 'Веха',
+    noMilestone: 'Нет',
     noDueDate: 'Не указан',
     dueDateInvalid: 'Введите год от 1900 до 2999.',
     created: (author, date) => `Автор: ${author ?? 'удалённый пользователь'}, создана ${date}`,
@@ -226,6 +233,7 @@ export const tasks: TasksMessages = {
     priority: (from, to) => `Приоритет: ${from} → ${to}`,
     assignee: (from, to) => `Исполнитель: ${from ?? 'никто'} → ${to ?? 'никто'}`,
     dueDate: (from, to) => `Срок: ${from ?? 'не указан'} → ${to ?? 'не указан'}`,
+    milestone: (from, to) => `Веха: ${from ?? 'нет'} → ${to ?? 'нет'}`,
     labels: (added, removed) =>
       `Метки: ${[
         added.length > 0 ? `добавлены ${added.join(', ')}` : '',

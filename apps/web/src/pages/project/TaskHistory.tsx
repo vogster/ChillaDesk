@@ -33,6 +33,8 @@ function describeChange(change: TaskChange, t: Messages): string {
         change.from === null ? null : formatDueDate(change.from),
         change.to === null ? null : formatDueDate(change.to),
       )
+    case 'milestone':
+      return texts.milestone(change.from, change.to)
     case 'labels':
       return texts.labels(change.added, change.removed)
   }

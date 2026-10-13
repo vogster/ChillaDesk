@@ -19,6 +19,7 @@ export const tasks = {
     board: 'Board',
     list: 'List',
     wiki: 'Wiki',
+    milestones: 'Milestones',
     members: 'Members',
     settings: 'Settings',
   },
@@ -60,6 +61,9 @@ export const tasks = {
     anyPriority: 'Any priority',
     label: 'Label',
     anyLabel: 'Any label',
+    milestone: 'Milestone',
+    anyMilestone: 'Any milestone',
+    noMilestone: 'No milestone',
     noMatches: 'No tasks match these filters.',
     empty: 'No tasks yet. Add one on the board.',
     count: (total: number) => `${total} ${total === 1 ? 'task' : 'tasks'}`,
@@ -73,6 +77,7 @@ export const tasks = {
       moveTo: 'Move to…',
       assignTo: 'Assign to…',
       setPriority: 'Set priority…',
+      setMilestone: 'Milestone…',
       delete: 'Delete',
       deleteConfirm: (count: number) =>
         `Delete ${count} ${count === 1 ? 'task' : 'tasks'} with their comments? This cannot be undone.`,
@@ -107,6 +112,8 @@ export const tasks = {
     assignee: 'Assignee',
     unassigned: 'Unassigned',
     dueDate: 'Due date',
+    milestone: 'Milestone',
+    noMilestone: 'None',
     noDueDate: 'None',
     dueDateInvalid: 'Enter a year between 1900 and 2999.',
     /** `author` is null when the account was deleted. */
@@ -218,6 +225,8 @@ export const tasks = {
       `Assignee: ${from ?? 'nobody'} → ${to ?? 'nobody'}`,
     dueDate: (from: string | null, to: string | null) =>
       `Due date: ${from ?? 'none'} → ${to ?? 'none'}`,
+    milestone: (from: string | null, to: string | null) =>
+      `Milestone: ${from ?? 'none'} → ${to ?? 'none'}`,
     labels: (added: string[], removed: string[]) =>
       `Labels: ${[
         added.length > 0 ? `added ${added.join(', ')}` : '',

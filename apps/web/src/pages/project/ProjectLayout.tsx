@@ -95,6 +95,9 @@ export function ProjectLayout({ currentUser }: { currentUser: User }) {
         <NavLink to="wiki" className={tabClass}>
           {t.tasks.layout.wiki}
         </NavLink>
+        <NavLink to="milestones" className={tabClass}>
+          {t.tasks.layout.milestones}
+        </NavLink>
         <NavLink to="members" className={tabClass}>
           {t.tasks.layout.members}
         </NavLink>

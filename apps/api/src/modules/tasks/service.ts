@@ -28,9 +28,18 @@ import {
 import { alias } from 'drizzle-orm/pg-core'
 import type { Db, Executor, Tx } from '../../db/client'
 import { containsPattern } from '../../db/like'
-import { projectMembers, projects, statuses, taskLabels, tasks, users } from '../../db/schema'
+import {
+  milestones,
+  projectMembers,
+  projects,
+  statuses,
+  taskLabels,
+  tasks,
+  users,
+} from '../../db/schema'
 import { invalid, notFound } from '../../errors'
 import { loadLabelsOfTasks, setTaskLabels } from '../labels/service'
+import { assertMilestoneOfProject } from '../milestones/service'
 import { notifyAssignment, notifyMentions, notifyMove } from '../notifications/service'
 import { getProject } from '../projects/service'
 import { loadChecklistProgress } from './checklist.service'
@@ -52,6 +61,7 @@ const taskColumns = {
   projectKey: projects.key,
   assignee: summaryOf(assignee),
   reporter: summaryOf(reporter),
+  milestone: { id: milestones.id, name: milestones.name },
 }
 
 // A left join yields the joined columns as nulls when there is no such user.
@@ -68,12 +78,13 @@ interface TaskRow {
   projectKey: string
   assignee: JoinedUser
   reporter: JoinedUser
+  milestone: { id: string | null; name: string | null } | null
 }
 
 const NO_CHECKLIST: ChecklistProgress = { done: 0, total: 0 }
 
 function toTask(
-  { task, projectKey, assignee, reporter }: TaskRow,
+  { task, projectKey, assignee, reporter, milestone }: TaskRow,
   labels: Label[],
   checklist: ChecklistProgress,
 ): Task {
@@ -90,6 +101,8 @@ function toTask(
     reporter: toSummary(reporter),
     dueDate: task.dueDate,
     labels,
+    milestone:
+      milestone?.id && milestone.name !== null ? { id: milestone.id, name: milestone.name } : null,
     checklist,
     position: task.position,
     createdAt: task.createdAt.toISOString(),
@@ -105,6 +118,7 @@ function selectTasks(db: Executor) {
     .innerJoin(statuses, eq(statuses.id, tasks.statusId))
     .leftJoin(assignee, eq(assignee.id, tasks.assigneeId))
     .leftJoin(reporter, eq(reporter.id, tasks.reporterId))
+    .leftJoin(milestones, eq(milestones.id, tasks.milestoneId))
 }
 
 /** Turns query rows into tasks, fetching the labels and checklists of all of them in one go. */
@@ -162,6 +176,7 @@ export async function findTasksOfUser(
     )
     .leftJoin(assignee, eq(assignee.id, tasks.assigneeId))
     .leftJoin(reporter, eq(reporter.id, tasks.reporterId))
+    .leftJoin(milestones, eq(milestones.id, tasks.milestoneId))
     .where(where)
     .orderBy(...orderBy)
     .limit(limit)
@@ -183,6 +198,11 @@ function filters(projectId: string, query: TaskListQuery): SQL | undefined {
       ? isNull(tasks.assigneeId)
       : query.assigneeId
         ? eq(tasks.assigneeId, query.assigneeId)
+        : undefined,
+    query.milestoneId === 'none'
+      ? isNull(tasks.milestoneId)
+      : query.milestoneId
+        ? eq(tasks.milestoneId, query.milestoneId)
         : undefined,
     query.labelId
       ? sql`exists (select 1 from ${taskLabels} where ${taskLabels.taskId} = ${tasks.id} and ${taskLabels.labelId} = ${query.labelId})`
@@ -334,6 +354,7 @@ export async function createTask(
     const statusId = input.statusId ?? (await firstStatusId(tx, projectId))
     await lockStatus(tx, projectId, statusId)
     await assertAssignable(tx, projectId, input.assigneeId)
+    await assertMilestoneOfProject(tx, projectId, input.milestoneId)
 
     const [created] = await tx
       .insert(tasks)
@@ -347,6 +368,7 @@ export async function createTask(
         assigneeId: input.assigneeId,
         reporterId: userId,
         dueDate: input.dueDate,
+        milestoneId: input.milestoneId,
         position: await endOfColumn(tx, statusId),
       })
       .returning({ id: tasks.id })
@@ -379,6 +401,7 @@ export async function updateTask(
   await getProject(db, userId, projectId, 'member')
   return db.transaction(async (tx) => {
     if (fields.assigneeId !== undefined) await assertAssignable(tx, projectId, fields.assigneeId)
+    await assertMilestoneOfProject(tx, projectId, fields.milestoneId)
 
     // The previous values decide who hears about the change: only a new assignee and only
     // people not already mentioned in the description.

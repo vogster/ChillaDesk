@@ -19,6 +19,7 @@ describe('createTaskRequestSchema', () => {
       priority: 'medium',
       assigneeId: null,
       dueDate: null,
+      milestoneId: null,
       labelIds: [],
     })
   })
