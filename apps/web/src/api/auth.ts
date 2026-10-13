@@ -1,8 +1,10 @@
 import {
   authResponseSchema,
   userSchema,
+  type ChangePasswordRequest,
   type LoginRequest,
   type RegisterRequest,
+  type UpdateProfileRequest,
   type User,
 } from '@chilladesk/shared'
 import { ApiError, apiRequest } from './client'
@@ -39,3 +41,9 @@ export async function register(input: RegisterRequest): Promise<User> {
 export function logout(): Promise<void> {
   return apiRequest('/auth/logout', { method: 'POST' })
 }
+
+export const updateProfile = (patch: UpdateProfileRequest): Promise<User> =>
+  apiRequest('/auth/me', { method: 'PATCH', body: patch, schema: userSchema })
+
+export const changePassword = (input: ChangePasswordRequest): Promise<void> =>
+  apiRequest('/auth/password', { method: 'POST', body: input })

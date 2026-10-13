@@ -28,6 +28,11 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
   passwordHash: text('password_hash').notNull(),
+  /** `en` or `ru`; null until an interface has reported the user's language. */
+  locale: text('locale'),
+  emailNotifications: boolean('email_notifications').notNull().default(true),
+  /** When the user proved the address is theirs; null until then. */
+  emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
   createdAt: createdAt(),
 })
 

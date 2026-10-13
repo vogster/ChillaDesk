@@ -99,6 +99,7 @@ describe('registration', () => {
       name: 'Ann',
       email: 'ann@example.com',
       password: 'correct horse',
+      locale: 'en',
     })
   })
 

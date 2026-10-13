@@ -1,9 +1,11 @@
 import { z } from 'zod'
 import { en as zodEn, ru as zodRu } from 'zod/locales'
+import { account as accountEn } from './en/account'
 import { common as commonEn } from './en/common'
 import { project as projectEn } from './en/project'
 import { shell as shellEn } from './en/shell'
 import { tasks as tasksEn } from './en/tasks'
+import { account as accountRu } from './ru/account'
 import { common as commonRu } from './ru/common'
 import { project as projectRu } from './ru/project'
 import { shell as shellRu } from './ru/shell'
@@ -15,14 +17,26 @@ export type Locale = (typeof LOCALES)[number]
 /** How each language calls itself, for the switcher. */
 export const LOCALE_NAMES: Record<Locale, string> = { en: 'English', ru: 'Русский' }
 
-const en = { common: commonEn, shell: shellEn, tasks: tasksEn, project: projectEn }
+const en = {
+  common: commonEn,
+  shell: shellEn,
+  tasks: tasksEn,
+  project: projectEn,
+  account: accountEn,
+}
 
 /** Every text of the interface. English is the source; other languages must match its shape. */
 export type Messages = typeof en
 
 const DICTIONARIES: Record<Locale, Messages> = {
   en,
-  ru: { common: commonRu, shell: shellRu, tasks: tasksRu, project: projectRu },
+  ru: {
+    common: commonRu,
+    shell: shellRu,
+    tasks: tasksRu,
+    project: projectRu,
+    account: accountRu,
+  },
 }
 
 export const messagesFor = (locale: Locale): Messages => DICTIONARIES[locale]
@@ -42,6 +56,15 @@ export function detectLocale(): Locale {
   const preferred = navigator.languages.length > 0 ? navigator.languages : [navigator.language]
   const known = preferred.map((tag) => tag.toLowerCase().split('-')[0]).find(isLocale)
   return known ?? 'en'
+}
+
+/** Whether a language was ever picked on this device (as opposed to guessed). */
+export function hasStoredLocale(): boolean {
+  try {
+    return isLocale(localStorage.getItem(STORAGE_KEY))
+  } catch {
+    return false
+  }
 }
 
 export function rememberLocale(locale: Locale): void {

@@ -5,12 +5,13 @@ import { errorMessage } from '../api/client'
 import { useRegister } from '../auth/useAuth'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, TextField } from '../components/ui'
-import { useT } from '../i18n'
+import { useLocale, useT } from '../i18n'
 import { authLinkClass, AuthShell } from './AuthShell'
 
 export function RegisterPage() {
   const texts = useT().shell.auth
   const register = useRegister()
+  const [locale] = useLocale()
   const location = useLocation()
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
@@ -21,6 +22,8 @@ export function RegisterPage() {
       name: String(form.get('name') ?? ''),
       email: String(form.get('email') ?? '').trim(),
       password: String(form.get('password') ?? ''),
+      // The language of the page the account was made on becomes the user's own.
+      locale,
     })
     if (!parsed.ok) {
       register.reset()

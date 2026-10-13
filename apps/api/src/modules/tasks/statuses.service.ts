@@ -3,6 +3,7 @@ import type {
   Status,
   StatusCategory,
   UpdateStatusRequest,
+  UserLocale,
 } from '@chilladesk/shared'
 import { and, asc, eq, gt, max, sql } from 'drizzle-orm'
 import type { Db, Executor, Tx } from '../../db/client'
@@ -10,11 +11,13 @@ import { projects, statuses, tasks } from '../../db/schema'
 import { conflict, invalid, isForeignKeyViolation, notFound } from '../../errors'
 import { getProject } from '../projects/service'
 
-const DEFAULT_STATUSES: readonly { name: string; category: StatusCategory }[] = [
-  { name: 'To Do', category: 'todo' },
-  { name: 'In Progress', category: 'in_progress' },
-  { name: 'Done', category: 'done' },
-]
+const DEFAULT_CATEGORIES: readonly StatusCategory[] = ['todo', 'in_progress', 'done']
+
+/** Names of the columns a new project starts with, in the language of whoever creates it. */
+const DEFAULT_NAMES: Record<UserLocale, Record<StatusCategory, string>> = {
+  en: { todo: 'To Do', in_progress: 'In Progress', done: 'Done' },
+  ru: { todo: 'К выполнению', in_progress: 'В работе', done: 'Готово' },
+}
 
 type StatusRow = typeof statuses.$inferSelect
 
@@ -22,10 +25,19 @@ export function toStatus(row: StatusRow): Status {
   return { id: row.id, name: row.name, category: row.category, position: row.position }
 }
 
-export async function createDefaultStatuses(tx: Tx, projectId: string): Promise<void> {
-  await tx
-    .insert(statuses)
-    .values(DEFAULT_STATUSES.map((status, position) => ({ ...status, projectId, position })))
+export async function createDefaultStatuses(
+  tx: Tx,
+  projectId: string,
+  locale: UserLocale = 'en',
+): Promise<void> {
+  await tx.insert(statuses).values(
+    DEFAULT_CATEGORIES.map((category, position) => ({
+      name: DEFAULT_NAMES[locale][category],
+      category,
+      projectId,
+      position,
+    })),
+  )
 }
 
 /** Columns of a project, left to right. Does not check access. */

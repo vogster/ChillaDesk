@@ -57,6 +57,13 @@
       "when": 1791845681169,
       "tag": "0007_notification_email_retries",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791908238034,
+      "tag": "0008_user_profile",
+      "breakpoints": true
     }
   ]
 }

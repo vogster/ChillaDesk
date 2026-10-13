@@ -79,9 +79,13 @@ export function AppLayout({ user }: { user: User }) {
               {t.shell.nav.tokens}
             </NavLink>
             <LanguageSwitcher />
-            <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-400">
+            <NavLink
+              to="/profile"
+              aria-label={t.account.profile.link(user.name)}
+              className={(state) => `hidden sm:inline ${navLinkClass(state)}`}
+            >
               {user.name}
-            </span>
+            </NavLink>
             <Button variant="secondary" onClick={handleLogout} disabled={logout.isPending}>
               {t.shell.nav.logOut}
             </Button>

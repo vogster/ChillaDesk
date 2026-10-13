@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
 import { errorMessage } from './api/client'
 import { redirectTarget } from './auth/redirect'
 import { useCurrentUser } from './auth/useAuth'
+import { useProfileLocale } from './auth/useProfileLocale'
 import { AppLayout } from './components/AppLayout'
 import { Alert, Button, Spinner } from './components/ui'
 import { I18nProvider, useT } from './i18n'
@@ -21,6 +22,7 @@ import { WikiHistory } from './pages/project/wiki/WikiHistory'
 import { WikiHome } from './pages/project/wiki/WikiHome'
 import { WikiLayout } from './pages/project/wiki/WikiLayout'
 import { WikiPageView } from './pages/project/wiki/WikiPageView'
+import { ProfilePage } from './pages/ProfilePage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { TokensPage } from './pages/TokensPage'
@@ -47,6 +49,7 @@ function AppRoutes() {
   const currentUser = useCurrentUser()
   const location = useLocation()
   const t = useT()
+  useProfileLocale(currentUser.data)
 
   if (currentUser.isPending) return <Spinner />
   // A failed background refresh keeps the last known user; only a failed first load blocks.
@@ -78,6 +81,7 @@ function AppRoutes() {
       >
         <Route index element={<ProjectsPage />} />
         <Route path="/tokens" element={<TokensPage />} />
+        <Route path="/profile" element={user && <ProfilePage user={user} />} />
         <Route path="/my-tasks" element={<MyTasksPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />

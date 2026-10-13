@@ -1,8 +1,10 @@
 import {
   authResponseSchema,
+  changePasswordRequestSchema,
   errorResponseSchema,
   loginRequestSchema,
   registerRequestSchema,
+  updateProfileRequestSchema,
   userSchema,
   type AuthResponse,
 } from '@chilladesk/shared'
@@ -12,8 +14,8 @@ import { z } from 'zod'
 import type { Db } from '../../db/client'
 import { AppError } from '../../errors'
 import { createAttemptLimiter } from './attempt-limiter'
-import { requireAuth, SESSION_COOKIE } from './plugin'
-import { login, logout, register } from './service'
+import { requireAuth, requireSession, SESSION_COOKIE } from './plugin'
+import { changePassword, login, logout, register, updateProfile } from './service'
 
 export interface AuthRoutesOptions {
   db: Db
@@ -125,5 +127,38 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
       },
     },
     async (request) => requireAuth(request).user,
+  )
+
+  app.patch(
+    '/me',
+    {
+      schema: {
+        tags,
+        summary: 'Change your name, language or email preference',
+        body: updateProfileRequestSchema,
+        response: { 200: userSchema, 401: errorResponseSchema, 403: errorResponseSchema },
+      },
+    },
+    // The account itself is out of reach for API tokens.
+    async (request) => updateProfile(db, requireSession(request).user.id, request.body),
+  )
+
+  app.post(
+    '/password',
+    {
+      config: perClient,
+      schema: {
+        tags,
+        summary: 'Change your password',
+        description: 'Ends every other session of the account; the current one stays.',
+        body: changePasswordRequestSchema,
+        response: { 204: z.null(), 400: errorResponseSchema, 401: errorResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const auth = requireSession(request)
+      await changePassword(db, auth.user.id, auth.sessionId ?? '', request.body)
+      return reply.code(204).send(null)
+    },
   )
 }

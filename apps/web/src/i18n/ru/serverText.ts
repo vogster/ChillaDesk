@@ -1,6 +1,7 @@
 /** Server texts that never vary, by their English wording. */
 const EXACT: Record<string, string> = {
   'Invalid email or password': 'Неверный email или пароль',
+  'The current password is wrong': 'Текущий пароль неверен',
   'An account with this email already exists': 'Аккаунт с таким email уже существует',
   'Registration is disabled on this server': 'Регистрация на этом сервере отключена',
   'This user is already a member of the project': 'Этот пользователь уже участвует в проекте',

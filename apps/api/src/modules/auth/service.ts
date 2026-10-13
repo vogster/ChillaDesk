@@ -1,15 +1,18 @@
 import {
   API_TOKEN_PREFIX,
+  localeSchema,
   type ApiTokenScope,
   type AuthResponse,
+  type ChangePasswordRequest,
   type LoginRequest,
   type RegisterRequest,
+  type UpdateProfileRequest,
   type User,
 } from '@chilladesk/shared'
-import { and, eq, gt, isNull, lt, lte, or } from 'drizzle-orm'
+import { and, eq, gt, isNull, lt, lte, ne, or } from 'drizzle-orm'
 import type { Db } from '../../db/client'
 import { apiTokens, sessions, users } from '../../db/schema'
-import { conflict, forbidden, isUniqueViolation, unauthenticated } from '../../errors'
+import { AppError, conflict, forbidden, isUniqueViolation, unauthenticated } from '../../errors'
 import { hashPassword, verifyPassword } from './password'
 import { generateToken, hashToken } from './tokens'
 
@@ -25,8 +28,18 @@ export interface AuthContext {
 
 type UserRow = typeof users.$inferSelect
 
-function toUser(row: UserRow): User {
-  return { id: row.id, email: row.email, name: row.name, createdAt: row.createdAt.toISOString() }
+export function toUser(row: UserRow): User {
+  // The column is free text; anything but a known language counts as not set.
+  const locale = localeSchema.safeParse(row.locale)
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    locale: locale.success ? locale.data : null,
+    emailNotifications: row.emailNotifications,
+    emailVerified: row.emailVerifiedAt !== null,
+    createdAt: row.createdAt.toISOString(),
+  }
 }
 
 type Executor = Pick<Db, 'insert'>
@@ -53,7 +66,12 @@ export async function register(
     return await db.transaction(async (tx) => {
       const [user] = await tx
         .insert(users)
-        .values({ email: input.email.toLowerCase(), name: input.name, passwordHash })
+        .values({
+          email: input.email.toLowerCase(),
+          name: input.name,
+          passwordHash,
+          locale: input.locale ?? null,
+        })
         .returning()
       if (!user) throw new Error('Insert returned no user row')
       return startSession(tx, user, options.now ?? new Date())
@@ -142,4 +160,40 @@ export async function authenticate(
 
 export async function logout(db: Db, sessionId: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.id, sessionId))
+}
+
+export async function updateProfile(
+  db: Db,
+  userId: string,
+  patch: UpdateProfileRequest,
+): Promise<User> {
+  const [updated] = await db.update(users).set(patch).where(eq(users.id, userId)).returning()
+  if (!updated) throw unauthenticated()
+  return toUser(updated)
+}
+
+/**
+ * Sets a new password and signs the user out everywhere else: whoever knew the old
+ * password must not keep a session opened with it.
+ */
+export async function changePassword(
+  db: Db,
+  userId: string,
+  currentSessionId: string,
+  input: ChangePasswordRequest,
+): Promise<void> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId))
+  if (!user) throw unauthenticated()
+  if (!(await verifyPassword(input.currentPassword, user.passwordHash))) {
+    const message = 'The current password is wrong'
+    throw new AppError('VALIDATION_ERROR', message, [{ path: 'currentPassword', message }])
+  }
+
+  const passwordHash = await hashPassword(input.newPassword)
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ passwordHash }).where(eq(users.id, userId))
+    await tx
+      .delete(sessions)
+      .where(and(eq(sessions.userId, userId), ne(sessions.id, currentSessionId)))
+  })
 }

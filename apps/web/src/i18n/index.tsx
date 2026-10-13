@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import {
   applyLocale,
   detectLocale,
@@ -28,18 +28,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return detected
   })
 
+  const setLocale = useCallback((next: Locale) => {
+    rememberLocale(next)
+    // Before the re-render, so texts built outside React are already in the new language.
+    applyLocale(next)
+    setLocaleState(next)
+  }, [])
+
   const value = useMemo<I18n>(
-    () => ({
-      locale,
-      t: messagesFor(locale),
-      setLocale: (next) => {
-        rememberLocale(next)
-        // Before the re-render, so texts built outside React are already in the new language.
-        applyLocale(next)
-        setLocaleState(next)
-      },
-    }),
-    [locale],
+    () => ({ locale, t: messagesFor(locale), setLocale }),
+    [locale, setLocale],
   )
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }

@@ -5,8 +5,8 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 
 ## Gaps in what already exists
 
-- [ ] **Profile** — change your name, password and language; turn notification emails off.
-- [ ] **Default columns in the user's language** — a new project always gets
+- [x] **Profile** — change your name, password and language; turn notification emails off.
+- [x] **Default columns in the user's language** — a new project always gets
       "To Do / In Progress / Done".
 - [ ] **Live events for lost access** — deleting a project or removing a member does not
       refresh the screens of the people affected.

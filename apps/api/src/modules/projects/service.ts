@@ -1,3 +1,4 @@
+import { localeSchema } from '@chilladesk/shared'
 import type {
   AddMemberRequest,
   CreateProjectRequest,
@@ -66,7 +67,12 @@ export async function createProject(
       const [project] = await tx.insert(projects).values(input).returning()
       if (!project) throw new Error('Insert returned no project row')
       await tx.insert(projectMembers).values({ projectId: project.id, userId, role: 'owner' })
-      await createDefaultStatuses(tx, project.id)
+      const [owner] = await tx
+        .select({ locale: users.locale })
+        .from(users)
+        .where(eq(users.id, userId))
+      const locale = localeSchema.safeParse(owner?.locale)
+      await createDefaultStatuses(tx, project.id, locale.success ? locale.data : 'en')
       return toProject(project, 'owner')
     })
   } catch (error) {

@@ -13,13 +13,14 @@ import {
   renderApp,
   signedOut,
   todo,
+  type ApiRoutes,
 } from '../test/render'
 import { applyLocale } from './messages'
 
 const project = makeProject()
 const url = `/api/projects/${project.id}`
 
-function signedIn() {
+function signedIn(extra: ApiRoutes = {}) {
   return mockApi({
     'GET /api/auth/me': () => ok(ann),
     'GET /api/projects': () => ok([project]),
@@ -31,6 +32,7 @@ function signedIn() {
     [`GET ${url}/labels`]: () => ok([]),
     [`GET ${url}/tasks`]: () =>
       ok({ items: [makeTask(1, { priority: 'urgent', dueDate: '2030-05-17' })], total: 1 }),
+    ...extra,
   })
 }
 
@@ -80,7 +82,7 @@ describe('interface language', () => {
 
   it('shows a project board in Russian, with dates in the Russian manner', async () => {
     browserLanguage('ru-RU')
-    signedIn()
+    signedIn({ 'GET /api/auth/me': () => ok({ ...ann, locale: 'ru' }) })
     renderApp(`/projects/${project.id}`)
 
     expect(await screen.findByRole('link', { name: 'Доска' })).toBeInTheDocument()

@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchCurrentUser, login, logout, register } from '../api/auth'
+import {
+  changePassword,
+  fetchCurrentUser,
+  login,
+  logout,
+  register,
+  updateProfile,
+} from '../api/auth'
 import { currentUserKey } from '../queryClient'
 
 export function useCurrentUser() {
@@ -38,3 +45,13 @@ export function useLogout() {
     },
   })
 }
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: updateProfile,
+    onSuccess: (user) => queryClient.setQueryData(currentUserKey, user),
+  })
+}
+
+export const useChangePassword = () => useMutation({ mutationFn: changePassword })

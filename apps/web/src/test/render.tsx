@@ -69,6 +69,9 @@ export const ann: User = {
   id: '11111111-1111-4111-8111-111111111111',
   email: 'ann@example.com',
   name: 'Ann',
+  locale: 'en',
+  emailNotifications: true,
+  emailVerified: true,
   createdAt: TIMESTAMP,
 }
 
@@ -76,6 +79,9 @@ export const bob: User = {
   id: '22222222-2222-4222-8222-222222222222',
   email: 'bob@example.com',
   name: 'Bob',
+  locale: 'en',
+  emailNotifications: true,
+  emailVerified: true,
   createdAt: TIMESTAMP,
 }
 
