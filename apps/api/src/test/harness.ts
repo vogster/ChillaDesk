@@ -1,7 +1,9 @@
 import type { AuthResponse, Project, Status } from '@chilladesk/shared'
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify'
 import { buildApp, type AppOptions } from '../app'
+import { eq } from 'drizzle-orm'
 import { createMemoryDatabase, type Database } from '../db/client'
+import { users } from '../db/schema'
 
 export interface TestUser {
   id: string
@@ -81,6 +83,12 @@ export async function createTestContext(
       throw new Error(`signUp failed with ${response.statusCode}: ${response.body}`)
     }
     const { user, token } = response.json<AuthResponse>()
+    // Fixture users are people whose address is known to be theirs; tests about
+    // unconfirmed accounts register their own.
+    await database.db
+      .update(users)
+      .set({ emailVerifiedAt: new Date() })
+      .where(eq(users.id, user.id))
     return { id: user.id, email, token, headers: { authorization: `Bearer ${token}` } }
   }
 

@@ -2,7 +2,7 @@ import { loginRequestSchema } from '@chilladesk/shared'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router'
 import { errorMessage } from '../api/client'
-import { useLogin } from '../auth/useAuth'
+import { useAuthOptions, useLogin } from '../auth/useAuth'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, TextField } from '../components/ui'
 import { useT } from '../i18n'
@@ -11,6 +11,8 @@ import { authLinkClass, AuthShell } from './AuthShell'
 export function LoginPage() {
   const texts = useT().shell.auth
   const login = useLogin()
+  const { emailEnabled } = useAuthOptions()
+  const { forgotLink } = useT().account.email
   const location = useLocation()
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
@@ -65,6 +67,13 @@ export function LoginPage() {
         <Button type="submit" className="w-full" disabled={login.isPending}>
           {login.isPending ? texts.login.submitting : texts.login.submit}
         </Button>
+        {emailEnabled && (
+          <p className="text-center text-sm">
+            <Link to="/forgot-password" className={authLinkClass}>
+              {forgotLink}
+            </Link>
+          </p>
+        )}
       </form>
     </AuthShell>
   )

@@ -74,6 +74,8 @@ interface PendingEmail {
   attempts: number
   to: string
   wantsEmail: boolean
+  /** Whether the recipient has proved the address is theirs. */
+  verified: Date | null
   /** Null when the recipient has left the project since. */
   memberId: string | null
   actorName: string | null
@@ -157,6 +159,7 @@ async function claimBatch(db: Db, now: Date): Promise<PendingEmail[]> {
       attempts: notifications.emailAttempts,
       to: users.email,
       wantsEmail: users.emailNotifications,
+      verified: users.emailVerifiedAt,
       memberId: projectMembers.userId,
       actorName: actors.name,
       project: { id: projects.id, key: projects.key, name: projects.name },
@@ -235,13 +238,14 @@ export async function deliverPending(
 
     const sentThisHour = sentTo.get(pending.userId) ?? 0
     // No email for what was already seen in the app, would arrive a day late, is about a
-    // project the recipient has left, goes to someone who turned emails off, or would be
-    // one too many for this hour.
+    // project the recipient has left, goes to someone who turned emails off or never
+    // confirmed the address (it may be somebody else's), or would be one too many.
     const worthSending =
       !pending.readAt &&
       now.getTime() - pending.createdAt.getTime() < MAX_AGE_MS &&
       pending.memberId !== null &&
       pending.wantsEmail &&
+      pending.verified !== null &&
       sentThisHour < MAX_EMAILS_PER_HOUR
     if (!worthSending) {
       await finish(db, pending.id, now, false)

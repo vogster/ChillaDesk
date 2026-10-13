@@ -1,23 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { ApiError, errorMessage } from '../api/client'
 import { acceptInvite, previewInvite } from '../api/invites'
 import { Alert, Button, Card, Spinner } from '../components/ui'
+import { useLinkToken } from '../hooks/useLinkToken'
 import { useT } from '../i18n'
 
 /**
- * `/invite/:token`: where an invite link leads. Someone who is not signed in is first sent
+ * `/invite#token=…`: where an invite link leads. Someone who is not signed in is first sent
  * to log in or sign up and comes back here afterwards.
  */
 export function InvitePage() {
   const t = useT()
   const texts = t.account.invites.page
-  const { token = '' } = useParams()
+  const token = useLinkToken()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const preview = useQuery({
     queryKey: ['invite', token],
     queryFn: () => previewInvite(token),
+    enabled: token !== '',
     retry: false,
   })
   const accept = useMutation({
@@ -35,7 +37,8 @@ export function InvitePage() {
     <div className="mx-auto max-w-md">
       <Card>
         <h1 className="mb-3 text-lg font-semibold">{texts.title}</h1>
-        {preview.isPending && <Spinner />}
+        {token === '' && <p className="text-sm">{texts.invalid}</p>}
+        {token !== '' && preview.isPending && <Spinner />}
         {preview.isError && (
           <div className="space-y-3">
             {invalid ? (

@@ -14,6 +14,7 @@ import type { AppConfig } from './config'
 import type { Database } from './db/client'
 import { AppError } from './errors'
 import { registerErrorHandlers } from './http/error-handler'
+import type { AccountMail } from './modules/auth/email-flows'
 import { MCP_PATH, registerAuth, SESSION_COOKIE } from './modules/auth/plugin'
 import { authRoutes } from './modules/auth/routes'
 import { createEventBus, type EventBus } from './modules/events/bus'
@@ -53,6 +54,10 @@ export interface AppOptions {
   accountRateLimitMax?: number
   /** Members one user can add per minute; bounds probing for registered emails. */
   memberInviteRateLimitMax?: number
+  /** Confirmation and reset emails one account can ask for per 15 minutes. */
+  accountEmailRateLimitMax?: number
+  /** How to send account emails; without it there is no confirmation or password reset. */
+  mail?: AccountMail | undefined
   /** Invite links one client may look up or accept per minute. */
   inviteRateLimitMax?: number
   /** How long one event stream lives before the client has to reconnect. */
@@ -70,6 +75,8 @@ export async function buildApp({
   accountRateLimitMax = 10,
   memberInviteRateLimitMax = 20,
   inviteRateLimitMax = 30,
+  accountEmailRateLimitMax = 3,
+  mail,
   eventStreamLifetimeMs,
 }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
@@ -136,11 +143,15 @@ export async function buildApp({
     cookieSecure,
     rateLimitMax: authRateLimitMax,
     accountRateLimitMax,
+    accountEmailRateLimitMax,
+    mail,
   })
   await app.register(projectRoutes, {
     prefix: '/api/projects',
     db,
     memberInviteRateLimitMax,
+    // Addresses can only be confirmed where the server sends email.
+    confirmedMembersOnly: mail !== undefined,
   })
   await app.register(projectInviteRoutes, { prefix: '/api/projects/:projectId/invites', db })
   await app.register(inviteRoutes, { prefix: '/api/invites', db, rateLimitMax: inviteRateLimitMax })

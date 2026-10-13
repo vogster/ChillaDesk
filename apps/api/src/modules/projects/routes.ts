@@ -41,11 +41,13 @@ const errors = {
 export interface ProjectRoutesOptions {
   db: Db
   memberInviteRateLimitMax: number
+  /** Whether only accounts with a confirmed address can be added by email. */
+  confirmedMembersOnly: boolean
 }
 
 export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async (
   app,
-  { db, memberInviteRateLimitMax },
+  { db, memberInviteRateLimitMax, confirmedMembersOnly },
 ) => {
   // onRequest runs before body validation, so anonymous callers get 401 rather than field errors.
   app.addHook('onRequest', async (request) => {
@@ -171,6 +173,7 @@ export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async 
         requireSession(request).user.id,
         request.params.projectId,
         request.body,
+        { confirmedOnly: confirmedMembersOnly },
       )
       // Their project list has a new entry.
       app.events.publishAccessChange([member.userId])

@@ -11,7 +11,7 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 - [x] **Live events for lost access** — deleting a project or removing a member does not
       refresh the screens of the people affected.
 - [x] **Invite links** — today only someone who already has an account can be added, by email.
-- [ ] **Email verification and password reset** — a forgotten password cannot be recovered,
+- [x] **Email verification and password reset** — a forgotten password cannot be recovered,
       and with open registration notification emails can be aimed at someone else's address.
 
 ## Tasks
@@ -43,5 +43,11 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 - [ ] **Version 0.2.0** — six large features since 0.1.0, same version and tag.
 - [ ] **Several API replicas** — live events are delivered inside one process; more than one
       replica needs PostgreSQL LISTEN/NOTIFY or similar.
-- [ ] **Server texts in the user's language** — the API and its emails answer in English;
-      the web app translates the error texts it knows.
+- [ ] **Server texts in the user's language** — error texts of the API and notification
+      emails are English (confirmation and reset emails follow the account's language; the
+      web app translates the error texts it knows).
+- [ ] **Changing the email address** of an account, and **deleting an account**.
+- [ ] **Registration tells whether an address has an account** ("already exists"); answer
+      the same either way and email the owner instead.
+- [ ] **Email limits in the database** — the per-account limit on confirmation and reset
+      emails is kept in memory, so it resets on restart and is per API replica.

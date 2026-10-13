@@ -68,3 +68,23 @@ export const changePasswordRequestSchema = z.object({
   newPassword: passwordSchema,
 })
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>
+
+/** What a client needs to know before anyone is signed in. */
+export const authOptionsSchema = z.object({
+  registrationEnabled: z.boolean(),
+  /** Whether the server sends email: confirmation links and password resets depend on it. */
+  emailEnabled: z.boolean(),
+})
+export type AuthOptions = z.infer<typeof authOptionsSchema>
+
+/** The token from a link in an email. */
+export const emailTokenRequestSchema = z.object({ token: z.string().min(1).max(200) })
+
+export const passwordResetRequestSchema = z.object({ email: emailSchema })
+export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>
+
+export const passwordResetConfirmSchema = z.object({
+  token: z.string().min(1).max(200),
+  password: passwordSchema,
+})
+export type PasswordResetConfirm = z.infer<typeof passwordResetConfirmSchema>

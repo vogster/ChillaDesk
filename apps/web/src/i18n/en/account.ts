@@ -21,11 +21,36 @@ export const account = {
     currentPassword: 'Current password',
     newPassword: 'New password',
     changePassword: 'Change password',
-    passwordChanged: 'Password changed. Your other devices were signed out.',
+    passwordChanged:
+      'Password changed. Your other devices were signed out. API tokens keep working: revoke them on the API tokens page if someone else may have them.',
+  },
+  email: {
+    backToLogin: 'Back to log in',
+    badLink: 'This link is incomplete. Open the link from the email again, or ask for a new one.',
+    forgotLink: 'Forgot your password?',
+    forgot: {
+      title: 'Reset your password',
+      hint: 'Enter the email address of your account and we will send you a link to choose a new password.',
+      submit: 'Send the link',
+      sent: 'If there is an account for this address, a link is on its way. It works for one hour.',
+    },
+    reset: {
+      title: 'Choose a new password',
+      submit: 'Set the new password',
+      done: 'Your password was changed, every device was signed out and your API tokens were revoked. You can log in with the new password now.',
+    },
+    verify: {
+      title: 'Email confirmation',
+      done: 'Thank you, your email address is confirmed.',
+      continue: 'Go to ChillaDesk',
+      send: 'Send a confirmation email',
+      sent: 'Sent. Open the link in the email within two days.',
+      why: 'Notification emails are sent only to a confirmed address.',
+    },
   },
   invites: {
     heading: 'Invite links',
-    hint: 'Anyone with the link who has an account, or creates one, can join this project. A link works for a week and for any number of people.',
+    hint: 'Anyone with the link who has an account, or creates one, can join this project. A link works for a week and for any number of people. Removing a member revokes every link.',
     role: 'Join as',
     create: 'Create invite link',
     created: 'Send this link to the people you want here. It is shown only now.',

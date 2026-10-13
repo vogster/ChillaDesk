@@ -246,6 +246,34 @@ describe('using an invite link', () => {
     guest.stop()
   })
 
+  it('stops working for everyone once a member is removed', async () => {
+    const fixture = await ctx.createProject()
+    const { token } = await invite(fixture)
+    await accept(fixture.outsider, token)
+
+    await fixture.call(fixture.owner, 'DELETE', `/members/${fixture.outsider.id}`)
+
+    expect((await accept(fixture.outsider, token)).statusCode).toBe(404)
+    expect((await fixture.call(fixture.owner, 'GET', '/invites')).json()).toEqual([])
+  })
+
+  it('keeps the links of others when someone leaves, and drops those of a demoted owner', async () => {
+    const fixture = await ctx.createProject()
+    const mine = await invite(fixture)
+    await fixture.call(fixture.owner, 'PATCH', `/members/${fixture.member.id}`, { role: 'owner' })
+    const theirs = (
+      await fixture.call(fixture.member, 'POST', '/invites', {})
+    ).json<CreatedInvite>()
+
+    await fixture.call(fixture.viewer, 'DELETE', `/members/${fixture.viewer.id}`)
+    expect((await preview(fixture.outsider, mine.token)).statusCode).toBe(200)
+    expect((await preview(fixture.outsider, theirs.token)).statusCode).toBe(200)
+
+    await fixture.call(fixture.owner, 'PATCH', `/members/${fixture.member.id}`, { role: 'member' })
+    expect((await preview(fixture.outsider, theirs.token)).statusCode).toBe(404)
+    expect((await preview(fixture.outsider, mine.token)).statusCode).toBe(200)
+  })
+
   it('goes away with its project', async () => {
     const fixture = await ctx.createProject()
     const { token } = await invite(fixture)

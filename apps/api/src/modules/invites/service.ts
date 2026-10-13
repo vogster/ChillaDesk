@@ -157,15 +157,22 @@ export async function acceptInvite(
   token: string,
   now: Date = new Date(),
 ): Promise<AcceptedInvite> {
-  const { invite, project } = await findInvite(db, token, now)
-  const inserted = await db
-    .insert(projectMembers)
-    .values({ projectId: project.id, userId, role: invite.role })
-    .onConflictDoNothing()
-    .returning({ role: projectMembers.role })
-  const joined = inserted.length > 0
-  const role = inserted[0]?.role ?? (await roleOf(db, project.id, userId))
-  if (!role) throw invalidInvite()
+  const { projectId, joined } = await db.transaction(async (tx) => {
+    // Locked until the member row is written, so revoking the link at the same moment
+    // either comes first and wins, or waits and finds the person already inside.
+    const [invite] = await tx
+      .select({ projectId: projectInvites.projectId, role: projectInvites.role })
+      .from(projectInvites)
+      .where(and(eq(projectInvites.tokenHash, hashToken(token)), gt(projectInvites.expiresAt, now)))
+      .for('share')
+    if (!invite) throw invalidInvite()
+    const inserted = await tx
+      .insert(projectMembers)
+      .values({ projectId: invite.projectId, userId, role: invite.role })
+      .onConflictDoNothing()
+      .returning({ role: projectMembers.role })
+    return { projectId: invite.projectId, joined: inserted.length > 0 }
+  })
 
-  return { project: await getProject(db, userId, project.id), joined }
+  return { project: await getProject(db, userId, projectId), joined }
 }

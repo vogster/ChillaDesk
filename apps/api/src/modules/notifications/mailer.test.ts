@@ -1,7 +1,7 @@
 import type { Task, WikiPage } from '@chilladesk/shared'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { notifications } from '../../db/schema'
+import { notifications, users } from '../../db/schema'
 import { createTestContext, type ProjectFixture, type TestContext } from '../../test/harness'
 import {
   createMailSender,
@@ -44,16 +44,19 @@ function outbox() {
 
 const later = (minutes: number) => new Date(Date.now() + minutes * 60 * 1000)
 
-const deliver = (
+const deliver = async (
   send: (message: MailMessage) => Promise<void>,
   now?: Date,
   shouldStop?: () => boolean,
-) =>
-  deliverPending(ctx.database.db, send, {
+) => {
+  // Every recipient here has a confirmed address; the tests are about everything else.
+  await ctx.database.db.update(users).set({ emailVerifiedAt: new Date() })
+  return deliverPending(ctx.database.db, send, {
     publicUrl: PUBLIC_URL,
     ...(now ? { now } : {}),
     ...(shouldStop ? { shouldStop } : {}),
   })
+}
 
 describe('deliverPending', () => {
   it('emails an assignment with a link to the task, once', async () => {
@@ -267,6 +270,7 @@ describe('startMailWorker', () => {
       await send(message)
     }
 
+    await ctx.database.db.update(users).set({ emailVerifiedAt: new Date() })
     const stop = startMailWorker({
       db: ctx.database.db,
       send: flaky,

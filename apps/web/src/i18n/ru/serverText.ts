@@ -2,6 +2,12 @@
 const EXACT: Record<string, string> = {
   'Invalid email or password': 'Неверный email или пароль',
   'The current password is wrong': 'Текущий пароль неверен',
+  'This link is not valid any more, ask for a new one':
+    'Эта ссылка больше не действует. Запросите новую.',
+  'This email address is confirmed already': 'Этот адрес почты уже подтверждён',
+  'The email could not be sent, try again later': 'Не удалось отправить письмо. Попробуйте позже.',
+  'This server is not set up to send email': 'На этом сервере не настроена отправка почты',
+  'Too many emails requested, try again later': 'Запрошено слишком много писем. Попробуйте позже.',
   'This invite link is not valid any more': 'Эта ссылка-приглашение больше не действует',
   'This project has too many invite links, revoke some first':
     'У проекта слишком много ссылок-приглашений. Сначала отзовите часть.',

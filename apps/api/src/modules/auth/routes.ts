@@ -1,8 +1,12 @@
 import {
+  authOptionsSchema,
   authResponseSchema,
   changePasswordRequestSchema,
+  emailTokenRequestSchema,
   errorResponseSchema,
   loginRequestSchema,
+  passwordResetConfirmSchema,
+  passwordResetRequestSchema,
   registerRequestSchema,
   updateProfileRequestSchema,
   userSchema,
@@ -14,6 +18,13 @@ import { z } from 'zod'
 import type { Db } from '../../db/client'
 import { AppError } from '../../errors'
 import { createAttemptLimiter } from './attempt-limiter'
+import {
+  requestPasswordReset,
+  resetPassword,
+  sendVerification,
+  verifyEmail,
+  type AccountMail,
+} from './email-flows'
 import { requireAuth, requireSession, SESSION_COOKIE } from './plugin'
 import { changePassword, login, logout, register, updateProfile } from './service'
 
@@ -26,6 +37,10 @@ export interface AuthRoutesOptions {
   rateLimitMax: number
   /** Login attempts per 15 minutes for one email, from any address. */
   accountRateLimitMax: number
+  /** Emails one account can ask for per 15 minutes (confirmation, password reset). */
+  accountEmailRateLimitMax: number
+  /** Absent when the server is not set up to send email. */
+  mail?: AccountMail | undefined
 }
 
 export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, options) => {
@@ -39,6 +54,37 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
     max: options.accountRateLimitMax,
     windowMs: 15 * 60 * 1000,
   })
+
+  // Bounds how much mail one account can cause, whoever asks for it.
+  const emailRequests = createAttemptLimiter({
+    max: options.accountEmailRateLimitMax,
+    windowMs: 15 * 60 * 1000,
+  })
+  const { mail } = options
+  const requireMail = (): AccountMail => {
+    if (!mail) throw new AppError('CONFLICT', 'This server is not set up to send email')
+    return mail
+  }
+  const logMailFailure = (what: string) => (error: unknown) => {
+    // Mail errors quote the address they were about, so only their codes are logged.
+    const { code, responseCode } = (error ?? {}) as { code?: unknown; responseCode?: unknown }
+    app.log.warn({ code, responseCode }, `${what} email was not sent`)
+  }
+
+  app.get(
+    '/options',
+    {
+      schema: {
+        tags,
+        summary: 'What this server offers before anyone is signed in',
+        response: { 200: authOptionsSchema },
+      },
+    },
+    async () => ({
+      registrationEnabled: options.registrationEnabled,
+      emailEnabled: mail !== undefined,
+    }),
+  )
 
   const setSessionCookie = (reply: FastifyReply, session: AuthResponse): void => {
     reply.setCookie(SESSION_COOKIE, session.token, {
@@ -66,6 +112,11 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
         registrationEnabled: options.registrationEnabled,
       })
       setSessionCookie(reply, session)
+      // Not awaited: the account exists whether or not the mail server answers.
+      if (mail) {
+        emailRequests.consume(session.user.id)
+        void sendVerification(db, mail, session.user.id).catch(logMailFailure('confirmation'))
+      }
       return reply.code(201).send(session)
     },
   )
@@ -158,6 +209,101 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
     async (request, reply) => {
       const auth = requireSession(request)
       await changePassword(db, auth.user.id, auth.sessionId ?? '', request.body)
+      return reply.code(204).send(null)
+    },
+  )
+
+  app.post(
+    '/verify-email',
+    {
+      config: perClient,
+      schema: {
+        tags,
+        summary: 'Confirm your email address with the token from the confirmation email',
+        description: 'Needs the session of the account the link was sent for.',
+        body: emailTokenRequestSchema,
+        response: { 204: z.null(), 400: errorResponseSchema, 401: errorResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      await verifyEmail(db, requireSession(request).user.id, request.body.token)
+      return reply.code(204).send(null)
+    },
+  )
+
+  app.post(
+    '/verify-email/resend',
+    {
+      config: perClient,
+      schema: {
+        tags,
+        summary: 'Send the confirmation email again',
+        response: {
+          204: z.null(),
+          401: errorResponseSchema,
+          409: errorResponseSchema,
+          429: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { user } = requireSession(request)
+      const sender = requireMail()
+      if (!emailRequests.consume(user.id).allowed) {
+        throw new AppError('RATE_LIMITED', 'Too many emails requested, try again later')
+      }
+      try {
+        await sendVerification(db, sender, user.id)
+      } catch (error) {
+        if (error instanceof AppError) throw error
+        // The mail server's own words quote the address, so they stay out of the log.
+        logMailFailure('confirmation')(error)
+        throw new AppError('INTERNAL_ERROR', 'The email could not be sent, try again later')
+      }
+      return reply.code(204).send(null)
+    },
+  )
+
+  app.post(
+    '/password-reset',
+    {
+      config: perClient,
+      schema: {
+        tags,
+        summary: 'Ask for an email with a link to choose a new password',
+        description:
+          'Always answers 204, whether or not the address belongs to an account, so it ' +
+          'cannot be used to find out who is registered.',
+        body: passwordResetRequestSchema,
+        response: { 204: z.null(), 409: errorResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const sender = requireMail()
+      const email = request.body.email.toLowerCase()
+      // Not awaited, and silent when over the limit: the answer and how long it takes
+      // must not depend on whether the account exists.
+      if (emailRequests.consume(email).allowed) {
+        void requestPasswordReset(db, sender, email).catch(logMailFailure('password reset'))
+      }
+      return reply.code(204).send(null)
+    },
+  )
+
+  app.post(
+    '/password-reset/confirm',
+    {
+      config: perClient,
+      schema: {
+        tags,
+        summary: 'Choose a new password with the token from the reset email',
+        description: 'Ends every session of the account.',
+        body: passwordResetConfirmSchema,
+        response: { 204: z.null(), 400: errorResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      await resetPassword(db, request.body.token, request.body.password)
       return reply.code(204).send(null)
     },
   )

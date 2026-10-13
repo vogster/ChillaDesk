@@ -71,6 +71,13 @@
       "when": 1791908704837,
       "tag": "0009_project_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791909063659,
+      "tag": "0010_email_tokens",
+      "breakpoints": true
     }
   ]
 }

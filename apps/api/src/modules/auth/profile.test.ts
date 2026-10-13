@@ -1,6 +1,6 @@
 import type { AuthResponse, Project, Status, Task, User } from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { notifications } from '../../db/schema'
+import { notifications, users } from '../../db/schema'
 import { createTestContext, TEST_PASSWORD, type TestContext } from '../../test/harness'
 import { deliverPending, type MailMessage } from '../notifications/mailer'
 
@@ -211,6 +211,7 @@ describe('what the profile changes elsewhere', () => {
     expect((await assign(fixture.member.id)).json<Task>().assignee?.id).toBe(fixture.member.id)
     await assign(fixture.viewer.id)
     const sent: MailMessage[] = []
+    await ctx.database.db.update(users).set({ emailVerifiedAt: new Date() })
 
     await deliverPending(ctx.database.db, async (message) => void sent.push(message), {
       publicUrl: 'https://desk.example.com',

@@ -4,9 +4,11 @@ import {
   updateProfileRequestSchema,
   type User,
 } from '@chilladesk/shared'
+import { useMutation } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { ApiError, errorMessage } from '../api/client'
-import { useChangePassword, useUpdateProfile } from '../auth/useAuth'
+import { resendVerification } from '../api/auth'
+import { useAuthOptions, useChangePassword, useUpdateProfile } from '../auth/useAuth'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, Card, TextField } from '../components/ui'
 import { currentMessages, LanguageSwitcher, useT } from '../i18n'
@@ -23,10 +25,31 @@ function serverFieldErrors(error: unknown): FieldErrors {
   )
 }
 
+/** For an address that was never confirmed: sends the email with the link again. */
+function ConfirmEmail() {
+  const texts = useT().account.email.verify
+  const resend = useMutation({ mutationFn: resendVerification })
+
+  return (
+    <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950">
+      <p>{texts.why}</p>
+      {resend.isError && <Alert>{errorMessage(resend.error)}</Alert>}
+      {resend.isSuccess ? (
+        <p role="status">{texts.sent}</p>
+      ) : (
+        <Button variant="secondary" onClick={() => resend.mutate()} disabled={resend.isPending}>
+          {texts.send}
+        </Button>
+      )}
+    </div>
+  )
+}
+
 function NameForm({ user }: { user: User }) {
   const t = useT()
   const texts = t.account.profile
   const update = useUpdateProfile()
+  const { emailEnabled } = useAuthOptions()
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -62,6 +85,7 @@ function NameForm({ user }: { user: User }) {
             ({user.emailVerified ? texts.emailVerified : texts.emailNotVerified})
           </span>
         </p>
+        {!user.emailVerified && emailEnabled && <ConfirmEmail />}
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={update.isPending}>
             {texts.saveName}

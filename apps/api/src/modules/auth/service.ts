@@ -11,7 +11,7 @@ import {
 } from '@chilladesk/shared'
 import { and, eq, gt, isNull, lt, lte, ne, or } from 'drizzle-orm'
 import type { Db } from '../../db/client'
-import { apiTokens, sessions, users } from '../../db/schema'
+import { apiTokens, emailTokens, sessions, users } from '../../db/schema'
 import { AppError, conflict, forbidden, isUniqueViolation, unauthenticated } from '../../errors'
 import { hashPassword, verifyPassword } from './password'
 import { generateToken, hashToken } from './tokens'
@@ -195,5 +195,7 @@ export async function changePassword(
     await tx
       .delete(sessions)
       .where(and(eq(sessions.userId, userId), ne(sessions.id, currentSessionId)))
+    // A reset link asked for with the old password in play must not outlive it.
+    await tx.delete(emailTokens).where(eq(emailTokens.userId, userId))
   })
 }

@@ -11,8 +11,16 @@ const late: { log?: FastifyInstance['log'] } = {}
 const database = await createDatabase(config, (error) => {
   late.log?.error({ err: error }, 'database ping failed')
 })
+// One sender for account emails (sent by the API) and notification emails (by the worker).
+const mail = config.mail
+  ? {
+      send: createMailSender(config.mail.smtpUrl, config.mail.from),
+      publicUrl: config.mail.publicUrl,
+    }
+  : undefined
 const app = await buildApp({
   database,
+  mail,
   logLevel: config.logLevel,
   trustProxy: config.trustProxy,
   registrationEnabled: config.registrationEnabled,
@@ -35,17 +43,10 @@ try {
 }
 app.log.info({ driver: database.driver }, 'database connected and migrated')
 
-const stopMailWorker = config.mail
-  ? startMailWorker({
-      db: database.db,
-      send: createMailSender(config.mail.smtpUrl, config.mail.from),
-      publicUrl: config.mail.publicUrl,
-      log: app.log,
-    })
+const stopMailWorker = mail
+  ? startMailWorker({ db: database.db, ...mail, log: app.log })
   : undefined
-app.log.info(
-  config.mail ? 'notification emails are on' : 'SMTP_URL is not set, notifications stay in the app',
-)
+app.log.info(mail ? 'emails are on' : 'SMTP_URL is not set, notifications stay in the app')
 
 let shuttingDown = false
 async function shutdown(signal: string): Promise<void> {

@@ -13,8 +13,11 @@ import { intlLocale, useT } from '../../i18n'
 
 const invitesKey = (projectId: string) => ['projects', projectId, 'invites'] as const
 
-/** The address someone opens to use the invite; the token is its last part. */
-export const inviteUrl = (token: string) => `${window.location.origin}/invite/${token}`
+/**
+ * The address someone opens to use the invite. The token is in the fragment, which the
+ * browser keeps to itself, so it does not reach the logs of the server or a proxy.
+ */
+export const inviteUrl = (token: string) => `${window.location.origin}/invite#token=${token}`
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(intlLocale(), { dateStyle: 'medium' })

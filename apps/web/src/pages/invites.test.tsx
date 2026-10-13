@@ -64,12 +64,12 @@ describe('invite links on the members page', () => {
     await user.click(screen.getByRole('button', { name: 'Create invite link' }))
 
     const link = await screen.findByLabelText('Invite link')
-    expect(link).toHaveValue(`${window.location.origin}/invite/${TOKEN}`)
+    expect(link).toHaveValue(`${window.location.origin}/invite#token=${TOKEN}`)
     expect(calls.find((call) => call.key === `POST ${url}/invites`)?.body).toEqual({
       role: 'viewer',
     })
     await user.click(screen.getByRole('button', { name: 'Copy link' }))
-    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/invite/${TOKEN}`)
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/invite#token=${TOKEN}`)
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
     const list = await screen.findByRole('list', { name: 'Open invite links' })
     expect(within(list).getByText('Viewer')).toBeInTheDocument()
@@ -113,7 +113,7 @@ describe('opening an invite link', () => {
       'POST /api/invites/accept': () => ok(makeProject({ role: 'viewer' })),
       [`GET ${url}`]: () => ok(makeProject({ role: 'viewer' })),
     })
-    const { user } = renderApp(`/invite/${TOKEN}`)
+    const { user } = renderApp(`/invite#token=${TOKEN}`)
 
     expect(
       await screen.findByText('You are invited to join the project “Chilla” as Viewer.'),
@@ -130,7 +130,7 @@ describe('opening an invite link', () => {
 
   it('offers to open the project to someone who is in it already', async () => {
     signedIn({ 'POST /api/invites/preview': () => ok(preview(true)) })
-    renderApp(`/invite/${TOKEN}`)
+    renderApp(`/invite#token=${TOKEN}`)
 
     expect(await screen.findByText('You are already in the project “Chilla”.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open the project' })).toHaveAttribute(
@@ -145,10 +145,18 @@ describe('opening an invite link', () => {
       'POST /api/invites/preview': () =>
         apiError(404, 'NOT_FOUND', 'This invite link is not valid any more'),
     })
-    renderApp(`/invite/${TOKEN}`)
+    renderApp(`/invite#token=${TOKEN}`)
 
     expect(await screen.findByText(/does not work any more/)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('says so when the link has no token at all', async () => {
+    const calls = signedIn({})
+    renderApp('/invite')
+
+    expect(await screen.findByText(/does not work any more/)).toBeInTheDocument()
+    expect(calls.some((call) => call.key.includes('/invites/'))).toBe(false)
   })
 
   it('reports a failure to join', async () => {
@@ -156,7 +164,7 @@ describe('opening an invite link', () => {
       'POST /api/invites/preview': () => ok(preview()),
       'POST /api/invites/accept': () => apiError(429, 'RATE_LIMITED', 'Slow down'),
     })
-    const { user } = renderApp(`/invite/${TOKEN}`)
+    const { user } = renderApp(`/invite#token=${TOKEN}`)
 
     await user.click(await screen.findByRole('button', { name: 'Join the project' }))
 
@@ -173,7 +181,7 @@ describe('opening an invite link', () => {
       },
       'POST /api/invites/preview': () => ok(preview()),
     })
-    const { user } = renderApp(`/invite/${TOKEN}`)
+    const { user } = renderApp(`/invite#token=${TOKEN}`)
 
     await user.type(await screen.findByLabelText('Email'), 'ann@example.com')
     await user.type(screen.getByLabelText('Password'), 'correct horse')

@@ -9,7 +9,14 @@ import type {
 } from '@chilladesk/shared'
 import { and, asc, eq } from 'drizzle-orm'
 import type { Db, Tx } from '../../db/client'
-import { notifications, projectMembers, projects, tasks, users } from '../../db/schema'
+import {
+  notifications,
+  projectInvites,
+  projectMembers,
+  projects,
+  tasks,
+  users,
+} from '../../db/schema'
 import { conflict, forbidden, isUniqueViolation, notFound } from '../../errors'
 import { createDefaultStatuses } from '../tasks/statuses.service'
 
@@ -144,10 +151,17 @@ export async function addMember(
   userId: string,
   projectId: string,
   input: AddMemberRequest,
+  /**
+   * On a server that confirms addresses, an account whose address was never confirmed may
+   * belong to someone who merely typed it in; it is treated as if it did not exist.
+   */
+  { confirmedOnly = false }: { confirmedOnly?: boolean } = {},
 ): Promise<ProjectMember> {
   await getProject(db, userId, projectId, 'owner')
   const [invitee] = await db.select().from(users).where(eq(users.email, input.email.toLowerCase()))
-  if (!invitee) throw notFound('User with this email')
+  if (!invitee || (confirmedOnly && !invitee.emailVerifiedAt)) {
+    throw notFound('User with this email')
+  }
 
   try {
     const [membership] = await db
@@ -199,6 +213,8 @@ export async function updateMemberRole(
       .where(membershipOf(projectId, memberId))
       .returning()
     if (!updated) throw notFound('Member')
+    // Someone who stops being an owner must not keep a way to let people in.
+    if (role !== 'owner') await revokeInvitesBy(tx, projectId, memberId)
 
     const [row] = await tx
       .select(memberColumns)
@@ -234,8 +250,17 @@ export async function removeMember(
     await tx
       .delete(notifications)
       .where(and(eq(notifications.projectId, projectId), eq(notifications.userId, memberId)))
+    // Whoever is put out must not walk back in: they may have joined through a link, or
+    // know one, so all of them go. Someone leaving on their own only takes theirs along.
+    if (memberId === userId) await revokeInvitesBy(tx, projectId, memberId)
+    else await tx.delete(projectInvites).where(eq(projectInvites.projectId, projectId))
   })
 }
+
+const revokeInvitesBy = (tx: Tx, projectId: string, creatorId: string) =>
+  tx
+    .delete(projectInvites)
+    .where(and(eq(projectInvites.projectId, projectId), eq(projectInvites.createdBy, creatorId)))
 
 /** Everyone in a project, for telling them about something that ends their access. */
 export async function memberIdsOf(db: Db, projectId: string): Promise<string[]> {

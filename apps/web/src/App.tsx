@@ -6,6 +6,7 @@ import { useProfileLocale } from './auth/useProfileLocale'
 import { AppLayout } from './components/AppLayout'
 import { Alert, Button, Spinner } from './components/ui'
 import { I18nProvider, useT } from './i18n'
+import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from './pages/EmailFlowPages'
 import { InvitePage } from './pages/InvitePage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -67,6 +68,9 @@ function AppRoutes() {
   const requested = location.pathname + location.search + location.hash
   return (
     <Routes>
+      {/* A forgotten password is recovered signed out; it also works while signed in. */}
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<GuestOnly signedIn={user !== null} />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -86,7 +90,8 @@ function AppRoutes() {
         <Route path="/my-tasks" element={<MyTasksPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/invite/:token" element={<InvitePage />} />
+        <Route path="/invite" element={<InvitePage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/projects/:projectId" element={user && <ProjectLayout currentUser={user} />}>
           <Route index element={<BoardPage />} />
           <Route path="list" element={<ListPage />} />

@@ -37,6 +37,7 @@ serving the web app and proxying `/api`. Database migrations run when the API st
   must not buffer it (nginx: `proxy_buffering off` for that path).
 - **Inviting people.** An owner adds someone by email, or creates an invite link on the
   members page: whoever opens it within a week, signs in or signs up, joins the project.
+  Removing a member revokes every link of the project.
 - **Sign-ups.** Anyone who can reach the site can register. Once your team is in, set
   `REGISTRATION_ENABLED=false` and restart.
 - **Backups.** Everything is in PostgreSQL:
@@ -76,11 +77,23 @@ text keeps their email (`@ann@example.com`) and readers see `@Ann`. You get a no
 when someone assigns you a task, mentions you, or comments on a task you created or are
 assigned to. They are listed under the bell in the header.
 
-Emails are optional: set `SMTP_URL`, `MAIL_FROM` and `PUBLIC_URL` together and the API
-sends each notification that has not been read in the app yet. Without them nothing is sent.
-Accounts are not verified by email, so anyone who can register can make the server write to
-an address of their choosing: close sign-ups (`REGISTRATION_ENABLED=false`) before turning
-email on. One person gets at most 30 emails an hour; the rest wait for them in the app.
+### Email
+
+Email is optional: set `SMTP_URL`, `MAIL_FROM` and `PUBLIC_URL` together. Then
+
+- a new account gets a link to **confirm its address** (it can be sent again from the
+  profile; the link works for the signed-in owner of the account only), and **"Forgot your
+  password?"** appears on the login page. A reset ends every session and revokes the
+  account's API tokens;
+- an account whose address is not confirmed **cannot be added to a project by email** (an
+  invite link still works);
+- **notifications** that were not read in the app are also emailed — only to confirmed
+  addresses, at most 30 an hour per person, and not to people who turned them off in
+  their profile.
+
+Without these settings nothing is sent, and a forgotten password cannot be recovered.
+Accounts created before email was turned on are unconfirmed until their owner asks for the
+confirmation email on the profile page. Emails are written in the language of the account.
 
 ## API and authentication
 

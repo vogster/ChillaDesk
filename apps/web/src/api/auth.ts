@@ -1,8 +1,11 @@
 import {
+  authOptionsSchema,
   authResponseSchema,
   userSchema,
+  type AuthOptions,
   type ChangePasswordRequest,
   type LoginRequest,
+  type PasswordResetConfirm,
   type RegisterRequest,
   type UpdateProfileRequest,
   type User,
@@ -47,3 +50,18 @@ export const updateProfile = (patch: UpdateProfileRequest): Promise<User> =>
 
 export const changePassword = (input: ChangePasswordRequest): Promise<void> =>
   apiRequest('/auth/password', { method: 'POST', body: input })
+
+export const fetchAuthOptions = (): Promise<AuthOptions> =>
+  apiRequest('/auth/options', { schema: authOptionsSchema })
+
+export const verifyEmail = (token: string): Promise<void> =>
+  apiRequest('/auth/verify-email', { method: 'POST', body: { token } })
+
+export const resendVerification = (): Promise<void> =>
+  apiRequest('/auth/verify-email/resend', { method: 'POST' })
+
+export const requestPasswordReset = (email: string): Promise<void> =>
+  apiRequest('/auth/password-reset', { method: 'POST', body: { email } })
+
+export const confirmPasswordReset = (input: PasswordResetConfirm): Promise<void> =>
+  apiRequest('/auth/password-reset/confirm', { method: 'POST', body: input })

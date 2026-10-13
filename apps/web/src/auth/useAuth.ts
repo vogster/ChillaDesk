@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   changePassword,
+  fetchAuthOptions,
   fetchCurrentUser,
   login,
   logout,
@@ -55,3 +56,14 @@ export function useUpdateProfile() {
 }
 
 export const useChangePassword = () => useMutation({ mutationFn: changePassword })
+
+/** What the server offers; false for everything until it has answered. */
+export function useAuthOptions() {
+  const options = useQuery({
+    queryKey: ['auth', 'options'],
+    queryFn: fetchAuthOptions,
+    staleTime: Infinity,
+    retry: false,
+  })
+  return options.data ?? { registrationEnabled: false, emailEnabled: false }
+}

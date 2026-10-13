@@ -51,6 +51,24 @@ export const sessions = pgTable(
   (table) => [index('sessions_user_id_idx').on(table.userId)],
 )
 
+/** Single-use links sent by email: confirming an address, choosing a new password. */
+export const emailTokens = pgTable(
+  'email_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** `verify` or `reset`. */
+    kind: text('kind').notNull(),
+    /** SHA-256 of the token in the link; the token itself is never stored. */
+    tokenHash: text('token_hash').notNull().unique(),
+    createdAt: createdAt(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [index('email_tokens_user_id_idx').on(table.userId)],
+)
+
 export const projects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),
   key: text('key').notNull().unique(),
