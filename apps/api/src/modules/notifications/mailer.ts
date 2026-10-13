@@ -89,6 +89,7 @@ const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim()
 const ACTIONS: Record<NotificationType, string> = {
   task_assigned: 'assigned you a task',
   task_commented: 'commented on a task',
+  task_moved: 'moved a task',
   mentioned: 'mentioned you',
 }
 

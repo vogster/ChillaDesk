@@ -146,3 +146,11 @@ export type Comment = z.infer<typeof commentSchema>
 
 export const commentRequestSchema = z.object({ body: textSchema.trim().min(1).max(10_000) })
 export type CommentRequest = z.infer<typeof commentRequestSchema>
+
+/** Who follows a task: they hear about its comments and moves. */
+export const taskWatchersSchema = z.object({
+  /** Whether the user asking is one of them. */
+  watching: z.boolean(),
+  watchers: z.array(userSummarySchema),
+})
+export type TaskWatchers = z.infer<typeof taskWatchersSchema>

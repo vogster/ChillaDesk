@@ -9,6 +9,7 @@ import {
 import { and, count, desc, eq, inArray, isNull } from 'drizzle-orm'
 import type { Db, Executor } from '../../db/client'
 import { notifications, projectMembers, projects, tasks, users, wikiPages } from '../../db/schema'
+import { watcherIdsOf } from '../tasks/watchers.service'
 
 const EXCERPT_LENGTH = 200
 
@@ -101,28 +102,39 @@ export async function notifyAssignment(
   if (assigneeId) await insertFor(db, 'task_assigned', subject, [assigneeId], title)
 }
 
-/** Tells the people responsible for a task about a new comment on it. */
+/** The watchers of a task who are still in the project, minus those already told. */
+async function watchersToTell(
+  db: Executor,
+  subject: NotificationSubject & { taskId: string },
+  alreadyNotified: Set<string> = new Set(),
+): Promise<string[]> {
+  const watching = (await watcherIdsOf(db, subject.taskId)).filter(
+    (userId) => !alreadyNotified.has(userId),
+  )
+  // Someone who left the project keeps watching on paper but hears no more about it.
+  return membersAmong(db, subject.projectId, watching)
+}
+
+/** Tells the people watching a task about a new comment on it. */
 export async function notifyComment(
   db: Executor,
   subject: NotificationSubject & { taskId: string },
   body: string,
   alreadyNotified: Set<string>,
 ): Promise<void> {
-  const [task] = await db
-    .select({ assigneeId: tasks.assigneeId, reporterId: tasks.reporterId })
-    .from(tasks)
-    .where(eq(tasks.id, subject.taskId))
-  const involved = [task?.assigneeId, task?.reporterId].filter(
-    (userId): userId is string => typeof userId === 'string' && !alreadyNotified.has(userId),
-  )
-  // Someone who left the project keeps their name on the task but hears no more about it.
-  await insertFor(
-    db,
-    'task_commented',
-    subject,
-    await membersAmong(db, subject.projectId, involved),
-    body,
-  )
+  const recipients = await watchersToTell(db, subject, alreadyNotified)
+  await insertFor(db, 'task_commented', subject, recipients, body)
+}
+
+/** Tells the people watching a task that it went to another column. */
+export async function notifyMove(
+  db: Executor,
+  subject: NotificationSubject & { taskId: string },
+  fromColumn: string,
+  toColumn: string,
+): Promise<void> {
+  const recipients = await watchersToTell(db, subject)
+  await insertFor(db, 'task_moved', subject, recipients, `${fromColumn} → ${toColumn}`)
 }
 
 const actor = { id: users.id, name: users.name, email: users.email }

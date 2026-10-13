@@ -151,6 +151,12 @@ export const tasks = {
   mentions: {
     listLabel: 'Mention a member',
   },
+  watch: {
+    start: 'Watch',
+    stop: 'Stop watching',
+    count: (count: number) => `${count} watching`,
+    hint: 'Watchers are notified about new comments and when the task moves to another column.',
+  },
   /** What happened to a task. Worded without a verb for the person, shown underneath. */
   history: {
     heading: 'History',

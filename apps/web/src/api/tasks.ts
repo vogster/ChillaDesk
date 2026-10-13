@@ -4,6 +4,7 @@ import {
   taskEventSchema,
   taskListSchema,
   taskSchema,
+  taskWatchersSchema,
   type Comment,
   type CreateStatusRequest,
   type MoveTaskRequest,
@@ -12,6 +13,7 @@ import {
   type TaskEvent,
   type TaskList,
   type TaskPriority,
+  type TaskWatchers,
   type UpdateStatusRequest,
   type UpdateTaskRequest,
 } from '@chilladesk/shared'
@@ -106,6 +108,19 @@ export const moveTask = (
 
 export const deleteTask = (projectId: string, taskId: string): Promise<void> =>
   apiRequest(`${base(projectId)}/tasks/${taskId}`, { method: 'DELETE' })
+
+export const fetchWatchers = (projectId: string, taskId: string): Promise<TaskWatchers> =>
+  apiRequest(`${base(projectId)}/tasks/${taskId}/watchers`, { schema: taskWatchersSchema })
+
+export const setWatching = (
+  projectId: string,
+  taskId: string,
+  watching: boolean,
+): Promise<TaskWatchers> =>
+  apiRequest(`${base(projectId)}/tasks/${taskId}/watch`, {
+    method: watching ? 'PUT' : 'DELETE',
+    schema: taskWatchersSchema,
+  })
 
 export const fetchTaskHistory = (projectId: string, taskId: string): Promise<TaskEvent[]> =>
   apiRequest(`${base(projectId)}/tasks/${taskId}/history`, { schema: z.array(taskEventSchema) })

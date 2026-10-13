@@ -4,6 +4,7 @@ import type { Db, Executor } from '../../db/client'
 import { comments, users } from '../../db/schema'
 import { forbidden, notFound } from '../../errors'
 import { notifyComment, notifyMentions } from '../notifications/service'
+import { watchTask } from './watchers.service'
 import { getProject } from '../projects/service'
 import { assertTaskInProject } from './service'
 
@@ -73,6 +74,8 @@ export async function addComment(
     const subject = { projectId, actorId: userId, taskId }
     const mentioned = await notifyMentions(tx, subject, input.body)
     await notifyComment(tx, subject, input.body, mentioned)
+    // Whoever joins the conversation hears how it goes on.
+    await watchTask(tx, taskId, [userId])
     return loadComment(tx, taskId, created.id)
   })
 }

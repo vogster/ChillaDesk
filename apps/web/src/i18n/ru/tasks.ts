@@ -163,6 +163,12 @@ export const tasks: TasksMessages = {
   mentions: {
     listLabel: 'Упомянуть участника',
   },
+  watch: {
+    start: 'Следить',
+    stop: 'Не следить',
+    count: (count) => `Следят: ${count}`,
+    hint: 'Тем, кто следит, приходят уведомления о новых комментариях и о переносе задачи в другую колонку.',
+  },
   history: {
     heading: 'История',
     created: 'Задача создана',

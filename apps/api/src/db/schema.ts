@@ -167,6 +167,24 @@ export const tasks = pgTable(
   ],
 )
 
+/** People who follow a task and are told about its comments and moves. */
+export const taskWatchers = pgTable(
+  'task_watchers',
+  {
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.taskId, table.userId] }),
+    index('task_watchers_user_id_idx').on(table.userId),
+  ],
+)
+
 /** The history of a task: one row per thing that changed. */
 export const taskEvents = pgTable(
   'task_events',
@@ -311,6 +329,7 @@ export const notificationType = pgEnum('notification_type', [
   'task_assigned',
   'task_commented',
   'mentioned',
+  'task_moved',
 ])
 
 export const notifications = pgTable(

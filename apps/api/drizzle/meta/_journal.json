@@ -85,6 +85,13 @@
       "when": 1791909938097,
       "tag": "0011_task_events",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791910219170,
+      "tag": "0012_task_watchers",
+      "breakpoints": true
     }
   ]
 }

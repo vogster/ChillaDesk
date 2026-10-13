@@ -144,6 +144,7 @@ export const shell = {
         ' assigned you ',
         subject,
       ],
+      task_moved: <T>(actor: T, subject: T): (T | string)[] => [actor, ' moved ', subject],
       task_commented: <T>(actor: T, subject: T): (T | string)[] => [
         actor,
         ' commented on ',

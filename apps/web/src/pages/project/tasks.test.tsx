@@ -983,3 +983,60 @@ describe('task history', () => {
     expect(await within(dialog).findByRole('alert')).toBeInTheDocument()
   })
 })
+
+describe('watching a task', () => {
+  const taskOne = makeTask(1, { title: 'Write docs' })
+  const watchUrl = `${url}/tasks/${taskOne.id}`
+
+  function watchServer(initiallyWatching: boolean) {
+    let watchers = initiallyWatching ? [summary(ann), summary(bob)] : [summary(bob)]
+    const state = () => ({ watching: watchers.some((item) => item.id === ann.id), watchers })
+    return server({
+      tasks: [taskOne],
+      extra: {
+        [`GET ${watchUrl}/watchers`]: () => ok(state()),
+        [`PUT ${watchUrl}/watch`]: () => {
+          watchers = [summary(ann), ...watchers.filter((item) => item.id !== ann.id)]
+          return ok(state())
+        },
+        [`DELETE ${watchUrl}/watch`]: () => {
+          watchers = watchers.filter((item) => item.id !== ann.id)
+          return ok(state())
+        },
+      },
+    })
+  }
+
+  it('starts and stops watching and shows how many people watch', async () => {
+    const { calls } = watchServer(false)
+    const { user } = renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const dialog = await screen.findByRole('dialog')
+
+    const start = await within(dialog).findByRole('button', { name: 'Watch' })
+    expect(start).toHaveAttribute('aria-pressed', 'false')
+    expect(within(dialog).getByText('1 watching')).toHaveAttribute('title', 'Bob')
+    await user.click(start)
+
+    const stop = await within(dialog).findByRole('button', { name: 'Stop watching' })
+    expect(stop).toHaveAttribute('aria-pressed', 'true')
+    expect(within(dialog).getByText('2 watching')).toBeInTheDocument()
+    await user.click(stop)
+
+    expect(await within(dialog).findByRole('button', { name: 'Watch' })).toBeInTheDocument()
+    expect(calls.filter((call) => call.key.endsWith('/watch')).map((call) => call.key)).toEqual([
+      `PUT ${watchUrl}/watch`,
+      `DELETE ${watchUrl}/watch`,
+    ])
+  })
+
+  it('leaves the task usable when the watchers cannot be loaded', async () => {
+    server({ tasks: [taskOne] })
+    renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const dialog = await screen.findByRole('dialog')
+
+    await within(dialog).findByRole('heading', { name: 'Write docs' })
+
+    expect(within(dialog).queryByRole('button', { name: 'Watch' })).not.toBeInTheDocument()
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
+  })
+})

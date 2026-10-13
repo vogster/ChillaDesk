@@ -5,8 +5,10 @@ import { userSummarySchema } from './tasks'
 export const notificationTypeSchema = z.enum([
   /** A task was assigned to you. */
   'task_assigned',
-  /** Someone commented on a task you are assigned to or created. */
+  /** Someone commented on a task you watch (you watch what you created, are assigned to or commented on). */
   'task_commented',
+  /** A task you watch was moved to another column. */
+  'task_moved',
   /** You were mentioned in a task, a comment or a wiki page. */
   'mentioned',
 ])

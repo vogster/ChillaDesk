@@ -140,6 +140,7 @@ export const shell: ShellMessages = {
     // Worded without a verb for the actor, whose gender is not known.
     sentence: {
       task_assigned: (actor, subject) => [actor, ': вам назначена задача ', subject],
+      task_moved: (actor, subject) => [actor, ': задача перенесена — ', subject],
       task_commented: (actor, subject) => [actor, ': новый комментарий к задаче ', subject],
       mentioned: (actor, subject) => [actor, ': упоминание — ', subject],
     },

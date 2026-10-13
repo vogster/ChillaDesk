@@ -8,6 +8,7 @@ import {
   taskListQuerySchema,
   taskListSchema,
   taskSchema,
+  taskWatchersSchema,
   updateTaskRequestSchema,
 } from '@chilladesk/shared'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
@@ -16,6 +17,7 @@ import type { Db } from '../../db/client'
 import { requireAuth } from '../auth/plugin'
 import { addComment, deleteComment, listComments, updateComment } from './comments.service'
 import { listTaskHistory } from './history.service'
+import { listWatchers, setWatching } from './watchers.service'
 import {
   createTask,
   deleteTask,
@@ -202,6 +204,50 @@ export const taskRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db })
         request.params.taskId,
       ),
   )
+
+  app.get(
+    '/:taskId/watchers',
+    {
+      schema: {
+        tags,
+        summary: 'Who watches a task, and whether you do',
+        params: taskParams,
+        response: { 200: taskWatchersSchema, ...errors },
+      },
+    },
+    (request) =>
+      listWatchers(
+        db,
+        requireAuth(request).user.id,
+        request.params.projectId,
+        request.params.taskId,
+      ),
+  )
+
+  for (const [method, watching] of [
+    ['PUT', true],
+    ['DELETE', false],
+  ] as const) {
+    app.route({
+      method,
+      url: '/:taskId/watch',
+      schema: {
+        tags,
+        summary: watching ? 'Start watching a task' : 'Stop watching a task',
+        description: 'Watchers are notified about comments on the task and when it is moved.',
+        params: taskParams,
+        response: { 200: taskWatchersSchema, ...errors },
+      },
+      handler: (request) =>
+        setWatching(
+          db,
+          requireAuth(request).user.id,
+          request.params.projectId,
+          request.params.taskId,
+          watching,
+        ),
+    })
+  }
 
   app.get(
     '/:taskId/history',

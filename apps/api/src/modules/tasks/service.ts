@@ -16,10 +16,11 @@ import { containsPattern } from '../../db/like'
 import { projectMembers, projects, statuses, taskLabels, tasks, users } from '../../db/schema'
 import { invalid, notFound } from '../../errors'
 import { loadLabelsOfTasks, setTaskLabels } from '../labels/service'
-import { notifyAssignment, notifyMentions } from '../notifications/service'
+import { notifyAssignment, notifyMentions, notifyMove } from '../notifications/service'
 import { getProject } from '../projects/service'
 import { diffTask, labelNamesOf, recordTaskChanges } from './history.service'
 import { toStatus } from './statuses.service'
+import { watchTask } from './watchers.service'
 
 const assignee = alias(users, 'assignee')
 const reporter = alias(users, 'reporter')
@@ -299,6 +300,7 @@ export async function createTask(
     if (!created) throw new Error('Insert returned no task row')
     await setTaskLabels(tx, projectId, created.id, input.labelIds)
     await recordTaskChanges(tx, created.id, userId, [{ field: 'created' }])
+    await watchTask(tx, created.id, [userId, input.assigneeId])
 
     const subject = { projectId, actorId: userId, taskId: created.id }
     await notifyAssignment(tx, subject, input.assigneeId, input.title)
@@ -350,6 +352,7 @@ export async function updateTask(
     const newAssignee =
       fields.assigneeId && fields.assigneeId !== before.assigneeId ? fields.assigneeId : null
     await notifyAssignment(tx, subject, newAssignee, updated.title)
+    await watchTask(tx, taskId, [newAssignee])
     if (fields.description !== undefined) {
       await notifyMentions(
         tx,
@@ -444,6 +447,11 @@ export async function moveTask(
     // Only a change of column is history; a new place in the same column is not.
     const changes = await diffTask(tx, { fields: before }, { fields: { ...before, statusId } })
     await recordTaskChanges(tx, taskId, userId, changes)
+    for (const change of changes) {
+      if (change.field === 'status') {
+        await notifyMove(tx, { projectId, actorId: userId, taskId }, change.from, change.to)
+      }
+    }
     return loadTask(tx, projectId, taskId)
   })
 }

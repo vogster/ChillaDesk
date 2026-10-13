@@ -18,6 +18,7 @@ import { ProjectMarkdown } from './ProjectMarkdown'
 import { useMembers } from './projectQueries'
 import { TaskComments } from './TaskComments'
 import { TaskHistory } from './TaskHistory'
+import { TaskWatch } from './TaskWatch'
 import { formatDueDate } from './taskDisplay'
 import { useDeleteTask, useMoveTask, useStatuses, useTask, useUpdateTask } from './taskQueries'
 
@@ -275,6 +276,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
         </div>
       </dl>
 
+      <TaskWatch projectId={project.id} taskId={task.id} />
       <TaskComments context={context} taskId={task.id} />
       <TaskHistory projectId={project.id} taskId={task.id} />
 

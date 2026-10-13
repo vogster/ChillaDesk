@@ -74,8 +74,9 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 
 Write `@` in a task description, a comment or a wiki page and pick a project member; the
 text keeps their email (`@ann@example.com`) and readers see `@Ann`. You get a notification
-when someone assigns you a task, mentions you, or comments on a task you created or are
-assigned to. They are listed under the bell in the header.
+when someone assigns you a task, mentions you, or comments on or moves a task you watch. You
+watch the tasks you created, are assigned to or commented on, and any other you choose to;
+you can stop watching any of them. Notifications are listed under the bell in the header.
 
 ### Email
 
