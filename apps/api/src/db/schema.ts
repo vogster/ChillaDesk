@@ -167,6 +167,52 @@ export const tasks = pgTable(
   ],
 )
 
+/** One line of a task's checklist. */
+export const checklistItems = pgTable(
+  'checklist_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    done: boolean('done').notNull().default(false),
+    /** Order within the task; new items go to the end. */
+    position: integer('position').notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index('checklist_items_task_idx').on(table.taskId, table.position)],
+)
+
+/** What the source task is to the target task. */
+export const taskLinkKind = pgEnum('task_link_kind', [
+  'blocks',
+  'duplicates',
+  'subtask_of',
+  'relates_to',
+])
+
+/** A link between two tasks of one project. */
+export const taskLinks = pgTable(
+  'task_links',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sourceTaskId: uuid('source_task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    targetTaskId: uuid('target_task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    kind: taskLinkKind('kind').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    uniqueIndex('task_links_pair_idx').on(table.sourceTaskId, table.targetTaskId),
+    index('task_links_target_idx').on(table.targetTaskId),
+  ],
+)
+
 /** People who follow a task and are told about its comments and moves. */
 export const taskWatchers = pgTable(
   'task_watchers',

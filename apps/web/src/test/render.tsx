@@ -140,6 +140,7 @@ export function makeTask(number: number, overrides: Partial<Task> = {}): Task {
     reporter: summary(ann),
     dueDate: null,
     labels: [],
+    checklist: { done: 0, total: 0 },
     position: number,
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,

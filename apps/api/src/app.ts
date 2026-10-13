@@ -25,6 +25,7 @@ import { mcpRoutes } from './modules/mcp/routes'
 import { notificationRoutes } from './modules/notifications/routes'
 import { overviewRoutes } from './modules/overview/routes'
 import { projectRoutes } from './modules/projects/routes'
+import { taskExtraRoutes } from './modules/tasks/extras.routes'
 import { taskRoutes } from './modules/tasks/routes'
 import { statusRoutes } from './modules/tasks/statuses.routes'
 import { tokenRoutes } from './modules/tokens/routes'
@@ -158,6 +159,7 @@ export async function buildApp({
   await app.register(labelRoutes, { prefix: '/api/projects/:projectId/labels', db })
   await app.register(statusRoutes, { prefix: '/api/projects/:projectId/statuses', db })
   await app.register(taskRoutes, { prefix: '/api/projects/:projectId/tasks', db })
+  await app.register(taskExtraRoutes, { prefix: '/api/projects/:projectId/tasks', db })
   await app.register(tokenRoutes, { prefix: '/api/tokens', db })
   await app.register(overviewRoutes, { prefix: '/api', db })
   await app.register(notificationRoutes, { prefix: '/api/notifications', db })

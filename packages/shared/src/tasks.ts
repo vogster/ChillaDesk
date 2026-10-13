@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { emailSchema, textSchema } from './auth'
 import { labelIdsSchema, labelSchema } from './labels'
+import { checklistProgressSchema } from './task-extras'
 
 /** What a column means, whatever it is called: lets clients tell open work from finished. */
 export const statusCategorySchema = z.enum(['todo', 'in_progress', 'done'])
@@ -68,6 +69,8 @@ export const taskSchema = z.object({
   dueDate: dueDateSchema.nullable(),
   /** Sorted by name. */
   labels: z.array(labelSchema),
+  /** Zero of zero for a task without a checklist. */
+  checklist: checklistProgressSchema,
   /** Sort key within the status column; only the order is meaningful. */
   position: z.number(),
   createdAt: z.iso.datetime(),

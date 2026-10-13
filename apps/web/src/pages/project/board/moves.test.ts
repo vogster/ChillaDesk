@@ -35,6 +35,7 @@ function task(id: string, statusId: string, position: number): Task {
     reporter: null,
     dueDate: null,
     labels: [],
+    checklist: { done: 0, total: 0 },
     position,
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,

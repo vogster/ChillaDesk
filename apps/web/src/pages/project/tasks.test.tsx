@@ -1,4 +1,13 @@
-import type { Comment, Label, Project, Status, Task, TaskEvent } from '@chilladesk/shared'
+import type {
+  ChecklistItem,
+  Comment,
+  Label,
+  Project,
+  Status,
+  Task,
+  TaskEvent,
+  TaskLink,
+} from '@chilladesk/shared'
 import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
@@ -1038,5 +1047,190 @@ describe('watching a task', () => {
 
     expect(within(dialog).queryByRole('button', { name: 'Watch' })).not.toBeInTheDocument()
     expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('checklist of a task', () => {
+  const taskOne = makeTask(1, { title: 'Release' })
+  const base = `${url}/tasks/${taskOne.id}/checklist`
+  const item = (number: number, text: string, done = false): ChecklistItem => ({
+    id: `cccccccc-cccc-4ccc-8ccc-${String(number).padStart(12, '0')}`,
+    text,
+    done,
+  })
+
+  function checklistServer(initial: ChecklistItem[], role: Project['role'] = 'owner') {
+    let items = initial
+    const routes: ApiRoutes = {
+      [`GET ${base}`]: () => ok(items),
+      [`POST ${base}`]: (body) => {
+        const created = item(items.length + 1, (body as { text: string }).text)
+        items = [...items, created]
+        return ok(created, 201)
+      },
+    }
+    for (const existing of initial) {
+      routes[`PATCH ${base}/${existing.id}`] = (body) => {
+        const updated = { ...existing, ...(body as Partial<ChecklistItem>) }
+        items = items.map((other) => (other.id === existing.id ? updated : other))
+        return ok(updated)
+      }
+      routes[`DELETE ${base}/${existing.id}`] = () => {
+        items = items.filter((other) => other.id !== existing.id)
+        return noContent()
+      }
+    }
+    return server({ role, tasks: [taskOne], extra: routes })
+  }
+
+  it('shows the items with their progress, ticks one, adds one and removes one', async () => {
+    const { bodyOf } = checklistServer([item(1, 'Changelog', true), item(2, 'Tag')])
+    const { user } = renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const dialog = await screen.findByRole('dialog')
+    const section = await within(dialog).findByRole('region', { name: /Checklist/ })
+    expect(await within(section).findByText('1 of 2 done')).toBeInTheDocument()
+    expect(within(section).getByRole('checkbox', { name: 'Changelog' })).toBeChecked()
+
+    await user.click(within(section).getByRole('checkbox', { name: 'Tag' }))
+    expect(await within(section).findByText('2 of 2 done')).toBeInTheDocument()
+    expect(bodyOf(`PATCH ${base}/${item(2, '').id}`)).toEqual({ done: true })
+
+    await user.type(within(section).getByLabelText('New checklist item'), 'Announce')
+    await user.click(within(section).getByRole('button', { name: 'Add' }))
+    expect(await within(section).findByRole('checkbox', { name: 'Announce' })).not.toBeChecked()
+    expect(within(section).getByLabelText('New checklist item')).toHaveValue('')
+
+    await user.click(
+      within(section).getByRole('button', { name: 'Remove “Changelog” from the checklist' }),
+    )
+    await waitFor(() =>
+      expect(
+        within(section).queryByRole('checkbox', { name: 'Changelog' }),
+      ).not.toBeInTheDocument(),
+    )
+  })
+
+  it('does not add an empty item', async () => {
+    const { calls } = checklistServer([])
+    const { user } = renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const dialog = await screen.findByRole('dialog')
+    const section = await within(dialog).findByRole('region', { name: /Checklist/ })
+
+    await user.click(within(section).getByRole('button', { name: 'Add' }))
+
+    expect(within(section).getByLabelText('New checklist item')).toBeInvalid()
+    expect(calls.some((call) => call.key === `POST ${base}`)).toBe(false)
+  })
+
+  it('is read-only for a viewer, and hidden from them while empty', async () => {
+    checklistServer([item(1, 'Changelog')], 'viewer')
+    const first = renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const dialog = await screen.findByRole('dialog')
+    expect(await within(dialog).findByRole('checkbox', { name: 'Changelog' })).toBeDisabled()
+    expect(within(dialog).queryByLabelText('New checklist item')).not.toBeInTheDocument()
+    first.unmount()
+
+    checklistServer([], 'viewer')
+    renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const empty = await screen.findByRole('dialog')
+    await within(empty).findByRole('heading', { name: 'Release' })
+    expect(within(empty).queryByRole('region', { name: /Checklist/ })).not.toBeInTheDocument()
+  })
+
+  it('shows the progress on the card of the task', async () => {
+    server({ tasks: [makeTask(1, { title: 'Release', checklist: { done: 2, total: 5 } })] })
+    renderApp(`/projects/${project.id}`)
+
+    expect(await screen.findByText('Checklist: 2 of 5 done')).toBeInTheDocument()
+  })
+})
+
+describe('links between tasks', () => {
+  const taskOne = makeTask(1, { title: 'Build the UI' })
+  const base = `${url}/tasks/${taskOne.id}/links`
+  const link = (number: number, relation: TaskLink['relation'], done = false): TaskLink => ({
+    id: `dddddddd-dddd-4ddd-8ddd-${String(number).padStart(12, '0')}`,
+    relation,
+    task: { id: makeTask(number).id, key: `CHL-${number}`, title: `Task ${number}`, done },
+  })
+
+  function linkServer(initial: TaskLink[], extra: ApiRoutes = {}) {
+    let links = initial
+    const routes: ApiRoutes = {
+      [`GET ${base}`]: () => ok(links),
+      [`POST ${base}`]: (body) => {
+        const input = body as { relation: TaskLink['relation']; taskNumber: number }
+        links = [...links, link(input.taskNumber, input.relation)]
+        return ok(links, 201)
+      },
+    }
+    for (const existing of initial) {
+      routes[`DELETE ${base}/${existing.id}`] = () => {
+        links = links.filter((other) => other.id !== existing.id)
+        return noContent()
+      }
+    }
+    return server({ tasks: [taskOne, makeTask(2), makeTask(3)], extra: { ...routes, ...extra } })
+  }
+
+  it('lists the links in words, with a link to each task', async () => {
+    linkServer([link(2, 'blocked_by', true), link(3, 'parent_of')])
+    renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const dialog = await screen.findByRole('dialog')
+    const section = await within(dialog).findByRole('region', { name: 'Linked tasks' })
+
+    const items = await within(section).findAllByRole('listitem')
+
+    expect(items.map((element) => element.textContent)).toEqual([
+      expect.stringMatching(/^is blocked by.*CHL-2 Task 2.*\(done\)/),
+      expect.stringMatching(/^has the subtask.*CHL-3 Task 3/),
+    ])
+    expect(within(section).getByRole('link', { name: /CHL-2/ })).toHaveAttribute(
+      'href',
+      `/projects/${project.id}?task=${makeTask(2).id}`,
+    )
+  })
+
+  it('adds a link by task key and removes one', async () => {
+    const { bodyOf } = linkServer([link(2, 'relates_to')])
+    const { user } = renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const dialog = await screen.findByRole('dialog')
+    const section = await within(dialog).findByRole('region', { name: 'Linked tasks' })
+
+    await user.selectOptions(within(section).getByLabelText('Relation'), 'is a subtask of')
+    await user.type(within(section).getByLabelText('Task number'), 'chl-3')
+    await user.click(within(section).getByRole('button', { name: 'Link' }))
+
+    expect(await within(section).findByRole('link', { name: /CHL-3/ })).toBeInTheDocument()
+    expect(bodyOf(`POST ${base}`)).toEqual({ relation: 'subtask_of', taskNumber: 3 })
+
+    await user.click(within(section).getByRole('button', { name: 'Remove the link to CHL-2' }))
+    await waitFor(() =>
+      expect(within(section).queryByRole('link', { name: /CHL-2/ })).not.toBeInTheDocument(),
+    )
+  })
+
+  it('asks for a proper task number and shows what the server refuses', async () => {
+    const { calls } = linkServer([], {
+      [`POST ${base}`]: () => apiError(409, 'CONFLICT', 'These two tasks are linked already'),
+    })
+    const { user } = renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const dialog = await screen.findByRole('dialog')
+    const section = await within(dialog).findByRole('region', { name: 'Linked tasks' })
+    const field = within(section).getByLabelText('Task number')
+
+    await user.type(field, 'OPS-3')
+    await user.click(within(section).getByRole('button', { name: 'Link' }))
+    expect(field).toBeInvalid()
+    expect(field).toHaveAccessibleDescription(/for example 12 or CHL-12/)
+    expect(calls.some((call) => call.key === `POST ${base}`)).toBe(false)
+
+    await user.clear(field)
+    await user.type(field, '#2')
+    await user.click(within(section).getByRole('button', { name: 'Link' }))
+
+    expect(await within(section).findByRole('alert')).toHaveTextContent(
+      'These two tasks are linked already',
+    )
   })
 })

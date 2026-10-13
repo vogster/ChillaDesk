@@ -30,6 +30,10 @@ const EXACT: Record<string, string> = {
   'Cross-site request blocked': 'Запрос с другого сайта заблокирован',
   'Too many open event streams, close some first':
     'Открыто слишком много вкладок с ChillaDesk. Закройте лишние.',
+  'These two tasks are linked already': 'Эти две задачи уже связаны',
+  'A task cannot be linked to itself': 'Задачу нельзя связать с ней самой',
+  'Checklist item not found': 'Пункт чек-листа не найден',
+  'Link not found': 'Связь не найдена',
   'Must not contain null characters': 'Текст не должен содержать нулевых символов',
   'At least one field is required': 'Нужно изменить хотя бы одно поле',
   'Labels must not repeat': 'Метки не должны повторяться',

@@ -92,6 +92,13 @@
       "when": 1791910219170,
       "tag": "0012_task_watchers",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791910494559,
+      "tag": "0013_checklists_and_links",
+      "breakpoints": true
     }
   ]
 }

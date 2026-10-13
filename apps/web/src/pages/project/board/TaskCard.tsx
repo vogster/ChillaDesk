@@ -25,6 +25,7 @@ interface TaskCardBodyProps {
 
 export function TaskCardBody({ task, status, action }: TaskCardBodyProps) {
   const link = useTaskLink(task.id)
+  const texts = useT().tasks.checklist
   return (
     <>
       <div className="flex items-start gap-2">
@@ -42,6 +43,20 @@ export function TaskCardBody({ task, status, action }: TaskCardBodyProps) {
         <span className="font-mono text-xs text-slate-500">{task.key}</span>
         <PriorityBadge priority={task.priority} />
         <DueDate task={task} status={status} />
+        {task.checklist.total > 0 && (
+          <span
+            className="text-xs text-slate-500"
+            title={texts.badge(task.checklist.done, task.checklist.total)}
+          >
+            <span aria-hidden="true">☑ </span>
+            <span className="sr-only">
+              {texts.badge(task.checklist.done, task.checklist.total)}
+            </span>
+            <span aria-hidden="true">
+              {task.checklist.done}/{task.checklist.total}
+            </span>
+          </span>
+        )}
         {task.assignee && (
           <span className="ml-auto">
             <Avatar user={task.assignee} />

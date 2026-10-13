@@ -163,6 +163,32 @@ export const tasks: TasksMessages = {
   mentions: {
     listLabel: 'Упомянуть участника',
   },
+  checklist: {
+    heading: 'Чек-лист',
+    progress: (done, total) => `выполнено ${done} из ${total}`,
+    badge: (done, total) => `Чек-лист: выполнено ${done} из ${total}`,
+    newItem: 'Новый пункт чек-листа',
+    removeItem: (text) => `Убрать из чек-листа пункт «${text}»`,
+  },
+  links: {
+    heading: 'Связанные задачи',
+    relationLabel: 'Связь',
+    taskLabel: 'Номер задачи',
+    add: 'Связать',
+    done: '(выполнена)',
+    removeLink: (key) => `Убрать связь с задачей ${key}`,
+    invalidTask: (projectKey) =>
+      `Введите номер задачи этого проекта, например 12 или ${projectKey}-12.`,
+    relation: {
+      blocks: 'блокирует',
+      blocked_by: 'заблокирована задачей',
+      duplicates: 'дублирует',
+      duplicated_by: 'продублирована задачей',
+      subtask_of: 'подзадача для',
+      parent_of: 'включает подзадачу',
+      relates_to: 'связана с',
+    },
+  },
   watch: {
     start: 'Следить',
     stop: 'Не следить',

@@ -1,4 +1,5 @@
 import type {
+  ChecklistProgress,
   CreateTaskRequest,
   Label,
   MoveTaskRequest,
@@ -18,6 +19,7 @@ import { invalid, notFound } from '../../errors'
 import { loadLabelsOfTasks, setTaskLabels } from '../labels/service'
 import { notifyAssignment, notifyMentions, notifyMove } from '../notifications/service'
 import { getProject } from '../projects/service'
+import { loadChecklistProgress } from './checklist.service'
 import { diffTask, labelNamesOf, recordTaskChanges } from './history.service'
 import { toStatus } from './statuses.service'
 import { watchTask } from './watchers.service'
@@ -54,7 +56,13 @@ interface TaskRow {
   reporter: JoinedUser
 }
 
-function toTask({ task, projectKey, assignee, reporter }: TaskRow, labels: Label[]): Task {
+const NO_CHECKLIST: ChecklistProgress = { done: 0, total: 0 }
+
+function toTask(
+  { task, projectKey, assignee, reporter }: TaskRow,
+  labels: Label[],
+  checklist: ChecklistProgress,
+): Task {
   return {
     id: task.id,
     projectId: task.projectId,
@@ -68,6 +76,7 @@ function toTask({ task, projectKey, assignee, reporter }: TaskRow, labels: Label
     reporter: toSummary(reporter),
     dueDate: task.dueDate,
     labels,
+    checklist,
     position: task.position,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -84,13 +93,14 @@ function selectTasks(db: Executor) {
     .leftJoin(reporter, eq(reporter.id, tasks.reporterId))
 }
 
-/** Turns query rows into tasks, fetching the labels of all of them in one go. */
+/** Turns query rows into tasks, fetching the labels and checklists of all of them in one go. */
 async function toTasks(db: Executor, rows: TaskRow[]): Promise<Task[]> {
-  const labels = await loadLabelsOfTasks(
-    db,
-    rows.map((row) => row.task.id),
+  const ids = rows.map((row) => row.task.id)
+  const labels = await loadLabelsOfTasks(db, ids)
+  const checklists = await loadChecklistProgress(db, ids)
+  return rows.map((row) =>
+    toTask(row, labels.get(row.task.id) ?? [], checklists.get(row.task.id) ?? NO_CHECKLIST),
   )
-  return rows.map((row) => toTask(row, labels.get(row.task.id) ?? []))
 }
 
 async function toSingleTask(db: Executor, row: TaskRow | undefined): Promise<Task> {

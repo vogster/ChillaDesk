@@ -151,6 +151,33 @@ export const tasks = {
   mentions: {
     listLabel: 'Mention a member',
   },
+  checklist: {
+    heading: 'Checklist',
+    progress: (done: number, total: number) => `${done} of ${total} done`,
+    /** On a card: how far the checklist is. */
+    badge: (done: number, total: number) => `Checklist: ${done} of ${total} done`,
+    newItem: 'New checklist item',
+    removeItem: (text: string) => `Remove “${text}” from the checklist`,
+  },
+  links: {
+    heading: 'Linked tasks',
+    relationLabel: 'Relation',
+    taskLabel: 'Task number',
+    add: 'Link',
+    done: '(done)',
+    removeLink: (key: string) => `Remove the link to ${key}`,
+    invalidTask: (projectKey: string) =>
+      `Enter the number of a task of this project, for example 12 or ${projectKey}-12.`,
+    relation: {
+      blocks: 'blocks',
+      blocked_by: 'is blocked by',
+      duplicates: 'duplicates',
+      duplicated_by: 'is duplicated by',
+      subtask_of: 'is a subtask of',
+      parent_of: 'has the subtask',
+      relates_to: 'relates to',
+    },
+  },
   watch: {
     start: 'Watch',
     stop: 'Stop watching',
