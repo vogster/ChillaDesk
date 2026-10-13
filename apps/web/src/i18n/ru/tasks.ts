@@ -163,4 +163,21 @@ export const tasks: TasksMessages = {
   mentions: {
     listLabel: 'Упомянуть участника',
   },
+  history: {
+    heading: 'История',
+    created: 'Задача создана',
+    title: (from, to) => `Название: «${from}» → «${to}»`,
+    description: 'Описание изменено',
+    status: (from, to) => `Колонка: ${from} → ${to}`,
+    priority: (from, to) => `Приоритет: ${from} → ${to}`,
+    assignee: (from, to) => `Исполнитель: ${from ?? 'никто'} → ${to ?? 'никто'}`,
+    dueDate: (from, to) => `Срок: ${from ?? 'не указан'} → ${to ?? 'не указан'}`,
+    labels: (added, removed) =>
+      `Метки: ${[
+        added.length > 0 ? `добавлены ${added.join(', ')}` : '',
+        removed.length > 0 ? `убраны ${removed.join(', ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('; ')}`,
+  },
 }

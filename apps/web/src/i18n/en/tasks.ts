@@ -151,6 +151,26 @@ export const tasks = {
   mentions: {
     listLabel: 'Mention a member',
   },
+  /** What happened to a task. Worded without a verb for the person, shown underneath. */
+  history: {
+    heading: 'History',
+    created: 'Task created',
+    title: (from: string, to: string) => `Title: “${from}” → “${to}”`,
+    description: 'Description changed',
+    status: (from: string, to: string) => `Column: ${from} → ${to}`,
+    priority: (from: string, to: string) => `Priority: ${from} → ${to}`,
+    assignee: (from: string | null, to: string | null) =>
+      `Assignee: ${from ?? 'nobody'} → ${to ?? 'nobody'}`,
+    dueDate: (from: string | null, to: string | null) =>
+      `Due date: ${from ?? 'none'} → ${to ?? 'none'}`,
+    labels: (added: string[], removed: string[]) =>
+      `Labels: ${[
+        added.length > 0 ? `added ${added.join(', ')}` : '',
+        removed.length > 0 ? `removed ${removed.join(', ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('; ')}`,
+  },
 }
 
 export type TasksMessages = typeof tasks

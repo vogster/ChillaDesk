@@ -1,4 +1,4 @@
-import type { Comment, Label, Project, Status, Task } from '@chilladesk/shared'
+import type { Comment, Label, Project, Status, Task, TaskEvent } from '@chilladesk/shared'
 import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
@@ -919,5 +919,67 @@ describe('editing comments', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.getByText('First draft')).toBeInTheDocument()
     expect(calls.some((call) => call.key.startsWith('PATCH'))).toBe(false)
+  })
+})
+
+describe('task history', () => {
+  const taskOne = makeTask(1, { title: 'Write docs' })
+  const event = (number: number, change: TaskEvent['change'], actor = ann): TaskEvent => ({
+    id: `bbbbbbbb-bbbb-4bbb-8bbb-${String(number).padStart(12, '0')}`,
+    actor: summary(actor),
+    change,
+    createdAt: TIMESTAMP,
+  })
+
+  it('is loaded when opened and reads each change in plain words', async () => {
+    const events: TaskEvent[] = [
+      event(1, { field: 'created' }),
+      event(2, { field: 'title', from: 'Draft', to: 'Write docs' }, bob),
+      event(3, { field: 'status', from: 'To Do', to: 'Done' }),
+      event(4, { field: 'priority', from: 'low', to: 'urgent' }),
+      event(5, { field: 'assignee', from: null, to: 'Bob' }),
+      event(6, { field: 'dueDate', from: '2030-05-17', to: null }),
+      event(7, { field: 'labels', added: ['bug', 'ui'], removed: ['docs'] }),
+      { ...event(8, { field: 'description' }), actor: null },
+    ]
+    const { calls } = server({
+      tasks: [taskOne],
+      extra: { [`GET ${url}/tasks/${taskOne.id}/history`]: () => ok(events) },
+    })
+    const { user } = renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const dialog = await screen.findByRole('dialog')
+    const requested = () => calls.some((call) => call.key.endsWith('/history'))
+    expect(requested()).toBe(false)
+
+    await user.click(await within(dialog).findByRole('button', { name: /History/ }))
+
+    const list = await within(dialog).findByRole('list', { name: 'History' })
+    const lines = within(list)
+      .getAllByRole('listitem')
+      .map((item) => item.firstElementChild?.textContent)
+    expect(lines).toEqual([
+      'Task created',
+      'Title: “Draft” → “Write docs”',
+      'Column: To Do → Done',
+      'Priority: Low → Urgent',
+      'Assignee: nobody → Bob',
+      expect.stringMatching(/^Due date: .*2030.* → none$/),
+      'Labels: added bug, ui; removed docs',
+      'Description changed',
+    ])
+    const items = within(list).getAllByRole('listitem')
+    expect(items[1]).toHaveTextContent('Bob ·')
+    expect(items[7]).toHaveTextContent('Deleted user ·')
+    expect(requested()).toBe(true)
+  })
+
+  it('reports a failure to load it', async () => {
+    server({ tasks: [taskOne] })
+    const { user } = renderApp(`/projects/${project.id}?task=${taskOne.id}`)
+    const dialog = await screen.findByRole('dialog')
+
+    await user.click(await within(dialog).findByRole('button', { name: /History/ }))
+
+    expect(await within(dialog).findByRole('alert')).toBeInTheDocument()
   })
 })

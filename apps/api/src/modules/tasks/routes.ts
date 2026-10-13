@@ -4,6 +4,7 @@ import {
   createTaskRequestSchema,
   errorResponseSchema,
   moveTaskRequestSchema,
+  taskEventSchema,
   taskListQuerySchema,
   taskListSchema,
   taskSchema,
@@ -14,6 +15,7 @@ import { z } from 'zod'
 import type { Db } from '../../db/client'
 import { requireAuth } from '../auth/plugin'
 import { addComment, deleteComment, listComments, updateComment } from './comments.service'
+import { listTaskHistory } from './history.service'
 import {
   createTask,
   deleteTask,
@@ -194,6 +196,25 @@ export const taskRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db })
     },
     (request) =>
       listComments(
+        db,
+        requireAuth(request).user.id,
+        request.params.projectId,
+        request.params.taskId,
+      ),
+  )
+
+  app.get(
+    '/:taskId/history',
+    {
+      schema: {
+        tags,
+        summary: 'What happened to a task, oldest first',
+        params: taskParams,
+        response: { 200: z.array(taskEventSchema), ...errors },
+      },
+    },
+    (request) =>
+      listTaskHistory(
         db,
         requireAuth(request).user.id,
         request.params.projectId,

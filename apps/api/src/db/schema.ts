@@ -1,11 +1,13 @@
 import { sql } from 'drizzle-orm'
 import {
   type AnyPgColumn,
+  bigserial,
   boolean,
   date,
   doublePrecision,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -163,6 +165,24 @@ export const tasks = pgTable(
     index('tasks_status_position_idx').on(table.statusId, table.position),
     index('tasks_assignee_id_idx').on(table.assigneeId),
   ],
+)
+
+/** The history of a task: one row per thing that changed. */
+export const taskEvents = pgTable(
+  'task_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Keeps entries written in the same instant in the order they were written. */
+    seq: bigserial('seq', { mode: 'number' }).notNull(),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    /** A `TaskChange` from the shared package. */
+    change: jsonb('change').notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index('task_events_task_idx').on(table.taskId, table.createdAt)],
 )
 
 export const comments = pgTable(

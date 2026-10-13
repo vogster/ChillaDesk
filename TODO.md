@@ -19,7 +19,7 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 - [ ] **Attachments** — files and images in tasks and wiki pages (images in Markdown are
       switched off entirely for now).
 - [ ] **Subtasks and checklists**; links between tasks ("blocks", "duplicates").
-- [ ] **Task history** — who changed the assignee, column or due date, and when. The wiki has
+- [x] **Task history** — who changed the assignee, column or due date, and when. The wiki has
       history, tasks do not.
 - [ ] **Watching a task** — only the creator and the assignee are notified today.
 - [ ] **Saved filters and sorting** in the list; bulk actions on several tasks.

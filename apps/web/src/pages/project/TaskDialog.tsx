@@ -17,6 +17,7 @@ import type { ProjectContext } from './ProjectLayout'
 import { ProjectMarkdown } from './ProjectMarkdown'
 import { useMembers } from './projectQueries'
 import { TaskComments } from './TaskComments'
+import { TaskHistory } from './TaskHistory'
 import { formatDueDate } from './taskDisplay'
 import { useDeleteTask, useMoveTask, useStatuses, useTask, useUpdateTask } from './taskQueries'
 
@@ -275,6 +276,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
       </dl>
 
       <TaskComments context={context} taskId={task.id} />
+      <TaskHistory projectId={project.id} taskId={task.id} />
 
       {canEdit && (
         <div className="border-t border-slate-200 pt-4 dark:border-slate-800">

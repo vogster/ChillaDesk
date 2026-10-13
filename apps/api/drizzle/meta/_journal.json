@@ -78,6 +78,13 @@
       "when": 1791909063659,
       "tag": "0010_email_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791909938097,
+      "tag": "0011_task_events",
+      "breakpoints": true
     }
   ]
 }

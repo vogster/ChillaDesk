@@ -1,6 +1,7 @@
 import {
   commentSchema,
   statusSchema,
+  taskEventSchema,
   taskListSchema,
   taskSchema,
   type Comment,
@@ -8,6 +9,7 @@ import {
   type MoveTaskRequest,
   type Status,
   type Task,
+  type TaskEvent,
   type TaskList,
   type TaskPriority,
   type UpdateStatusRequest,
@@ -104,6 +106,9 @@ export const moveTask = (
 
 export const deleteTask = (projectId: string, taskId: string): Promise<void> =>
   apiRequest(`${base(projectId)}/tasks/${taskId}`, { method: 'DELETE' })
+
+export const fetchTaskHistory = (projectId: string, taskId: string): Promise<TaskEvent[]> =>
+  apiRequest(`${base(projectId)}/tasks/${taskId}/history`, { schema: z.array(taskEventSchema) })
 
 export const fetchComments = (projectId: string, taskId: string): Promise<Comment[]> =>
   apiRequest(`${base(projectId)}/tasks/${taskId}/comments`, { schema: commentList })
