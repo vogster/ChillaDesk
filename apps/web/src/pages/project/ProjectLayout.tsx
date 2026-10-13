@@ -38,9 +38,11 @@ export function ProjectLayout({ currentUser }: { currentUser: User }) {
   const openTaskId = taskParam.success ? taskParam.data : null
 
   if (project.isPending) return <Spinner />
-  // Only when there is nothing to show: a failed reload in the background must not take
-  // the board, or a half-written comment, off the screen.
-  if (project.isError && !project.data) {
+  // A project that is gone, or that the user was removed from, leaves the screen at once.
+  // Any other failed reload in the background must not take the board, or a half-written
+  // comment, with it: then the error is only shown when there is nothing else to show.
+  const gone = project.error instanceof ApiError && project.error.code === 'NOT_FOUND'
+  if (project.isError && (gone || !project.data)) {
     // A malformed id fails validation; for the visitor that is also just a missing page.
     const missing =
       project.error instanceof ApiError &&

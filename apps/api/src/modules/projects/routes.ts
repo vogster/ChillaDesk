@@ -15,6 +15,7 @@ import {
   addMember,
   createProject,
   deleteProject,
+  memberIdsOf,
   getProject,
   listMembers,
   listProjects,
@@ -121,7 +122,12 @@ export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async 
       },
     },
     async (request, reply) => {
-      await deleteProject(db, requireSession(request).user.id, request.params.projectId)
+      const { projectId } = request.params
+      const userId = requireSession(request).user.id
+      // Read before the project goes: afterwards nobody is a member of it any more.
+      const members = await memberIdsOf(db, projectId)
+      await deleteProject(db, userId, projectId)
+      app.events.publishAccessChange(members)
       return reply.code(204).send(null)
     },
   )
@@ -166,6 +172,8 @@ export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async 
         request.params.projectId,
         request.body,
       )
+      // Their project list has a new entry.
+      app.events.publishAccessChange([member.userId])
       return reply.code(201).send(member)
     },
   )
@@ -208,6 +216,8 @@ export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async 
         request.params.projectId,
         request.params.userId,
       )
+      // No longer a member, so the project's own events do not reach them any more.
+      app.events.publishAccessChange([request.params.userId])
       return reply.code(204).send(null)
     },
   )

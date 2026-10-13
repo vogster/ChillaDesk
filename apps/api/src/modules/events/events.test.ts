@@ -59,6 +59,17 @@ describe('event bus', () => {
     expect(ann.received).toEqual([])
   })
 
+  it('tells chosen users that their access changed', () => {
+    const bus = createEventBus({ membersAmong: everyone })
+    const [ann, bob] = [subscriber('ann'), subscriber('bob')]
+    bus.subscribe(ann.self)
+    bus.subscribe(bob.self)
+
+    bus.publishAccessChange(['bob', 'nobody-connected'])
+
+    expect([ann.received, bob.received]).toEqual([[], [{ type: 'access_changed' }]])
+  })
+
   it('counts the streams of each user', () => {
     const bus = createEventBus({ membersAmong: everyone })
     const stop = bus.subscribe(subscriber('ann').self)
@@ -151,16 +162,46 @@ describe('events of the API', () => {
     }
 
     await expect.poll(() => member.received.length).toBe(steps.length)
-    expect(member.received.map((event) => event.resource)).toEqual([
-      'tasks',
-      'tasks',
-      'statuses',
-      'labels',
-      'wiki',
-      'members',
-      'project',
-    ])
+    expect(
+      member.received.map((event) => ('resource' in event ? event.resource : event.type)),
+    ).toEqual(['tasks', 'tasks', 'statuses', 'labels', 'wiki', 'members', 'project'])
     member.stop()
+  })
+
+  it('tells everyone who was in a deleted project, and nobody else', async () => {
+    const fixture = await ctx.createProject()
+    const [owner, member, outsider] = [fixture.owner, fixture.member, fixture.outsider].map(listen)
+
+    await fixture.call(fixture.owner, 'DELETE', '')
+
+    const lost = [{ type: 'access_changed' }]
+    await expect.poll(() => member?.received).toEqual(lost)
+    expect(owner?.received).toEqual(lost)
+    expect(outsider?.received).toEqual([])
+    for (const listener of [owner, member, outsider]) listener?.stop()
+  })
+
+  it('tells someone who is added to a project or removed from it', async () => {
+    const fixture = await ctx.createProject()
+    const [member, outsider] = [fixture.member, fixture.outsider].map(listen)
+    const access = (events: { type: string }[] = []) =>
+      events.filter((event) => event.type === 'access_changed').length
+
+    await fixture.call(fixture.owner, 'POST', '/members', {
+      email: fixture.outsider.email,
+      role: 'viewer',
+    })
+    await expect.poll(() => access(outsider?.received)).toBe(1)
+
+    await fixture.call(fixture.owner, 'DELETE', `/members/${fixture.member.id}`)
+    await expect.poll(() => access(member?.received)).toBe(1)
+    // The one who stays only hears that the member list changed.
+    expect(access(outsider?.received)).toBe(1)
+
+    await fixture.call(fixture.viewer, 'DELETE', `/members/${fixture.owner.id}`)
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    expect(access(member?.received)).toBe(1)
+    for (const listener of [member, outsider]) listener?.stop()
   })
 
   it('stays silent about reads and about requests that failed', async () => {

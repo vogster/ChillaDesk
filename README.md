@@ -89,7 +89,8 @@ Errors always have the shape `{ "error": { "code", "message", "details"? } }`.
 
 `GET /api/events` is a server-sent event stream that says in which project something
 changed (`{"type":"project_changed","projectId":"…","resource":"tasks"}`), so a client knows
-what to reload. One user can hold ten streams open.
+what to reload; `{"type":"access_changed"}` says that the set of projects you can see has
+changed. One user can hold ten streams open.
 Events are delivered by the API process a client is connected to, so run a single API
 container (as the compose file does) if you rely on them.
 

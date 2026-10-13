@@ -19,6 +19,8 @@ export interface EventBus {
   subscribe(subscriber: Subscriber): () => void
   /** Tells the connected members of a project that something in it changed. */
   publishProject(projectId: string, resource: LiveResource): Promise<void>
+  /** Tells these users that the set of projects they can see has changed. */
+  publishAccessChange(userIds: string[]): void
   /** Number of streams the user has open. */
   countOf(userId: string): number
   /** Number of open streams. */
@@ -53,6 +55,13 @@ export function createEventBus({ membersAmong, onError }: EventBusOptions): Even
       } catch (error) {
         // A missed event costs a stale screen; it must never fail the request that caused it.
         onError?.(error)
+      }
+    },
+
+    publishAccessChange(userIds) {
+      const affected = new Set(userIds)
+      for (const subscriber of subscribers) {
+        if (affected.has(subscriber.userId)) subscriber.send({ type: 'access_changed' })
       }
     },
 

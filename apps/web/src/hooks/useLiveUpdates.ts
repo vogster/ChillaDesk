@@ -32,8 +32,15 @@ const AFFECTED: Record<LiveResource, string[][]> = {
 
 /** Reloads what is on screen of the changed parts, and the lists that span projects. */
 function refresh(queryClient: QueryClient, events: LiveEvent[]): void {
+  // What the user may see has changed, so nothing on screen can be trusted as it is.
+  if (events.some((event) => event.type === 'access_changed')) {
+    void queryClient.invalidateQueries()
+    return
+  }
+  const changes = events.filter((event) => event.type === 'project_changed')
+
   const keys = new Map<string, unknown[]>()
-  for (const { projectId, resource } of events) {
+  for (const { projectId, resource } of changes) {
     // A card being dragged is ahead of the server; its own request reloads the board when
     // it settles, and a reload before that would put the card back for a moment.
     const moving = queryClient.isMutating({ mutationKey: ['projects', projectId, 'move-task'] })
@@ -47,7 +54,7 @@ function refresh(queryClient: QueryClient, events: LiveEvent[]): void {
     // Only the project itself is reloaded for a rename, not everything inside it.
     void queryClient.invalidateQueries({ queryKey, exact: queryKey.length === 2 })
   }
-  if (events.some((event) => event.resource === 'project')) {
+  if (changes.some((event) => event.resource === 'project')) {
     void queryClient.invalidateQueries({ queryKey: ['projects'], exact: true })
   }
   for (const queryKey of [['notifications'], ['my-tasks'], ['search']]) {

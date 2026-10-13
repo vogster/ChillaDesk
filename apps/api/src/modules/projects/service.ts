@@ -236,3 +236,12 @@ export async function removeMember(
       .where(and(eq(notifications.projectId, projectId), eq(notifications.userId, memberId)))
   })
 }
+
+/** Everyone in a project, for telling them about something that ends their access. */
+export async function memberIdsOf(db: Db, projectId: string): Promise<string[]> {
+  const rows = await db
+    .select({ userId: projectMembers.userId })
+    .from(projectMembers)
+    .where(eq(projectMembers.projectId, projectId))
+  return rows.map((row) => row.userId)
+}

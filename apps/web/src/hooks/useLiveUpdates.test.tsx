@@ -60,11 +60,17 @@ const changed = (resource: LiveResource = 'tasks') => ({
 function server() {
   let tasks = [makeTask(1, { title: 'First task' })]
   let failing = false
+  let lost = false
   const calls = mockApi({
     'GET /api/auth/me': () => ok(ann),
     'GET /api/projects': () => ok([project]),
     'GET /api/notifications': () => ok({ items: [], unreadCount: tasks.length - 1 }),
-    [`GET ${url}`]: () => (failing ? apiError(429, 'RATE_LIMITED', 'Slow down') : ok(project)),
+    [`GET ${url}`]: () =>
+      lost
+        ? apiError(404, 'NOT_FOUND', 'Project not found')
+        : failing
+          ? apiError(429, 'RATE_LIMITED', 'Slow down')
+          : ok(project),
     [`GET ${url}/members`]: () => ok([makeMember(ann, 'owner')]),
     [`GET ${url}/statuses`]: () => ok([todo, doing, done]),
     [`GET ${url}/labels`]: () => ok([]),
@@ -78,6 +84,10 @@ function server() {
     },
     failProject: () => {
       failing = true
+    },
+    /** The project is deleted, or the user is removed from it. */
+    loseAccess: () => {
+      lost = true
     },
     count: (key: string) => calls.filter((call) => call.key === key).length,
   }
@@ -161,6 +171,18 @@ describe('live updates in the app', () => {
     await pause(100)
     expect(screen.getByText('First task')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('takes a project off the screen when access to it is lost', async () => {
+    const api = server()
+    renderApp(`/projects/${project.id}`)
+    await screen.findByText('First task')
+
+    api.loseAccess()
+    stream().emit({ type: 'access_changed' })
+
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+    expect(screen.queryByText('First task')).not.toBeInTheDocument()
   })
 
   it('only listens while signed in and closes the stream on leaving', async () => {
