@@ -8,18 +8,14 @@ import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../api/client'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../../components/form'
 import { Alert, Button, Card, selectClass, Spinner, TextField } from '../../components/ui'
+import { useT } from '../../i18n'
 import { useStatusMutations, useStatuses } from './taskQueries'
 
-const CATEGORY_LABELS: Record<StatusCategory, string> = {
-  todo: 'Not started',
-  in_progress: 'In progress',
-  done: 'Done',
-}
-
 function CategoryOptions() {
+  const t = useT()
   return statusCategorySchema.options.map((category) => (
     <option key={category} value={category}>
-      {CATEGORY_LABELS[category]}
+      {t.project.columns.category[category]}
     </option>
   ))
 }
@@ -35,6 +31,7 @@ function swapped(statuses: Status[], index: number, direction: -1 | 1): string[]
 
 /** Owner-only: the columns of the board. */
 export function StatusSettings({ projectId }: { projectId: string }) {
+  const t = useT()
   const statuses = useStatuses(projectId)
   const { create, update, reorder, remove } = useStatusMutations(projectId)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -79,10 +76,8 @@ export function StatusSettings({ projectId }: { projectId: string }) {
 
   return (
     <Card>
-      <h2 className="mb-1 text-base font-semibold">Board columns</h2>
-      <p className="mb-4 text-sm text-slate-500">
-        The kind tells ChillaWiki which columns hold finished work, whatever they are called.
-      </p>
+      <h2 className="mb-1 text-base font-semibold">{t.project.columns.heading}</h2>
+      <p className="mb-4 text-sm text-slate-500">{t.project.columns.hint}</p>
       {actionError && (
         <div className="mb-4">
           <Alert>{errorMessage(actionError)}</Alert>
@@ -99,7 +94,7 @@ export function StatusSettings({ projectId }: { projectId: string }) {
                 key={status.name}
                 defaultValue={status.name}
                 maxLength={40}
-                aria-label={`Name of column ${index + 1}`}
+                aria-label={t.project.columns.nameOf(index + 1)}
                 onBlur={(event) => handleRename(status, event.target)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') event.currentTarget.blur()
@@ -107,7 +102,7 @@ export function StatusSettings({ projectId }: { projectId: string }) {
                 className="min-w-32 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-2 focus:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900"
               />
               <select
-                aria-label={`Kind of ${status.name}`}
+                aria-label={t.project.columns.kindOf(status.name)}
                 className={selectClass}
                 value={status.category}
                 disabled={update.isPending}
@@ -123,7 +118,7 @@ export function StatusSettings({ projectId }: { projectId: string }) {
               </select>
               <Button
                 variant="secondary"
-                aria-label={`Move ${status.name} left`}
+                aria-label={t.project.columns.moveLeft(status.name)}
                 disabled={busy || index === 0}
                 onClick={() => {
                   clearErrors()
@@ -134,7 +129,7 @@ export function StatusSettings({ projectId }: { projectId: string }) {
               </Button>
               <Button
                 variant="secondary"
-                aria-label={`Move ${status.name} right`}
+                aria-label={t.project.columns.moveRight(status.name)}
                 disabled={busy || index === statuses.data.length - 1}
                 onClick={() => {
                   clearErrors()
@@ -145,14 +140,14 @@ export function StatusSettings({ projectId }: { projectId: string }) {
               </Button>
               <Button
                 variant="secondary"
-                aria-label={`Delete ${status.name}`}
+                aria-label={t.project.columns.deleteColumn(status.name)}
                 disabled={busy || statuses.data.length === 1}
                 onClick={() => {
                   clearErrors()
                   remove.mutate(status.id)
                 }}
               >
-                Delete
+                {t.common.delete}
               </Button>
             </li>
           ))}
@@ -165,7 +160,7 @@ export function StatusSettings({ projectId }: { projectId: string }) {
         className="mt-4 flex flex-wrap items-start gap-3 border-t border-slate-200 pt-4 dark:border-slate-800"
       >
         <TextField
-          label="New column"
+          label={t.project.columns.newColumn}
           name="name"
           maxLength={40}
           required
@@ -174,7 +169,7 @@ export function StatusSettings({ projectId }: { projectId: string }) {
         />
         <div>
           <label htmlFor="new-status-category" className="mb-1 block text-sm font-medium">
-            Kind
+            {t.project.columns.kind}
           </label>
           <select
             id="new-status-category"
@@ -186,7 +181,7 @@ export function StatusSettings({ projectId }: { projectId: string }) {
           </select>
         </div>
         <Button type="submit" className="mt-6" disabled={create.isPending}>
-          Add column
+          {t.project.columns.add}
         </Button>
       </form>
     </Card>

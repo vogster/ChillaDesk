@@ -5,9 +5,11 @@ import { errorMessage } from '../api/client'
 import { useLogin } from '../auth/useAuth'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, TextField } from '../components/ui'
+import { useT } from '../i18n'
 import { authLinkClass, AuthShell } from './AuthShell'
 
 export function LoginPage() {
+  const texts = useT().shell.auth
   const login = useLogin()
   const location = useLocation()
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -32,12 +34,12 @@ export function LoginPage() {
 
   return (
     <AuthShell
-      title="Log in"
+      title={texts.login.title}
       footer={
         <>
-          No account yet? {/* Keep the requested page so signing up also returns to it. */}
+          {texts.login.noAccount} {/* Keep the requested page so signing up also returns to it. */}
           <Link to="/register" state={location.state} className={authLinkClass}>
-            Sign up
+            {texts.login.signUp}
           </Link>
         </>
       }
@@ -45,7 +47,7 @@ export function LoginPage() {
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {login.isError && <Alert>{errorMessage(login.error)}</Alert>}
         <TextField
-          label="Email"
+          label={texts.email}
           name="email"
           type="email"
           autoComplete="email"
@@ -53,7 +55,7 @@ export function LoginPage() {
           error={fieldErrors.email}
         />
         <TextField
-          label="Password"
+          label={texts.password}
           name="password"
           type="password"
           autoComplete="current-password"
@@ -61,7 +63,7 @@ export function LoginPage() {
           error={fieldErrors.password}
         />
         <Button type="submit" className="w-full" disabled={login.isPending}>
-          {login.isPending ? 'Logging in…' : 'Log in'}
+          {login.isPending ? texts.login.submitting : texts.login.submit}
         </Button>
       </form>
     </AuthShell>

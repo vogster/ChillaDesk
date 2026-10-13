@@ -4,7 +4,7 @@ import { redirectTarget } from './auth/redirect'
 import { useCurrentUser } from './auth/useAuth'
 import { AppLayout } from './components/AppLayout'
 import { Alert, Button, Spinner } from './components/ui'
-import { I18nProvider } from './i18n'
+import { I18nProvider, useT } from './i18n'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { NotificationsPage } from './pages/notifications/NotificationsPage'
@@ -46,6 +46,7 @@ export function App() {
 function AppRoutes() {
   const currentUser = useCurrentUser()
   const location = useLocation()
+  const t = useT()
 
   if (currentUser.isPending) return <Spinner />
   // A failed background refresh keeps the last known user; only a failed first load blocks.
@@ -53,7 +54,7 @@ function AppRoutes() {
     return (
       <div className="mx-auto max-w-md space-y-4 p-8">
         <Alert>{errorMessage(currentUser.error)}</Alert>
-        <Button onClick={() => void currentUser.refetch()}>Try again</Button>
+        <Button onClick={() => void currentUser.refetch()}>{t.shell.app.tryAgain}</Button>
       </div>
     )
   }

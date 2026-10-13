@@ -5,12 +5,13 @@ import { errorMessage } from '../../api/client'
 import type { TaskFilters } from '../../api/tasks'
 import { Alert, selectClass, Spinner } from '../../components/ui'
 import { useDebounce } from '../../hooks/useDebounce'
+import { useT } from '../../i18n'
 import { useTaskLink } from './board/TaskCard'
 import { LabelList } from './labels/LabelChip'
 import { useLabels } from './labels/labelQueries'
 import { useProjectContext } from './ProjectLayout'
 import { useMembers } from './projectQueries'
-import { DueDate, PRIORITY_LABELS, PriorityBadge } from './taskDisplay'
+import { DueDate, PriorityBadge } from './taskDisplay'
 import { useStatuses, useTasks } from './taskQueries'
 
 const SEARCH_DELAY_MS = 300
@@ -24,6 +25,8 @@ function TaskTitleLink({ taskId, title }: { taskId: string; title: string }) {
 }
 
 export function ListPage() {
+  const t = useT()
+  const text = t.tasks.list
   const { project } = useProjectContext()
   const [search, setSearch] = useState('')
   const [statusId, setStatusId] = useState('')
@@ -51,25 +54,25 @@ export function ListPage() {
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-48 flex-1">
           <label htmlFor="task-search" className="mb-1 block text-sm font-medium">
-            Search
+            {text.search}
           </label>
           <input
             id="task-search"
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Title or description"
+            placeholder={text.searchPlaceholder}
             className="block w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus:outline-2 focus:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900"
           />
         </div>
         <label className="text-sm font-medium">
-          <span className="mb-1 block">Status</span>
+          <span className="mb-1 block">{text.status}</span>
           <select
             className={selectClass}
             value={statusId}
             onChange={(event) => setStatusId(event.target.value)}
           >
-            <option value="">Any status</option>
+            <option value="">{text.anyStatus}</option>
             {statuses.data?.map((status) => (
               <option key={status.id} value={status.id}>
                 {status.name}
@@ -78,14 +81,14 @@ export function ListPage() {
           </select>
         </label>
         <label className="text-sm font-medium">
-          <span className="mb-1 block">Assignee</span>
+          <span className="mb-1 block">{text.assignee}</span>
           <select
             className={selectClass}
             value={assigneeId}
             onChange={(event) => setAssigneeId(event.target.value)}
           >
-            <option value="">Anyone</option>
-            <option value="none">Unassigned</option>
+            <option value="">{text.anyone}</option>
+            <option value="none">{text.unassigned}</option>
             {members.data?.map((member) => (
               <option key={member.userId} value={member.userId}>
                 {member.name}
@@ -94,29 +97,29 @@ export function ListPage() {
           </select>
         </label>
         <label className="text-sm font-medium">
-          <span className="mb-1 block">Priority</span>
+          <span className="mb-1 block">{text.priority}</span>
           <select
             className={selectClass}
             value={priority}
             onChange={(event) => setPriority(event.target.value as TaskPriority | '')}
           >
-            <option value="">Any priority</option>
+            <option value="">{text.anyPriority}</option>
             {taskPrioritySchema.options.map((option) => (
               <option key={option} value={option}>
-                {PRIORITY_LABELS[option]}
+                {t.common.priority[option]}
               </option>
             ))}
           </select>
         </label>
         {labels.data && labels.data.length > 0 && (
           <label className="text-sm font-medium">
-            <span className="mb-1 block">Label</span>
+            <span className="mb-1 block">{text.label}</span>
             <select
               className={selectClass}
               value={labelId}
               onChange={(event) => setLabelId(event.target.value)}
             >
-              <option value="">Any label</option>
+              <option value="">{text.anyLabel}</option>
               {labels.data.map((label) => (
                 <option key={label.id} value={label.id}>
                   {label.name}
@@ -131,37 +134,37 @@ export function ListPage() {
       {tasks.isError && <Alert>{errorMessage(tasks.error)}</Alert>}
       {tasks.isSuccess && tasks.data.items.length === 0 && (
         <p className="py-8 text-center text-sm text-slate-500">
-          {filtered ? 'No tasks match these filters.' : 'No tasks yet. Add one on the board.'}
+          {filtered ? text.noMatches : text.empty}
         </p>
       )}
       {tasks.isSuccess && tasks.data.items.length > 0 && (
         <>
           <p role="status" className="text-sm text-slate-500">
             {tasks.data.total === tasks.data.items.length
-              ? `${tasks.data.total} ${tasks.data.total === 1 ? 'task' : 'tasks'}`
-              : `Showing ${tasks.data.items.length} of ${tasks.data.total} tasks`}
+              ? text.count(tasks.data.total)
+              : text.showing(tasks.data.items.length, tasks.data.total)}
           </p>
           <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
             <table className="w-full min-w-[40rem] text-left text-sm">
               <thead className="bg-slate-100 text-xs text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300">
                 <tr>
                   <th scope="col" className="px-3 py-2">
-                    Key
+                    {text.columns.key}
                   </th>
                   <th scope="col" className="px-3 py-2">
-                    Title
+                    {text.columns.title}
                   </th>
                   <th scope="col" className="px-3 py-2">
-                    Status
+                    {text.columns.status}
                   </th>
                   <th scope="col" className="px-3 py-2">
-                    Priority
+                    {text.columns.priority}
                   </th>
                   <th scope="col" className="px-3 py-2">
-                    Assignee
+                    {text.columns.assignee}
                   </th>
                   <th scope="col" className="px-3 py-2">
-                    Due
+                    {text.columns.due}
                   </th>
                 </tr>
               </thead>

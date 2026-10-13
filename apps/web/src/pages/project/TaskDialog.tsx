@@ -10,13 +10,14 @@ import { ApiError, errorMessage } from '../../api/client'
 import { parseForm, type FieldErrors } from '../../components/form'
 import { Modal } from '../../components/Modal'
 import { Alert, Button, selectClass, Spinner } from '../../components/ui'
+import { intlLocale, useT } from '../../i18n'
 import { TaskLabels } from './labels/TaskLabels'
 import { MentionTextarea } from './mentions/MentionTextarea'
 import type { ProjectContext } from './ProjectLayout'
 import { ProjectMarkdown } from './ProjectMarkdown'
 import { useMembers } from './projectQueries'
 import { TaskComments } from './TaskComments'
-import { formatDueDate, PRIORITY_LABELS } from './taskDisplay'
+import { formatDueDate } from './taskDisplay'
 import { useDeleteTask, useMoveTask, useStatuses, useTask, useUpdateTask } from './taskQueries'
 
 const fieldClass =
@@ -29,6 +30,8 @@ interface TaskDialogProps {
 }
 
 export function TaskDialog({ context, taskId, onClose }: TaskDialogProps) {
+  const t = useT()
+  const text = t.tasks.dialog
   const task = useTask(context.project.id, taskId)
   // A malformed id fails validation; either way there is no such task to show.
   const missing =
@@ -36,13 +39,16 @@ export function TaskDialog({ context, taskId, onClose }: TaskDialogProps) {
     (task.error.code === 'NOT_FOUND' || task.error.code === 'VALIDATION_ERROR')
 
   return (
-    <Modal label={task.data ? `${task.data.key}: ${task.data.title}` : 'Task'} onClose={onClose}>
+    <Modal
+      label={task.data ? `${task.data.key}: ${task.data.title}` : text.label}
+      onClose={onClose}
+    >
       {task.isPending && <Spinner />}
       {task.isError && (
         <div className="space-y-3">
-          <Alert>{missing ? 'This task does not exist any more.' : errorMessage(task.error)}</Alert>
+          <Alert>{missing ? text.missing : errorMessage(task.error)}</Alert>
           <Button variant="secondary" onClick={onClose}>
-            Close
+            {t.common.close}
           </Button>
         </div>
       )}
@@ -58,6 +64,8 @@ interface TaskDetailsProps {
 }
 
 function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
+  const t = useT()
+  const text = t.tasks.dialog
   const { project, canEdit } = context
   const statuses = useStatuses(project.id)
   const members = useMembers(project.id)
@@ -93,7 +101,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close"
+          aria-label={t.common.close}
           className="-mt-1 rounded px-2 text-xl leading-none text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
         >
           ×
@@ -106,7 +114,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
         <form onSubmit={handleSave} noValidate className="space-y-3">
           <div>
             <label htmlFor="task-title" className="mb-1 block text-sm font-medium">
-              Title
+              {text.title}
             </label>
             <input
               id="task-title"
@@ -127,7 +135,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
           </div>
           <div>
             <label htmlFor="task-description" className="mb-1 block text-sm font-medium">
-              Description
+              {text.description}
             </label>
             <MentionTextarea
               projectId={project.id}
@@ -135,7 +143,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
               name="description"
               defaultValue={task.description}
               rows={8}
-              placeholder="Markdown is supported."
+              placeholder={text.descriptionPlaceholder}
               aria-invalid={fieldErrors.description ? true : undefined}
               aria-describedby={fieldErrors.description ? 'task-description-error' : undefined}
               className={`${fieldClass} font-mono`}
@@ -151,10 +159,10 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
           </div>
           <div className="flex gap-2">
             <Button type="submit" disabled={updateTask.isPending}>
-              Save
+              {t.common.save}
             </Button>
             <Button variant="secondary" onClick={() => setEditing(false)}>
-              Cancel
+              {t.common.cancel}
             </Button>
           </div>
         </form>
@@ -164,14 +172,14 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
             <h2 className="text-xl font-semibold">{task.title}</h2>
             {canEdit && (
               <Button variant="secondary" onClick={() => setEditing(true)}>
-                Edit
+                {t.common.edit}
               </Button>
             )}
           </div>
           {task.description ? (
             <ProjectMarkdown project={project}>{task.description}</ProjectMarkdown>
           ) : (
-            <p className="text-sm text-slate-500">No description.</p>
+            <p className="text-sm text-slate-500">{text.noDescription}</p>
           )}
         </div>
       )}
@@ -184,7 +192,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
       />
 
       <dl className="grid gap-3 border-y border-slate-200 py-4 text-sm sm:grid-cols-2 dark:border-slate-800">
-        <Field label="Status" htmlFor={canEdit ? 'task-status' : undefined}>
+        <Field label={text.status} htmlFor={canEdit ? 'task-status' : undefined}>
           {canEdit ? (
             <select
               id="task-status"
@@ -205,7 +213,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
             statuses.data?.find((status) => status.id === task.statusId)?.name
           )}
         </Field>
-        <Field label="Priority" htmlFor={canEdit ? 'task-priority' : undefined}>
+        <Field label={text.priority} htmlFor={canEdit ? 'task-priority' : undefined}>
           {canEdit ? (
             <select
               id="task-priority"
@@ -217,15 +225,15 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
             >
               {taskPrioritySchema.options.map((option) => (
                 <option key={option} value={option}>
-                  {PRIORITY_LABELS[option]}
+                  {t.common.priority[option]}
                 </option>
               ))}
             </select>
           ) : (
-            PRIORITY_LABELS[task.priority]
+            t.common.priority[task.priority]
           )}
         </Field>
-        <Field label="Assignee" htmlFor={canEdit ? 'task-assignee' : undefined}>
+        <Field label={text.assignee} htmlFor={canEdit ? 'task-assignee' : undefined}>
           {canEdit ? (
             <select
               id="task-assignee"
@@ -233,7 +241,7 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
               value={task.assignee?.id ?? ''}
               onChange={(event) => updateTask.mutate({ assigneeId: event.target.value || null })}
             >
-              <option value="">Unassigned</option>
+              <option value="">{text.unassigned}</option>
               {members.data?.map((member) => (
                 <option key={member.userId} value={member.userId}>
                   {member.name}
@@ -241,10 +249,10 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
               ))}
             </select>
           ) : (
-            (task.assignee?.name ?? 'Unassigned')
+            (task.assignee?.name ?? text.unassigned)
           )}
         </Field>
-        <Field label="Due date" htmlFor={canEdit ? 'task-due' : undefined}>
+        <Field label={text.dueDate} htmlFor={canEdit ? 'task-due' : undefined}>
           {canEdit ? (
             <DueDateInput
               // Start again from the saved value whenever it changes.
@@ -255,12 +263,14 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
           ) : task.dueDate ? (
             formatDueDate(task.dueDate)
           ) : (
-            'None'
+            text.noDueDate
           )}
         </Field>
         <div className="text-xs text-slate-500 sm:col-span-2">
-          Created by {task.reporter?.name ?? 'a deleted user'} on{' '}
-          {new Date(task.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+          {text.created(
+            task.reporter?.name ?? null,
+            new Date(task.createdAt).toLocaleDateString(intlLocale(), { dateStyle: 'medium' }),
+          )}
         </div>
       </dl>
 
@@ -270,17 +280,17 @@ function TaskDetails({ context, task, onClose }: TaskDetailsProps) {
         <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
           {confirmingDelete ? (
             <div className="flex flex-wrap items-center gap-3">
-              <p className="text-sm">Delete this task and its comments? This cannot be undone.</p>
+              <p className="text-sm">{text.deleteConfirm}</p>
               <Button variant="danger" onClick={handleDelete} disabled={deleteTask.isPending}>
-                Yes, delete
+                {text.deleteYes}
               </Button>
               <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>
-                Cancel
+                {t.common.cancel}
               </Button>
             </div>
           ) : (
             <Button variant="secondary" onClick={() => setConfirmingDelete(true)}>
-              Delete task…
+              {text.deleteTask}
             </Button>
           )}
         </div>
@@ -299,6 +309,7 @@ interface DueDateInputProps {
  * until the field loses focus or Enter is pressed.
  */
 function DueDateInput({ value, onCommit }: DueDateInputProps) {
+  const t = useT()
   const [draft, setDraft] = useState(value ?? '')
   const [invalid, setInvalid] = useState(false)
 
@@ -329,7 +340,7 @@ function DueDateInput({ value, onCommit }: DueDateInputProps) {
       />
       {invalid && (
         <p id="task-due-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
-          Enter a year between 1900 and 2999.
+          {t.tasks.dialog.dueDateInvalid}
         </p>
       )}
     </>

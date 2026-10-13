@@ -3,11 +3,14 @@ import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../../api/client'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../../../components/form'
 import { Alert, Button, Card, selectClass, Spinner, TextField } from '../../../components/ui'
+import { useT } from '../../../i18n'
 import { ColorOptions, LabelChip } from './LabelChip'
 import { useLabelMutations, useLabels } from './labelQueries'
 
 /** Owner settings: the labels tasks of this project can carry. */
 export function LabelSettings({ projectId }: { projectId: string }) {
+  const t = useT()
+  const text = t.tasks.labels.settings
   const labels = useLabels(projectId)
   const { create, update, remove } = useLabelMutations(projectId)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -49,10 +52,8 @@ export function LabelSettings({ projectId }: { projectId: string }) {
 
   return (
     <Card>
-      <h2 className="mb-1 text-base font-semibold">Labels</h2>
-      <p className="mb-4 text-sm text-slate-500">
-        Deleting a label takes it off every task that has it.
-      </p>
+      <h2 className="mb-1 text-base font-semibold">{text.heading}</h2>
+      <p className="mb-4 text-sm text-slate-500">{text.hint}</p>
       {actionError && (
         <div className="mb-4">
           <Alert>{errorMessage(actionError)}</Alert>
@@ -61,7 +62,7 @@ export function LabelSettings({ projectId }: { projectId: string }) {
       {labels.isPending && <Spinner />}
       {labels.isError && <Alert>{errorMessage(labels.error)}</Alert>}
       {labels.isSuccess && labels.data.length === 0 && (
-        <p className="text-sm text-slate-500">No labels yet.</p>
+        <p className="text-sm text-slate-500">{text.empty}</p>
       )}
       {labels.isSuccess && labels.data.length > 0 && (
         <ul className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -75,7 +76,7 @@ export function LabelSettings({ projectId }: { projectId: string }) {
                 key={label.name}
                 defaultValue={label.name}
                 maxLength={40}
-                aria-label={`Name of label ${label.name}`}
+                aria-label={text.nameOf(label.name)}
                 onBlur={(event) => handleRename(label, event.target)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') event.currentTarget.blur()
@@ -83,7 +84,7 @@ export function LabelSettings({ projectId }: { projectId: string }) {
                 className="min-w-32 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-2 focus:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900"
               />
               <select
-                aria-label={`Colour of ${label.name}`}
+                aria-label={text.colorOf(label.name)}
                 className={selectClass}
                 value={label.color}
                 onChange={(event) => {
@@ -98,14 +99,14 @@ export function LabelSettings({ projectId }: { projectId: string }) {
               </select>
               <Button
                 variant="secondary"
-                aria-label={`Delete label ${label.name}`}
+                aria-label={text.deleteLabel(label.name)}
                 disabled={remove.isPending}
                 onClick={() => {
                   clearErrors()
                   remove.mutate(label.id)
                 }}
               >
-                Delete
+                {t.common.delete}
               </Button>
             </li>
           ))}
@@ -118,7 +119,7 @@ export function LabelSettings({ projectId }: { projectId: string }) {
         className="mt-4 flex flex-wrap items-start gap-3 border-t border-slate-200 pt-4 dark:border-slate-800"
       >
         <TextField
-          label="New label"
+          label={text.newLabel}
           name="name"
           maxLength={40}
           required
@@ -127,7 +128,7 @@ export function LabelSettings({ projectId }: { projectId: string }) {
         />
         <div>
           <label htmlFor="settings-label-color" className="mb-1 block text-sm font-medium">
-            Colour
+            {text.color}
           </label>
           <select
             id="settings-label-color"
@@ -139,7 +140,7 @@ export function LabelSettings({ projectId }: { projectId: string }) {
           </select>
         </div>
         <Button type="submit" className="mt-6" disabled={create.isPending}>
-          Add label
+          {text.add}
         </Button>
       </form>
     </Card>

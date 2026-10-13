@@ -9,6 +9,7 @@ import {
   type SyntheticEvent,
   type TextareaHTMLAttributes,
 } from 'react'
+import { useT } from '../../../i18n'
 import { useMembers } from '../projectQueries'
 import { insertMention, mentionTokenAt, suggestMembers, type MentionToken } from './mentionModel'
 
@@ -35,6 +36,7 @@ export function MentionTextarea({
   onSelect,
   ...props
 }: MentionTextareaProps) {
+  const t = useT()
   const ref = useRef<HTMLTextAreaElement>(null)
   const choosing = useRef(false)
   const listId = useId()
@@ -144,7 +146,7 @@ export function MentionTextarea({
         <ul
           id={listId}
           role="listbox"
-          aria-label="Mention a member"
+          aria-label={t.tasks.mentions.listLabel}
           className="absolute top-full left-0 z-20 mt-1 max-h-56 w-72 max-w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900"
         >
           {suggestions.map((member) => (

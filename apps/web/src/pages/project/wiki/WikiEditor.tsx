@@ -10,6 +10,7 @@ import { ApiError, errorMessage } from '../../../api/client'
 import { parseForm, type FieldErrors } from '../../../components/form'
 import { Alert, Button, selectClass, Spinner, TextField } from '../../../components/ui'
 import { useDraft } from '../../../hooks/useDraft'
+import { useT } from '../../../i18n'
 import { NotFoundPage } from '../../NotFoundPage'
 import { MentionTextarea } from '../mentions/MentionTextarea'
 import { useProjectContext } from '../ProjectLayout'
@@ -62,6 +63,8 @@ function EditorForm({
   onSubmit,
   onCancel,
 }: EditorFormProps) {
+  const t = useT()
+  const texts = t.project.wiki.editor
   const draft = useDraft(draftKey, initial)
   const text = draft.value
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -106,9 +109,9 @@ function EditorForm({
           role="status"
           className="flex flex-wrap items-center gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
         >
-          Your unsaved changes from earlier were restored.
+          {texts.draftRestored}
           <button type="button" className="font-medium underline" onClick={draft.discard}>
-            Discard them
+            {texts.discardDraft}
           </button>
         </p>
       )}
@@ -120,7 +123,7 @@ function EditorForm({
       )}
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_14rem]">
         <TextField
-          label="Title"
+          label={texts.title}
           name="title"
           value={text.title}
           onChange={(event) => draft.set({ ...text, title: event.target.value })}
@@ -130,7 +133,7 @@ function EditorForm({
         />
         <div>
           <label htmlFor="wiki-parent" className="mb-1 block text-sm font-medium">
-            Parent page
+            {texts.parent}
           </label>
           <select
             id="wiki-parent"
@@ -138,7 +141,7 @@ function EditorForm({
             value={text.parentId ?? ''}
             onChange={(event) => draft.set({ ...text, parentId: event.target.value || null })}
           >
-            <option value="">None (top level)</option>
+            <option value="">{texts.noParent}</option>
             {parents.map((parent) => (
               <option key={parent.id} value={parent.id}>
                 {parent.title}
@@ -151,7 +154,7 @@ function EditorForm({
       <div>
         <div
           role="tablist"
-          aria-label="Editor mode"
+          aria-label={texts.mode}
           className="flex gap-1 border-b border-slate-200 dark:border-slate-800"
         >
           <button
@@ -161,7 +164,7 @@ function EditorForm({
             className={tabClass(!previewing)}
             onClick={() => setPreviewing(false)}
           >
-            Write
+            {texts.write}
           </button>
           <button
             type="button"
@@ -170,7 +173,7 @@ function EditorForm({
             className={tabClass(previewing)}
             onClick={() => setPreviewing(true)}
           >
-            Preview
+            {texts.preview}
           </button>
         </div>
         {previewing ? (
@@ -181,13 +184,13 @@ function EditorForm({
                 {text.content}
               </ProjectMarkdown>
             ) : (
-              <p className="text-sm text-slate-500">Nothing to preview yet.</p>
+              <p className="text-sm text-slate-500">{texts.nothingToPreview}</p>
             )}
           </div>
         ) : (
           <>
             <label htmlFor="wiki-content" className="sr-only">
-              Content
+              {texts.content}
             </label>
             <MentionTextarea
               projectId={project.id}
@@ -195,7 +198,7 @@ function EditorForm({
               value={text.content}
               onChange={(event) => draft.set({ ...text, content: event.target.value })}
               rows={18}
-              placeholder={`Markdown. Link pages with [[Page title]] and tasks with ${project.key}-1.`}
+              placeholder={texts.contentPlaceholder(project.key)}
               aria-invalid={fieldErrors.content ? true : undefined}
               aria-describedby={fieldErrors.content ? 'wiki-content-error' : undefined}
               className="block w-full rounded-b-md border border-t-0 border-slate-300 bg-white px-3 py-2 font-mono text-sm focus:outline-2 focus:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900"
@@ -211,7 +214,7 @@ function EditorForm({
 
       <div className="flex gap-2">
         <Button type="submit" disabled={isSaving}>
-          {isSaving ? 'Saving…' : submitLabel}
+          {isSaving ? texts.saving : submitLabel}
         </Button>
         <Button
           variant="secondary"
@@ -220,7 +223,7 @@ function EditorForm({
             onCancel()
           }}
         >
-          Cancel
+          {t.common.cancel}
         </Button>
       </div>
     </form>
@@ -231,6 +234,7 @@ const draftKeyFor = (projectId: string, page: string) =>
   `chillawiki:wiki-draft:${projectId}:${page}`
 
 function NewPageForm({ project, parents }: { project: Project; parents: WikiPageSummary[] }) {
+  const t = useT()
   const [searchParams] = useSearchParams()
   const createPage = useCreateWikiPage(project.id)
   const navigate = useNavigate()
@@ -245,7 +249,7 @@ function NewPageForm({ project, parents }: { project: Project; parents: WikiPage
       draftKey={draftKeyFor(project.id, `new:${title}`)}
       parents={parents}
       initial={initial}
-      submitLabel="Create page"
+      submitLabel={t.project.wiki.editor.createPage}
       isSaving={createPage.isPending}
       error={createPage.error}
       onSubmit={(text, done) =>
@@ -263,6 +267,7 @@ function NewPageForm({ project, parents }: { project: Project; parents: WikiPage
 
 /** `/wiki/new`: optional `?title=` (from a link to a missing page) and `?parent=`. */
 export function WikiNewPage() {
+  const t = useT()
   const { project, canEdit } = useProjectContext()
   const [searchParams] = useSearchParams()
   const pages = useWikiPages(project.id)
@@ -272,7 +277,7 @@ export function WikiNewPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">New page</h2>
+      <h2 className="text-xl font-semibold">{t.project.wiki.editor.newPage}</h2>
       {/* A different requested title is a different page to write: start its own form. */}
       <NewPageForm
         key={searchParams.get('title') ?? ''}
@@ -290,6 +295,8 @@ const isStaleEdit = (error: unknown) =>
   error.details.some((detail) => detail.path === 'baseVersion')
 
 function EditExisting({ project, page }: { project: Project; page: WikiPage }) {
+  const t = useT()
+  const { conflict } = t.project.wiki.editor
   const pages = useWikiPages(project.id)
   const updatePage = useUpdateWikiPage(project.id, page.id)
   const overwritePage = useOverwriteWikiPage(project.id, page.id)
@@ -323,21 +330,21 @@ function EditExisting({ project, page }: { project: Project; page: WikiPage }) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Edit page</h2>
+      <h2 className="text-xl font-semibold">{t.project.wiki.editor.editPage}</h2>
       <EditorForm
         project={project}
         // Tied to the version: a draft written against older text is not offered again.
         draftKey={draftKeyFor(project.id, `${page.id}:v${page.version}`)}
         parents={parents}
         initial={initial}
-        submitLabel="Save"
+        submitLabel={t.common.save}
         isSaving={updatePage.isPending || overwritePage.isPending}
         error={overwritePage.error ?? updatePage.error}
         errorActions={(validated, done) =>
           isStaleEdit(updatePage.error) &&
           !overwritePage.error && (
             <span className="mt-2 block">
-              Your text is still here. Copy what you need, or{' '}
+              {conflict.before}
               <button
                 type="button"
                 className="font-medium underline disabled:opacity-60"
@@ -356,9 +363,9 @@ function EditExisting({ project, page }: { project: Project; page: WikiPage }) {
                   )
                 }}
               >
-                save your version over theirs
+                {conflict.action}
               </button>
-              .
+              {conflict.after}
             </span>
           )
         }

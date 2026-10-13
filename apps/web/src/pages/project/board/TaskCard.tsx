@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { useT } from '../../../i18n'
 import { LabelList } from '../labels/LabelChip'
 import { TASK_PARAM } from '../ProjectLayout'
 import { Avatar, DueDate, PriorityBadge } from '../taskDisplay'
@@ -79,6 +80,7 @@ interface TaskCardProps {
  * card itself stays a plain list item with an ordinary link inside.
  */
 export function TaskCard({ task, status, draggable }: TaskCardProps) {
+  const t = useT()
   const {
     attributes,
     listeners,
@@ -87,7 +89,11 @@ export function TaskCard({ task, status, draggable }: TaskCardProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id, disabled: !draggable })
+  } = useSortable({
+    id: task.id,
+    disabled: !draggable,
+    attributes: { roleDescription: t.tasks.board.drag.roleDescription },
+  })
 
   if (!draggable) {
     return (
@@ -114,7 +120,7 @@ export function TaskCard({ task, status, draggable }: TaskCardProps) {
             type="button"
             ref={setActivatorNodeRef}
             {...attributes}
-            aria-label={`Move ${task.title}`}
+            aria-label={t.tasks.board.move(task.title)}
             className="-mt-0.5 -mr-1 shrink-0 cursor-grab rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:hover:bg-slate-800"
           >
             <DragHandleIcon />

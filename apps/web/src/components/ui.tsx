@@ -1,4 +1,5 @@
 import { useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
+import { useT } from '../i18n'
 
 const BUTTON_VARIANTS = {
   primary:
@@ -83,10 +84,12 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   )
 }
 
-export function Spinner({ label = 'Loading…' }: { label?: string }) {
+/** Says that something is loading, in the current language, unless given another label. */
+export function Spinner({ label }: { label?: string }) {
+  const t = useT()
   return (
     <p role="status" className="py-10 text-center text-sm text-slate-500">
-      {label}
+      {label ?? t.common.loading}
     </p>
   )
 }

@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { errorMessage } from '../../../api/client'
 import { Alert, Button, Spinner } from '../../../components/ui'
+import { intlLocale, useT } from '../../../i18n'
 import { NotFoundPage } from '../../NotFoundPage'
 import { useProjectContext } from '../ProjectLayout'
 import { ProjectMarkdown } from '../ProjectMarkdown'
@@ -11,10 +12,12 @@ import { useUpdateWikiPage, useWikiPage, useWikiVersion, useWikiVersions } from 
 const VERSION_PARAM = 'v'
 
 function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  return new Date(iso).toLocaleString(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 export function WikiHistory() {
+  const t = useT()
+  const texts = t.project.wiki.history
   const { project, canEdit } = useProjectContext()
   const { pageId = '' } = useParams()
   const [searchParams] = useSearchParams()
@@ -52,7 +55,7 @@ export function WikiHistory() {
         >
           ← {current.title}
         </Link>
-        <h2 className="mt-1 text-xl font-semibold">History</h2>
+        <h2 className="mt-1 text-xl font-semibold">{texts.heading}</h2>
       </div>
 
       <ol className="divide-y divide-slate-200 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
@@ -65,17 +68,17 @@ export function WikiHistory() {
                 item.version === selected ? 'bg-indigo-50 dark:bg-indigo-950' : ''
               }`}
             >
-              <span className="font-medium">Version {item.version}</span>
+              <span className="font-medium">{texts.version(item.version)}</span>
               {item.version === current.version && (
                 <span className="rounded bg-slate-200 px-1.5 text-xs dark:bg-slate-700">
-                  current
+                  {texts.current}
                 </span>
               )}
               <span className="min-w-0 flex-1 truncate text-slate-600 dark:text-slate-400">
                 {item.title}
               </span>
               <span className="text-xs text-slate-500">
-                {item.author?.name ?? 'Deleted user'}, {formatTimestamp(item.createdAt)}
+                {item.author?.name ?? t.common.deletedUser}, {formatTimestamp(item.createdAt)}
               </span>
             </Link>
           </li>
@@ -83,13 +86,11 @@ export function WikiHistory() {
       </ol>
 
       {selected !== null && (
-        <section aria-label={`Version ${selected}`} className="space-y-3">
+        <section aria-label={texts.version(selected)} className="space-y-3">
           {version.isPending && <Spinner />}
           {version.isError && (
             <Alert>
-              {isMissing(version.error)
-                ? `This page has no version ${selected}.`
-                : errorMessage(version.error)}
+              {isMissing(version.error) ? texts.noVersion(selected) : errorMessage(version.error)}
             </Alert>
           )}
           {version.isSuccess && (
@@ -98,7 +99,7 @@ export function WikiHistory() {
                 <h3 className="text-lg font-semibold break-words">{version.data.title}</h3>
                 {canEdit && selected !== current.version && (
                   <Button onClick={handleRestore} disabled={restore.isPending}>
-                    Restore this version
+                    {texts.restore}
                   </Button>
                 )}
               </div>
@@ -107,7 +108,7 @@ export function WikiHistory() {
                 {version.data.content ? (
                   <ProjectMarkdown project={project}>{version.data.content}</ProjectMarkdown>
                 ) : (
-                  <p className="text-sm text-slate-500">This version had no content.</p>
+                  <p className="text-sm text-slate-500">{texts.noContent}</p>
                 )}
               </div>
             </>

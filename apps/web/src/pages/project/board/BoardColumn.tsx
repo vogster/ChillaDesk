@@ -4,11 +4,13 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../../api/client'
 import { Alert, Button } from '../../../components/ui'
+import { useT } from '../../../i18n'
 import { useCreateTask } from '../taskQueries'
 import { columnDropId } from './moves'
 import { TaskCard } from './TaskCard'
 
 function QuickAdd({ projectId, status }: { projectId: string; status: Status }) {
+  const t = useT()
   const createTask = useCreateTask(projectId)
   const [open, setOpen] = useState(false)
 
@@ -26,10 +28,10 @@ function QuickAdd({ projectId, status }: { projectId: string; status: Status }) 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`Add a task to ${status.name}`}
+        aria-label={t.tasks.board.addTo(status.name)}
         className="mt-2 w-full rounded-md px-2 py-1.5 text-left text-sm text-slate-500 hover:bg-slate-200 hover:text-slate-800 dark:hover:bg-slate-700 dark:hover:text-slate-100"
       >
-        + Add task
+        {t.tasks.board.addTask}
       </button>
     )
   }
@@ -41,8 +43,8 @@ function QuickAdd({ projectId, status }: { projectId: string; status: Status }) 
         name="title"
         autoFocus
         maxLength={200}
-        aria-label={`Title of the new task in ${status.name}`}
-        placeholder="What needs to be done?"
+        aria-label={t.tasks.board.newTitleIn(status.name)}
+        placeholder={t.tasks.board.newTitlePlaceholder}
         onKeyDown={(event) => {
           if (event.key === 'Escape') setOpen(false)
         }}
@@ -50,10 +52,10 @@ function QuickAdd({ projectId, status }: { projectId: string; status: Status }) 
       />
       <div className="flex gap-2">
         <Button type="submit" disabled={createTask.isPending}>
-          Add
+          {t.common.add}
         </Button>
         <Button variant="secondary" onClick={() => setOpen(false)}>
-          Done
+          {t.tasks.board.done}
         </Button>
       </div>
     </form>
@@ -68,6 +70,7 @@ interface BoardColumnProps {
 }
 
 export function BoardColumn({ projectId, status, tasks, canEdit }: BoardColumnProps) {
+  const t = useT()
   const { setNodeRef, isOver } = useDroppable({ id: columnDropId(status.id) })
   const headingId = `column-${status.id}`
 
@@ -83,7 +86,7 @@ export function BoardColumn({ projectId, status, tasks, canEdit }: BoardColumnPr
         <span id={headingId}>{status.name}</span>
         <span className="font-normal text-slate-500">
           {tasks.length}
-          <span className="sr-only"> {tasks.length === 1 ? 'task' : 'tasks'}</span>
+          <span className="sr-only"> {t.tasks.board.countNoun(tasks.length)}</span>
         </span>
       </h2>
       <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>

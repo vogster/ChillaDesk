@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useOutletContext, useParams, useSearchParams } f
 import { z } from 'zod'
 import { ApiError, errorMessage } from '../../api/client'
 import { Alert, Spinner } from '../../components/ui'
+import { useT } from '../../i18n'
 import { NotFoundPage } from '../NotFoundPage'
 import { useProject } from './projectQueries'
 import { TaskDialog } from './TaskDialog'
@@ -28,6 +29,7 @@ const tabClass = ({ isActive }: { isActive: boolean }) =>
   }`
 
 export function ProjectLayout({ currentUser }: { currentUser: User }) {
+  const t = useT()
   const { projectId = '' } = useParams()
   const project = useProject(projectId)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -63,7 +65,7 @@ export function ProjectLayout({ currentUser }: { currentUser: User }) {
     <div className="space-y-6">
       <div>
         <Link to="/" className="text-sm text-indigo-600 hover:underline dark:text-indigo-400">
-          ← Projects
+          {t.tasks.layout.backToProjects}
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{data.name}</h1>
@@ -79,24 +81,24 @@ export function ProjectLayout({ currentUser }: { currentUser: User }) {
       </div>
 
       <nav
-        aria-label="Project sections"
+        aria-label={t.tasks.layout.sections}
         className="flex gap-5 border-b border-slate-200 dark:border-slate-800"
       >
         <NavLink to="." end className={tabClass}>
-          Board
+          {t.tasks.layout.board}
         </NavLink>
         <NavLink to="list" className={tabClass}>
-          List
+          {t.tasks.layout.list}
         </NavLink>
         <NavLink to="wiki" className={tabClass}>
-          Wiki
+          {t.tasks.layout.wiki}
         </NavLink>
         <NavLink to="members" className={tabClass}>
-          Members
+          {t.tasks.layout.members}
         </NavLink>
         {data.role === 'owner' && (
           <NavLink to="settings" className={tabClass}>
-            Settings
+            {t.tasks.layout.settings}
           </NavLink>
         )}
       </nav>

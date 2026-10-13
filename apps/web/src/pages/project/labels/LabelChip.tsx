@@ -1,4 +1,5 @@
 import { labelColorSchema, type Label, type LabelColor } from '@chillawiki/shared'
+import { currentMessages, useT } from '../../../i18n'
 
 const COLOR_STYLES: Record<LabelColor, string> = {
   gray: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
@@ -14,7 +15,8 @@ const COLOR_STYLES: Record<LabelColor, string> = {
 
 export const LABEL_COLORS = labelColorSchema.options
 
-export const colorName = (color: LabelColor) => color[0]?.toUpperCase() + color.slice(1)
+/** The name of a colour in the current language, for code outside components. */
+export const colorName = (color: LabelColor): string => currentMessages().tasks.labels.colors[color]
 
 export function LabelChip({ label }: { label: Pick<Label, 'name' | 'color'> }) {
   return (
@@ -28,9 +30,10 @@ export function LabelChip({ label }: { label: Pick<Label, 'name' | 'color'> }) {
 
 /** The labels of a task as a list; renders nothing for a task without labels. */
 export function LabelList({ labels }: { labels: Label[] }) {
+  const t = useT()
   if (labels.length === 0) return null
   return (
-    <ul aria-label="Labels" className="flex flex-wrap gap-1">
+    <ul aria-label={t.tasks.labels.listLabel} className="flex flex-wrap gap-1">
       {labels.map((label) => (
         <li key={label.id} className="max-w-full">
           <LabelChip label={label} />
@@ -41,9 +44,10 @@ export function LabelList({ labels }: { labels: Label[] }) {
 }
 
 export function ColorOptions() {
+  const t = useT()
   return LABEL_COLORS.map((color) => (
     <option key={color} value={color}>
-      {colorName(color)}
+      {t.tasks.labels.colors[color]}
     </option>
   ))
 }

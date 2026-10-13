@@ -1,4 +1,6 @@
 import type { MoveTaskRequest, Status, Task } from '@chillawiki/shared'
+import type { DragItem } from '../../../i18n/en/tasks'
+import { currentMessages } from '../../../i18n/messages'
 
 const COLUMN_PREFIX = 'column:'
 
@@ -124,11 +126,16 @@ export function applyMove(tasks: Task[], taskId: string, target: MoveTaskRequest
 }
 
 /** Names a drag source or drop target for screen-reader announcements. */
-export function describeDragItem(statuses: Status[], tasks: Task[], id: string): string {
+export function dragItemOf(statuses: Status[], tasks: Task[], id: string): DragItem {
   if (id.startsWith(COLUMN_PREFIX)) {
     const status = statuses.find((item) => item.id === id.slice(COLUMN_PREFIX.length))
-    return status ? `the ${status.name} column` : 'a column'
+    return { kind: 'column', name: status?.name ?? null }
   }
   const task = tasks.find((item) => item.id === id)
-  return task ? `${task.key} ${task.title}` : 'a task'
+  return { kind: 'task', name: task ? `${task.key} ${task.title}` : null }
+}
+
+/** The same in words, in the current language. */
+export function describeDragItem(statuses: Status[], tasks: Task[], id: string): string {
+  return currentMessages().tasks.board.drag.describe(dragItemOf(statuses, tasks, id))
 }

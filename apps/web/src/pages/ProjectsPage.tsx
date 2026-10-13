@@ -4,9 +4,12 @@ import { Link, useNavigate } from 'react-router'
 import { errorMessage } from '../api/client'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, Card, Spinner, TextField } from '../components/ui'
+import { useT } from '../i18n'
 import { useCreateProject, useProjects } from './project/projectQueries'
 
 function NewProjectForm({ onClose }: { onClose: () => void }) {
+  const t = useT()
+  const texts = t.shell.projects
   const createProject = useCreateProject()
   const navigate = useNavigate()
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -35,28 +38,28 @@ function NewProjectForm({ onClose }: { onClose: () => void }) {
 
   return (
     <Card className="mb-6">
-      <h2 className="mb-4 text-base font-semibold">New project</h2>
+      <h2 className="mb-4 text-base font-semibold">{texts.newProject}</h2>
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {createProject.isError && <Alert>{errorMessage(createProject.error)}</Alert>}
         <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-          <TextField label="Name" name="name" required error={fieldErrors.name} autoFocus />
+          <TextField label={texts.name} name="name" required error={fieldErrors.name} autoFocus />
           <TextField
-            label="Key"
+            label={texts.key}
             name="key"
             placeholder="CHL"
             maxLength={10}
             required
-            hint="Prefix for task numbers"
+            hint={texts.keyHint}
             error={fieldErrors.key}
           />
         </div>
-        <TextField label="Description" name="description" error={fieldErrors.description} />
+        <TextField label={texts.description} name="description" error={fieldErrors.description} />
         <div className="flex gap-2">
           <Button type="submit" disabled={createProject.isPending}>
-            {createProject.isPending ? 'Creating…' : 'Create project'}
+            {createProject.isPending ? texts.creating : texts.create}
           </Button>
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t.common.cancel}
           </Button>
         </div>
       </form>
@@ -65,6 +68,7 @@ function NewProjectForm({ onClose }: { onClose: () => void }) {
 }
 
 function ProjectCard({ project }: { project: Project }) {
+  const t = useT()
   return (
     <li>
       <Link
@@ -82,21 +86,22 @@ function ProjectCard({ project }: { project: Project }) {
             {project.description}
           </p>
         )}
-        <p className="mt-3 text-xs text-slate-500 capitalize">{project.role}</p>
+        <p className="mt-3 text-xs text-slate-500 capitalize">{t.common.role[project.role]}</p>
       </Link>
     </li>
   )
 }
 
 export function ProjectsPage() {
+  const texts = useT().shell.projects
   const projects = useProjects()
   const [creating, setCreating] = useState(false)
 
   return (
     <>
       <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-        {!creating && <Button onClick={() => setCreating(true)}>New project</Button>}
+        <h1 className="text-2xl font-semibold tracking-tight">{texts.title}</h1>
+        {!creating && <Button onClick={() => setCreating(true)}>{texts.newProject}</Button>}
       </div>
 
       {creating && <NewProjectForm onClose={() => setCreating(false)} />}
@@ -105,10 +110,8 @@ export function ProjectsPage() {
       {projects.isError && <Alert>{errorMessage(projects.error)}</Alert>}
       {projects.isSuccess && projects.data.length === 0 && !creating && (
         <Card className="text-center">
-          <p className="font-medium">No projects yet</p>
-          <p className="mt-1 text-sm text-slate-500">
-            Create your first project to start tracking tasks and writing docs.
-          </p>
+          <p className="font-medium">{texts.empty}</p>
+          <p className="mt-1 text-sm text-slate-500">{texts.emptyHint}</p>
         </Card>
       )}
       {projects.isSuccess && projects.data.length > 0 && (

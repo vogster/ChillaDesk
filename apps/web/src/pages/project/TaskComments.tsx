@@ -2,6 +2,7 @@ import { commentRequestSchema, type Comment } from '@chillawiki/shared'
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../api/client'
 import { Alert, Button, Spinner } from '../../components/ui'
+import { intlLocale, useT } from '../../i18n'
 import { MentionTextarea } from './mentions/MentionTextarea'
 import type { ProjectContext } from './ProjectLayout'
 import { ProjectMarkdown } from './ProjectMarkdown'
@@ -10,10 +11,8 @@ import { useCommentMutations, useComments } from './taskQueries'
 const textAreaClass =
   'block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-2 focus:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900'
 
-const EMPTY_COMMENT = 'Write a comment first.'
-
 function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  return new Date(iso).toLocaleString(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 interface CommentItemProps {
@@ -23,11 +22,13 @@ interface CommentItemProps {
 }
 
 function CommentItem({ context, comment, mutations }: CommentItemProps) {
+  const t = useT()
+  const text = t.tasks.comments
   const { project, currentUser } = context
   const { add, edit, remove } = mutations
   const [editing, setEditing] = useState(false)
   const [invalid, setInvalid] = useState(false)
-  const authorName = comment.author?.name ?? 'Deleted user'
+  const authorName = comment.author?.name ?? t.common.deletedUser
   const isAuthor = comment.author?.id === currentUser.id
   const canDelete = isAuthor || project.role === 'owner'
   const errorId = `comment-${comment.id}-error`
@@ -55,17 +56,17 @@ function CommentItem({ context, comment, mutations }: CommentItemProps) {
         <span className="font-medium text-slate-700 dark:text-slate-200">{authorName}</span>
         <time dateTime={comment.createdAt}>{formatTimestamp(comment.createdAt)}</time>
         {comment.updatedAt !== comment.createdAt && (
-          <span title={`Edited ${formatTimestamp(comment.updatedAt)}`}>(edited)</span>
+          <span title={text.editedAt(formatTimestamp(comment.updatedAt))}>{text.edited}</span>
         )}
         <span className="ml-auto flex gap-3">
           {isAuthor && !editing && (
             <button
               type="button"
               onClick={() => setEditing(true)}
-              aria-label={`Edit your comment from ${formatTimestamp(comment.createdAt)}`}
+              aria-label={text.editYours(formatTimestamp(comment.createdAt))}
               className={`${actionClass} hover:text-indigo-600`}
             >
-              Edit
+              {t.common.edit}
             </button>
           )}
           {canDelete && (
@@ -77,10 +78,10 @@ function CommentItem({ context, comment, mutations }: CommentItemProps) {
                 edit.reset()
                 remove.mutate(comment.id)
               }}
-              aria-label={`Delete comment by ${comment.author?.name ?? 'deleted user'}`}
+              aria-label={text.deleteBy(comment.author?.name ?? null)}
               className={`${actionClass} hover:text-red-600`}
             >
-              Delete
+              {t.common.delete}
             </button>
           )}
         </span>
@@ -89,7 +90,7 @@ function CommentItem({ context, comment, mutations }: CommentItemProps) {
       {editing ? (
         <form onSubmit={handleSave} className="space-y-2">
           <label htmlFor={`comment-${comment.id}`} className="sr-only">
-            Edit comment
+            {text.editLabel}
           </label>
           <MentionTextarea
             projectId={project.id}
@@ -104,12 +105,12 @@ function CommentItem({ context, comment, mutations }: CommentItemProps) {
           />
           {invalid && (
             <p id={errorId} className="text-xs text-red-600 dark:text-red-400">
-              {EMPTY_COMMENT}
+              {text.emptyBody}
             </p>
           )}
           <div className="flex gap-2">
             <Button type="submit" disabled={edit.isPending}>
-              Save comment
+              {text.save}
             </Button>
             <Button
               variant="secondary"
@@ -118,7 +119,7 @@ function CommentItem({ context, comment, mutations }: CommentItemProps) {
                 setEditing(false)
               }}
             >
-              Cancel
+              {t.common.cancel}
             </Button>
           </div>
         </form>
@@ -135,6 +136,8 @@ interface TaskCommentsProps {
 }
 
 export function TaskComments({ context, taskId }: TaskCommentsProps) {
+  const t = useT()
+  const text = t.tasks.comments
   const { project, canEdit } = context
   const comments = useComments(project.id, taskId)
   const mutations = useCommentMutations(project.id, taskId)
@@ -157,13 +160,13 @@ export function TaskComments({ context, taskId }: TaskCommentsProps) {
   return (
     <section aria-labelledby="comments-heading" className="space-y-3">
       <h3 id="comments-heading" className="text-sm font-semibold">
-        Comments
+        {text.heading}
       </h3>
       {actionError && <Alert>{errorMessage(actionError)}</Alert>}
       {comments.isPending && <Spinner />}
       {comments.isError && <Alert>{errorMessage(comments.error)}</Alert>}
       {comments.isSuccess && comments.data.length === 0 && (
-        <p className="text-sm text-slate-500">No comments yet.</p>
+        <p className="text-sm text-slate-500">{text.empty}</p>
       )}
       {comments.isSuccess && comments.data.length > 0 && (
         <ul className="space-y-3">
@@ -181,25 +184,25 @@ export function TaskComments({ context, taskId }: TaskCommentsProps) {
       {canEdit && (
         <form onSubmit={handleSubmit} className="space-y-2">
           <label htmlFor="new-comment" className="sr-only">
-            Add a comment
+            {text.addLabel}
           </label>
           <MentionTextarea
             projectId={context.project.id}
             id="new-comment"
             name="body"
             rows={3}
-            placeholder="Add a comment… Markdown is supported, @ mentions a member."
+            placeholder={text.addPlaceholder}
             aria-invalid={invalid ? true : undefined}
             aria-describedby={invalid ? 'new-comment-error' : undefined}
             className={textAreaClass}
           />
           {invalid && (
             <p id="new-comment-error" className="text-xs text-red-600 dark:text-red-400">
-              {EMPTY_COMMENT}
+              {text.emptyBody}
             </p>
           )}
           <Button type="submit" disabled={add.isPending}>
-            Comment
+            {text.submit}
           </Button>
         </form>
       )}

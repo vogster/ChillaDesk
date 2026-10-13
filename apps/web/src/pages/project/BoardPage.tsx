@@ -17,10 +17,11 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useEffect, useMemo, useState } from 'react'
 import { errorMessage } from '../../api/client'
 import { Alert, Spinner } from '../../components/ui'
+import { useT } from '../../i18n'
 import { BoardColumn } from './board/BoardColumn'
 import {
   columnOf,
-  describeDragItem,
+  dragItemOf,
   groupByStatus,
   isSamePlace,
   moveToColumn,
@@ -49,6 +50,7 @@ function isPastMiddle({ active, over }: DragOverEvent): boolean {
 }
 
 export function BoardPage() {
+  const t = useT()
   const { project, canEdit } = useProjectContext()
   const statuses = useStatuses(project.id)
   const tasks = useTasks(project.id)
@@ -105,21 +107,18 @@ export function BoardPage() {
     statuses.data.find((status) => status.id === statusId)
 
   // dnd-kit's default announcements read out raw ids; these use task and column names.
-  const name = (id: string | number) => describeDragItem(statuses.data, taskList, String(id))
+  const item = (id: string | number) => dragItemOf(statuses.data, taskList, String(id))
+  const { drag } = t.tasks.board
   const announcements: Announcements = {
-    onDragStart: ({ active }) => `Picked up ${name(active.id)}.`,
+    onDragStart: ({ active }) => drag.pickedUp(item(active.id)),
     onDragOver: ({ active, over }) => {
       // Hovering over its own slot is not news; staying quiet keeps the pick-up message audible.
       if (over?.id === active.id) return undefined
-      return over
-        ? `${name(active.id)} is over ${name(over.id)}.`
-        : `${name(active.id)} is not over a column.`
+      return over ? drag.over(item(active.id), item(over.id)) : drag.notOver(item(active.id))
     },
     onDragEnd: ({ active, over }) =>
-      over
-        ? `${name(active.id)} was dropped on ${name(over.id)}.`
-        : `${name(active.id)} was put back.`,
-    onDragCancel: ({ active }) => `Moving ${name(active.id)} was cancelled.`,
+      over ? drag.dropped(item(active.id), item(over.id)) : drag.putBack(item(active.id)),
+    onDragCancel: ({ active }) => drag.cancelled(item(active.id)),
   }
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -173,13 +172,15 @@ export function BoardPage() {
       {moveTask.isError && <Alert>{errorMessage(moveTask.error)}</Alert>}
       {tasks.data.total > taskList.length && (
         <p className="text-sm text-slate-500">
-          Showing the first {taskList.length} of {tasks.data.total} tasks. Use the list to find the
-          rest.
+          {t.tasks.board.truncated(taskList.length, tasks.data.total)}
         </p>
       )}
       <DndContext
         sensors={sensors}
-        accessibility={{ announcements }}
+        accessibility={{
+          announcements,
+          screenReaderInstructions: { draggable: drag.instructions },
+        }}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}

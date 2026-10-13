@@ -2,6 +2,7 @@ import { createLabelRequestSchema, type Label, type Task } from '@chillawiki/sha
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../../api/client'
 import { Alert, Button, selectClass } from '../../../components/ui'
+import { useT } from '../../../i18n'
 import { ColorOptions, LabelChip, LabelList } from './LabelChip'
 import { useLabelMutations, useLabels } from './labelQueries'
 
@@ -15,6 +16,8 @@ interface TaskLabelsProps {
 
 /** The labels of a task in its dialog, with a picker for those who may change them. */
 export function TaskLabels({ projectId, task, canEdit, onChange }: TaskLabelsProps) {
+  const t = useT()
+  const text = t.tasks.labels
   const labels = useLabels(projectId)
   const { create } = useLabelMutations(projectId)
   const [picking, setPicking] = useState(false)
@@ -28,6 +31,10 @@ export function TaskLabels({ projectId, task, canEdit, onChange }: TaskLabelsPro
         : [...selected, label.id],
     )
 
+  // The schemas' own messages are written in English; zod's follow the language by itself.
+  const nameIssue = (message: string | undefined) =>
+    message === undefined ? text.invalidName : (t.common.errors.serverText(message) ?? message)
+
   const handleCreate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     // The dialog's own forms must not see this submit.
@@ -38,7 +45,7 @@ export function TaskLabels({ projectId, task, canEdit, onChange }: TaskLabelsPro
       name: String(form.get('label-name') ?? ''),
       color: form.get('label-color'),
     })
-    setNameError(parsed.success ? undefined : (parsed.error.issues[0]?.message ?? 'Invalid name'))
+    setNameError(parsed.success ? undefined : nameIssue(parsed.error.issues[0]?.message))
     if (!parsed.success) return
     create.mutate(parsed.data, {
       // A label made from a task is meant for that task.
@@ -55,7 +62,7 @@ export function TaskLabels({ projectId, task, canEdit, onChange }: TaskLabelsPro
         {task.labels.length > 0 ? (
           <LabelList labels={task.labels} />
         ) : (
-          <span className="text-sm text-slate-500">No labels</span>
+          <span className="text-sm text-slate-500">{text.none}</span>
         )}
         {canEdit && (
           <button
@@ -64,7 +71,7 @@ export function TaskLabels({ projectId, task, canEdit, onChange }: TaskLabelsPro
             onClick={() => setPicking(!picking)}
             className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400"
           >
-            {picking ? 'Done' : 'Edit labels'}
+            {picking ? text.done : text.editLabels}
           </button>
         )}
       </div>
@@ -73,7 +80,7 @@ export function TaskLabels({ projectId, task, canEdit, onChange }: TaskLabelsPro
         <div className="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-800">
           {labels.isError && <Alert>{errorMessage(labels.error)}</Alert>}
           {labels.isSuccess && labels.data.length === 0 && (
-            <p className="text-sm text-slate-500">This project has no labels yet.</p>
+            <p className="text-sm text-slate-500">{text.projectHasNone}</p>
           )}
           {labels.isSuccess && labels.data.length > 0 && (
             <ul className="flex flex-wrap gap-x-4 gap-y-2">
@@ -101,13 +108,13 @@ export function TaskLabels({ projectId, task, canEdit, onChange }: TaskLabelsPro
             )}
             <div className="min-w-40 flex-1">
               <label htmlFor="new-label-name" className="sr-only">
-                New label
+                {text.newLabel}
               </label>
               <input
                 id="new-label-name"
                 name="label-name"
                 maxLength={40}
-                placeholder="New label"
+                placeholder={text.newLabel}
                 aria-invalid={nameError ? true : undefined}
                 aria-describedby={nameError ? 'new-label-error' : undefined}
                 className="block w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-2 focus:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900"
@@ -119,7 +126,7 @@ export function TaskLabels({ projectId, task, canEdit, onChange }: TaskLabelsPro
               )}
             </div>
             <label htmlFor="new-label-color" className="sr-only">
-              Colour of the new label
+              {text.newColor}
             </label>
             <select
               id="new-label-color"
@@ -130,7 +137,7 @@ export function TaskLabels({ projectId, task, canEdit, onChange }: TaskLabelsPro
               <ColorOptions />
             </select>
             <Button type="submit" variant="secondary" disabled={create.isPending}>
-              Create label
+              {text.create}
             </Button>
           </form>
         </div>

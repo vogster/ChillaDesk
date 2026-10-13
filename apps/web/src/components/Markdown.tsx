@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Link } from 'react-router'
 import remarkGfm from 'remark-gfm'
+import { useT } from '../i18n'
 
 const STYLES = [
   'text-sm leading-relaxed break-words',
@@ -51,6 +52,7 @@ export function Markdown({
   missingLinkAttribute,
   linksLeaveInNewTab = false,
 }: MarkdownProps) {
+  const t = useT()
   return (
     <div className={STYLES}>
       <ReactMarkdown
@@ -73,11 +75,7 @@ export function Markdown({
               <Link
                 to={href ?? ''}
                 className={missing ? MISSING_LINK : undefined}
-                title={
-                  missing
-                    ? 'This page does not exist yet. Follow the link to create it.'
-                    : undefined
-                }
+                title={missing ? t.shell.markdown.missingPage : undefined}
               >
                 {label}
               </Link>

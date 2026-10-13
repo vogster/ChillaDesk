@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Card } from '../components/ui'
+import { LanguageSwitcher } from '../i18n'
 
 interface AuthShellProps {
   title: string
@@ -18,6 +19,9 @@ export function AuthShell({ title, children, footer }: AuthShellProps) {
           {children}
         </Card>
         <p className="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">{footer}</p>
+        <div className="mt-6 flex justify-center">
+          <LanguageSwitcher />
+        </div>
       </div>
     </div>
   )

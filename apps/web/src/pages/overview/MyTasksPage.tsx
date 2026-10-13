@@ -3,10 +3,12 @@ import { useState } from 'react'
 import { errorMessage } from '../../api/client'
 import { fetchMyTasks } from '../../api/overview'
 import { Alert, Card, Spinner } from '../../components/ui'
+import { useT } from '../../i18n'
 import { TaskTable } from './TaskTable'
 
 /** Everything assigned to the signed-in user, across projects. */
 export function MyTasksPage() {
+  const texts = useT().shell.myTasks
   const [includeDone, setIncludeDone] = useState(false)
   const tasks = useQuery({
     queryKey: ['my-tasks', includeDone],
@@ -16,14 +18,14 @@ export function MyTasksPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">My tasks</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{texts.title}</h1>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={includeDone}
             onChange={(event) => setIncludeDone(event.target.checked)}
           />
-          Show finished
+          {texts.showFinished}
         </label>
       </div>
 
@@ -31,19 +33,16 @@ export function MyTasksPage() {
       {tasks.isError && <Alert>{errorMessage(tasks.error)}</Alert>}
       {tasks.isSuccess && tasks.data.length === 0 && (
         <Card className="text-center">
-          <p className="font-medium">Nothing assigned to you</p>
-          <p className="mt-1 text-sm text-slate-500">
-            Tasks show up here when someone makes you the assignee.
-          </p>
+          <p className="font-medium">{texts.empty}</p>
+          <p className="mt-1 text-sm text-slate-500">{texts.emptyHint}</p>
         </Card>
       )}
       {tasks.isSuccess && tasks.data.length > 0 && (
         <>
           <p role="status" className="text-sm text-slate-500">
-            {tasks.data.length} {tasks.data.length === 1 ? 'task' : 'tasks'}, earliest due date
-            first
+            {texts.count(tasks.data.length)}
           </p>
-          <TaskTable tasks={tasks.data} caption="Tasks assigned to you" />
+          <TaskTable tasks={tasks.data} caption={texts.caption} />
         </>
       )}
     </div>

@@ -4,10 +4,12 @@ import { useNavigate } from 'react-router'
 import { errorMessage } from '../../api/client'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../../components/form'
 import { Alert, Button, Card, TextField } from '../../components/ui'
+import { useT } from '../../i18n'
 import { useDeleteProject, useUpdateProject } from './projectQueries'
 
 /** Owner-only: rename the project or delete it. */
 export function ProjectSettings({ project }: { project: Project }) {
+  const t = useT()
   const updateProject = useUpdateProject(project.id)
   const deleteProject = useDeleteProject(project.id)
   const navigate = useNavigate()
@@ -40,29 +42,29 @@ export function ProjectSettings({ project }: { project: Project }) {
 
   return (
     <Card>
-      <h2 className="mb-4 text-base font-semibold">Settings</h2>
+      <h2 className="mb-4 text-base font-semibold">{t.project.settings.heading}</h2>
       <form onSubmit={handleSave} noValidate className="space-y-4">
         {updateProject.isError && <Alert>{errorMessage(updateProject.error)}</Alert>}
         <TextField
-          label="Name"
+          label={t.project.settings.name}
           name="name"
           defaultValue={project.name}
           required
           error={fieldErrors.name}
         />
         <TextField
-          label="Description"
+          label={t.project.settings.description}
           name="description"
           defaultValue={project.description}
           error={fieldErrors.description}
         />
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={updateProject.isPending}>
-            Save changes
+            {t.project.settings.saveChanges}
           </Button>
           {updateProject.isSuccess && (
             <span role="status" className="text-sm text-slate-500">
-              Saved
+              {t.project.settings.saved}
             </span>
           )}
         </div>
@@ -77,18 +79,20 @@ export function ProjectSettings({ project }: { project: Project }) {
         {confirmingDelete ? (
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm">
-              Delete <strong>{project.name}</strong> with all its data? This cannot be undone.
+              {t.project.settings.deleteConfirm.before}
+              <strong>{project.name}</strong>
+              {t.project.settings.deleteConfirm.after}
             </p>
             <Button variant="danger" onClick={handleDelete} disabled={deleteProject.isPending}>
-              Yes, delete
+              {t.project.confirmDelete}
             </Button>
             <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>
-              Cancel
+              {t.common.cancel}
             </Button>
           </div>
         ) : (
           <Button variant="secondary" onClick={() => setConfirmingDelete(true)}>
-            Delete project…
+            {t.project.settings.deleteProject}
           </Button>
         )}
       </div>

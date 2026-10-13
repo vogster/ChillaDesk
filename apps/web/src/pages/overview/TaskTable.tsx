@@ -1,5 +1,6 @@
 import type { TaskInContext } from '@chillawiki/shared'
 import { Link } from 'react-router'
+import { useT } from '../../i18n'
 import { LabelList } from '../project/labels/LabelChip'
 import { TASK_PARAM } from '../project/ProjectLayout'
 import { DueDate, PriorityBadge } from '../project/taskDisplay'
@@ -12,6 +13,7 @@ const headerClass = 'px-3 py-2'
 
 /** Tasks from several projects in one table. */
 export function TaskTable({ tasks, caption }: { tasks: TaskInContext[]; caption: string }) {
+  const texts = useT().shell.taskTable
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
       <table className="w-full min-w-[40rem] text-left text-sm">
@@ -19,22 +21,22 @@ export function TaskTable({ tasks, caption }: { tasks: TaskInContext[]; caption:
         <thead className="bg-slate-100 text-xs text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300">
           <tr>
             <th scope="col" className={headerClass}>
-              Key
+              {texts.key}
             </th>
             <th scope="col" className={headerClass}>
-              Title
+              {texts.title}
             </th>
             <th scope="col" className={headerClass}>
-              Project
+              {texts.project}
             </th>
             <th scope="col" className={headerClass}>
-              Status
+              {texts.status}
             </th>
             <th scope="col" className={headerClass}>
-              Priority
+              {texts.priority}
             </th>
             <th scope="col" className={headerClass}>
-              Due
+              {texts.due}
             </th>
           </tr>
         </thead>

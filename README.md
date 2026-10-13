@@ -8,6 +8,7 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **Labels, search and “My tasks”** across all your projects
 - **Mentions and notifications** — in the app, and by email if you configure SMTP
 - **Live updates** — boards, tasks and pages refresh as your teammates change them
+- **English and Russian** interface, following the browser language, with a switcher
 - **REST API** with OpenAPI docs — ready for a mobile client
 - **MCP server** — let AI agents read and update your projects
 
@@ -149,6 +150,13 @@ pnpm test         # unit + integration tests with coverage
 pnpm lint && pnpm typecheck
 ```
 
+### Translating the interface
+
+Texts live in `apps/web/src/i18n`: `en/*.ts` is the source and every other language is a
+folder of files typed against it, so a missing or extra text does not compile. To add a
+language, copy `ru/`, translate it, and register it in `messages.ts`. The API answers in
+English; `ru/serverText.ts` shows how its error texts are translated in the browser.
+
 ## Repository layout
 
 ```
@@ -167,7 +175,8 @@ docker/          Caddy config for the web image
 - [x] Docker release with a verified stack
 - [x] Task labels, “My tasks”, search, mentions and notifications
 - [x] Live updates over server-sent events
-- [ ] Later: translations, mobile app, attachments
+- [x] Russian interface
+- [ ] Later: more languages, mobile app, attachments
 
 ## License
 

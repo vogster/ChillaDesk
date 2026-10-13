@@ -11,14 +11,16 @@ import { useNavigate } from 'react-router'
 import { errorMessage } from '../../api/client'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../../components/form'
 import { Alert, Button, Card, selectClass, Spinner, TextField } from '../../components/ui'
+import { useT } from '../../i18n'
 import { useMemberMutations, useMembers } from './projectQueries'
 
 const ROLES = projectRoleSchema.options
 
 function RoleOptions() {
+  const t = useT()
   return ROLES.map((role) => (
     <option key={role} value={role}>
-      {role}
+      {t.common.role[role]}
     </option>
   ))
 }
@@ -29,6 +31,7 @@ interface MembersPanelProps {
 }
 
 export function MembersPanel({ project, currentUser }: MembersPanelProps) {
+  const t = useT()
   const members = useMembers(project.id)
   const { add, changeRole, remove } = useMemberMutations(project.id, currentUser.id)
   const navigate = useNavigate()
@@ -74,7 +77,7 @@ export function MembersPanel({ project, currentUser }: MembersPanelProps) {
 
   return (
     <Card>
-      <h2 className="mb-4 text-base font-semibold">Members</h2>
+      <h2 className="mb-4 text-base font-semibold">{t.project.members.heading}</h2>
       {actionError && (
         <div className="mb-4">
           <Alert>{errorMessage(actionError)}</Alert>
@@ -91,13 +94,17 @@ export function MembersPanel({ project, currentUser }: MembersPanelProps) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
                     {member.name}
-                    {isSelf && <span className="ml-1 font-normal text-slate-500">(you)</span>}
+                    {isSelf && (
+                      <span className="ml-1 font-normal text-slate-500">
+                        {t.project.members.you}
+                      </span>
+                    )}
                   </p>
                   <p className="truncate text-xs text-slate-500">{member.email}</p>
                 </div>
                 {isOwner ? (
                   <select
-                    aria-label={`Role of ${member.name}`}
+                    aria-label={t.project.members.roleOf(member.name)}
                     className={selectClass}
                     value={member.role}
                     disabled={changeRole.isPending}
@@ -113,7 +120,7 @@ export function MembersPanel({ project, currentUser }: MembersPanelProps) {
                   </select>
                 ) : (
                   <span className="text-sm text-slate-600 capitalize dark:text-slate-400">
-                    {member.role}
+                    {t.common.role[member.role]}
                   </span>
                 )}
                 {(isOwner || isSelf) && (
@@ -121,9 +128,13 @@ export function MembersPanel({ project, currentUser }: MembersPanelProps) {
                     variant="secondary"
                     disabled={remove.isPending}
                     onClick={() => handleRemove(member)}
-                    aria-label={isSelf ? 'Leave project' : `Remove ${member.name}`}
+                    aria-label={
+                      isSelf
+                        ? t.project.members.leaveProject
+                        : t.project.members.removeMember(member.name)
+                    }
                   >
-                    {isSelf ? 'Leave' : 'Remove'}
+                    {isSelf ? t.project.members.leave : t.project.members.remove}
                   </Button>
                 )}
               </li>
@@ -139,18 +150,18 @@ export function MembersPanel({ project, currentUser }: MembersPanelProps) {
           className="mt-4 flex flex-wrap items-start gap-3 border-t border-slate-200 pt-4 dark:border-slate-800"
         >
           <TextField
-            label="Add a member by email"
+            label={t.project.members.addByEmail}
             name="email"
             type="email"
-            placeholder="teammate@example.com"
+            placeholder={t.project.members.emailPlaceholder}
             required
-            hint="They need a ChillaWiki account first"
+            hint={t.project.members.accountHint}
             error={fieldErrors.email}
             className="min-w-56 flex-1"
           />
           <div>
             <label htmlFor="new-member-role" className="mb-1 block text-sm font-medium">
-              Role
+              {t.project.members.role}
             </label>
             <select
               id="new-member-role"
@@ -162,7 +173,7 @@ export function MembersPanel({ project, currentUser }: MembersPanelProps) {
             </select>
           </div>
           <Button type="submit" className="mt-6" disabled={add.isPending}>
-            Add
+            {t.common.add}
           </Button>
         </form>
       )}

@@ -5,9 +5,11 @@ import { errorMessage } from '../api/client'
 import { useRegister } from '../auth/useAuth'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, TextField } from '../components/ui'
+import { useT } from '../i18n'
 import { authLinkClass, AuthShell } from './AuthShell'
 
 export function RegisterPage() {
+  const texts = useT().shell.auth
   const register = useRegister()
   const location = useLocation()
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -33,21 +35,27 @@ export function RegisterPage() {
 
   return (
     <AuthShell
-      title="Create an account"
+      title={texts.register.title}
       footer={
         <>
-          Already have an account?{' '}
+          {texts.register.haveAccount}{' '}
           <Link to="/login" state={location.state} className={authLinkClass}>
-            Log in
+            {texts.register.logIn}
           </Link>
         </>
       }
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {register.isError && <Alert>{errorMessage(register.error)}</Alert>}
-        <TextField label="Name" name="name" autoComplete="name" required error={fieldErrors.name} />
         <TextField
-          label="Email"
+          label={texts.name}
+          name="name"
+          autoComplete="name"
+          required
+          error={fieldErrors.name}
+        />
+        <TextField
+          label={texts.email}
           name="email"
           type="email"
           autoComplete="email"
@@ -55,16 +63,16 @@ export function RegisterPage() {
           error={fieldErrors.email}
         />
         <TextField
-          label="Password"
+          label={texts.password}
           name="password"
           type="password"
           autoComplete="new-password"
           required
-          hint={`At least ${PASSWORD_MIN_LENGTH} characters`}
+          hint={texts.register.passwordHint(PASSWORD_MIN_LENGTH)}
           error={fieldErrors.password}
         />
         <Button type="submit" className="w-full" disabled={register.isPending}>
-          {register.isPending ? 'Creating account…' : 'Sign up'}
+          {register.isPending ? texts.register.submitting : texts.register.submit}
         </Button>
       </form>
     </AuthShell>

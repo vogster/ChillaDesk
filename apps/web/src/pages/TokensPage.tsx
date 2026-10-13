@@ -9,18 +9,21 @@ import { errorMessage } from '../api/client'
 import { createApiToken, fetchApiTokens, revokeApiToken } from '../api/tokens'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, Card, selectClass, Spinner, TextField } from '../components/ui'
+import { intlLocale, useT, type Messages } from '../i18n'
+
+type TokenTexts = Messages['shell']['tokens']
 
 const tokensKey = ['api-tokens'] as const
 
 const EXPIRY_OPTIONS = [
-  { label: '30 days', days: 30 },
-  { label: '90 days', days: 90 },
-  { label: '1 year', days: 365 },
-  { label: 'Never', days: null },
+  { key: 'days30', days: 30 },
+  { key: 'days90', days: 90 },
+  { key: 'year', days: 365 },
+  { key: 'never', days: null },
 ] as const
 
 const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' })
+  new Date(iso).toLocaleDateString(intlLocale(), { dateStyle: 'medium' })
 
 /** What an MCP client needs to connect, ready to paste into its configuration. */
 function mcpConfig(token: string): string {
@@ -40,6 +43,7 @@ function mcpConfig(token: string): string {
 }
 
 function CopyButton({ text, label }: { text: string; label: string }) {
+  const texts = useT().shell.tokens.notice
   const [copied, setCopied] = useState(false)
   const copy = async () => {
     try {
@@ -52,7 +56,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
   }
   return (
     <Button variant="secondary" onClick={() => void copy()}>
-      {copied ? 'Copied' : label}
+      {copied ? texts.copied : label}
     </Button>
   )
 }
@@ -64,49 +68,47 @@ function NewTokenNotice({
   created: CreatedApiToken
   onDismiss: () => void
 }) {
+  const texts = useT().shell.tokens.notice
   return (
     <Card className="border-emerald-300 dark:border-emerald-800">
-      <h2 className="text-base font-semibold">Token “{created.name}” created</h2>
-      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-        Copy it now. For your security it is not stored and cannot be shown again.
-      </p>
+      <h2 className="text-base font-semibold">{texts.created(created.name)}</h2>
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{texts.copyNow}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <code
-          aria-label="New API token"
+          aria-label={texts.tokenLabel}
           className="min-w-0 flex-1 rounded bg-slate-100 px-2 py-1.5 text-sm break-all dark:bg-slate-800"
         >
           {created.token}
         </code>
-        <CopyButton text={created.token} label="Copy token" />
+        <CopyButton text={created.token} label={texts.copyToken} />
       </div>
-      <h3 className="mt-4 text-sm font-semibold">Connect an AI assistant (MCP)</h3>
-      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-        Add this server to your MCP client configuration:
-      </p>
+      <h3 className="mt-4 text-sm font-semibold">{texts.mcpTitle}</h3>
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{texts.mcpHint}</p>
       <pre
-        aria-label="MCP client configuration"
+        aria-label={texts.configLabel}
         className="mt-2 overflow-x-auto rounded bg-slate-100 p-3 text-xs dark:bg-slate-800"
       >
         {mcpConfig(created.token)}
       </pre>
       <div className="mt-3 flex gap-2">
-        <CopyButton text={mcpConfig(created.token)} label="Copy configuration" />
+        <CopyButton text={mcpConfig(created.token)} label={texts.copyConfig} />
         <Button variant="secondary" onClick={onDismiss}>
-          Done
+          {texts.done}
         </Button>
       </div>
     </Card>
   )
 }
 
-function expiryText(token: ApiToken): string {
-  if (!token.expiresAt) return 'No expiry'
+function expiryText(token: ApiToken, texts: TokenTexts['list']): string {
+  if (!token.expiresAt) return texts.noExpiry
   return Date.parse(token.expiresAt) < Date.now()
-    ? `Expired ${formatDate(token.expiresAt)}`
-    : `Expires ${formatDate(token.expiresAt)}`
+    ? texts.expired(formatDate(token.expiresAt))
+    : texts.expires(formatDate(token.expiresAt))
 }
 
 export function TokensPage() {
+  const texts = useT().shell.tokens
   const queryClient = useQueryClient()
   const tokens = useQuery({ queryKey: tokensKey, queryFn: fetchApiTokens })
   const refresh = () => queryClient.invalidateQueries({ queryKey: tokensKey })
@@ -146,11 +148,8 @@ export function TokensPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">API tokens</h1>
-        <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          A token lets a script or an AI assistant work with your projects as you, through the REST
-          API or MCP. A read-only token can look but not change anything.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{texts.title}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">{texts.intro}</p>
       </div>
 
       {created && (
@@ -165,12 +164,12 @@ export function TokensPage() {
       )}
 
       <Card>
-        <h2 className="mb-4 text-base font-semibold">New token</h2>
+        <h2 className="mb-4 text-base font-semibold">{texts.form.title}</h2>
         <form onSubmit={handleCreate} noValidate className="flex flex-wrap items-start gap-3">
           <TextField
-            label="Name"
+            label={texts.form.name}
             name="name"
-            placeholder="e.g. Claude on my laptop"
+            placeholder={texts.form.namePlaceholder}
             maxLength={60}
             required
             error={fieldErrors.name}
@@ -178,7 +177,7 @@ export function TokensPage() {
           />
           <div>
             <label htmlFor="token-scope" className="mb-1 block text-sm font-medium">
-              Access
+              {texts.form.access}
             </label>
             <select
               id="token-scope"
@@ -186,13 +185,13 @@ export function TokensPage() {
               defaultValue="read"
               className={`${selectClass} py-2`}
             >
-              <option value="read">Read only</option>
-              <option value="write">Read and write</option>
+              <option value="read">{texts.scope.read}</option>
+              <option value="write">{texts.scope.write}</option>
             </select>
           </div>
           <div>
             <label htmlFor="token-expiry" className="mb-1 block text-sm font-medium">
-              Expires
+              {texts.form.expires}
             </label>
             <select
               id="token-expiry"
@@ -201,20 +200,20 @@ export function TokensPage() {
               className={`${selectClass} py-2`}
             >
               {EXPIRY_OPTIONS.map((option) => (
-                <option key={option.label} value={option.days ?? ''}>
-                  {option.label}
+                <option key={option.key} value={option.days ?? ''}>
+                  {texts.form.expiry[option.key]}
                 </option>
               ))}
             </select>
           </div>
           <Button type="submit" className="mt-6" disabled={create.isPending}>
-            Create token
+            {texts.form.create}
           </Button>
         </form>
       </Card>
 
       <Card>
-        <h2 className="mb-4 text-base font-semibold">Your tokens</h2>
+        <h2 className="mb-4 text-base font-semibold">{texts.list.title}</h2>
         {actionError && (
           <div className="mb-4">
             <Alert>{errorMessage(actionError)}</Alert>
@@ -223,7 +222,7 @@ export function TokensPage() {
         {tokens.isPending && <Spinner />}
         {tokens.isError && <Alert>{errorMessage(tokens.error)}</Alert>}
         {tokens.isSuccess && tokens.data.length === 0 && (
-          <p className="text-sm text-slate-500">You have no tokens yet.</p>
+          <p className="text-sm text-slate-500">{texts.list.empty}</p>
         )}
         {tokens.isSuccess && tokens.data.length > 0 && (
           <ul className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -232,22 +231,23 @@ export function TokensPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{token.name}</p>
                   <p className="text-xs text-slate-500">
-                    {token.scope === 'read' ? 'Read only' : 'Read and write'} · {expiryText(token)}{' '}
-                    ·{' '}
-                    {token.lastUsedAt ? `Last used ${formatDate(token.lastUsedAt)}` : 'Never used'}
+                    {texts.scope[token.scope]} · {expiryText(token, texts.list)} ·{' '}
+                    {token.lastUsedAt
+                      ? texts.list.lastUsed(formatDate(token.lastUsedAt))
+                      : texts.list.neverUsed}
                   </p>
                 </div>
                 <Button
                   variant="secondary"
                   disabled={revoke.isPending}
-                  aria-label={`Revoke ${token.name}`}
+                  aria-label={texts.list.revokeLabel(token.name)}
                   onClick={() => {
                     create.reset()
                     if (created?.id === token.id) setCreated(null)
                     revoke.mutate(token.id)
                   }}
                 >
-                  Revoke
+                  {texts.list.revoke}
                 </Button>
               </li>
             ))}

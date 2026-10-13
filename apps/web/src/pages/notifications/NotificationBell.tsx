@@ -1,15 +1,17 @@
 import { NavLink } from 'react-router'
+import { useT } from '../../i18n'
 import { useNotifications } from './notificationQueries'
 
 /** The header link to the notifications, with the number still unread. */
 export function NotificationBell() {
+  const texts = useT().shell.notifications
   const unread = useNotifications().data?.unreadCount ?? 0
 
   return (
     <NavLink
       to="/notifications"
-      aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
-      title="Notifications"
+      aria-label={texts.bellLabel(unread)}
+      title={texts.title}
       className={({ isActive }) =>
         `relative rounded-md p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 ${
           isActive ? 'text-slate-900 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400'

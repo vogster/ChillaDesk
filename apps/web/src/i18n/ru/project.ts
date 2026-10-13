@@ -1,3 +1,100 @@
 import type { ProjectMessages } from '../en/project'
 
-export const project: ProjectMessages = {}
+export const project: ProjectMessages = {
+  confirmDelete: 'Да, удалить',
+  members: {
+    heading: 'Участники',
+    you: '(вы)',
+    roleOf: (name) => `Роль участника ${name}`,
+    leaveProject: 'Покинуть проект',
+    removeMember: (name) => `Удалить участника ${name}`,
+    leave: 'Покинуть',
+    remove: 'Удалить',
+    addByEmail: 'Добавить участника по эл. почте',
+    emailPlaceholder: 'kollega@example.com',
+    accountHint: 'У человека уже должна быть учётная запись ChillaWiki',
+    role: 'Роль',
+  },
+  settings: {
+    heading: 'Настройки',
+    name: 'Название',
+    description: 'Описание',
+    saveChanges: 'Сохранить изменения',
+    saved: 'Сохранено',
+    deleteConfirm: {
+      before: 'Удалить проект ',
+      after: ' со всеми данными? Это действие нельзя отменить.',
+    },
+    deleteProject: 'Удалить проект…',
+  },
+  columns: {
+    heading: 'Колонки доски',
+    hint: 'Тип подсказывает ChillaWiki, в каких колонках лежит завершённая работа, как бы они ни назывались.',
+    category: {
+      todo: 'Не начато',
+      in_progress: 'В работе',
+      done: 'Готово',
+    },
+    nameOf: (position) => `Название колонки ${position}`,
+    kindOf: (name) => `Тип колонки «${name}»`,
+    moveLeft: (name) => `Сдвинуть колонку «${name}» влево`,
+    moveRight: (name) => `Сдвинуть колонку «${name}» вправо`,
+    deleteColumn: (name) => `Удалить колонку «${name}»`,
+    newColumn: 'Новая колонка',
+    kind: 'Тип',
+    add: 'Добавить колонку',
+  },
+  wiki: {
+    search: 'Поиск по вики',
+    newPageLink: '+ Новая страница',
+    pagesNav: 'Страницы вики',
+    noMatches: 'По вашему запросу ничего не найдено.',
+    noPages: 'Страниц пока нет.',
+    empty: {
+      title: 'В этой вики пока пусто',
+      hint: 'Храните заметки, решения и инструкции рядом с задачами, к которым они относятся.',
+      action: 'Написать первую страницу',
+    },
+    page: {
+      savedInfo: (version, date, author) =>
+        `Версия ${version}, сохранена ${date}${author ? ` — ${author}` : ''}`,
+      noContent: 'На этой странице пока ничего нет.',
+      deleteConfirm: {
+        before: 'Удалить страницу ',
+        after: ' вместе с её историей? Вложенные страницы сохранятся и поднимутся на уровень выше.',
+      },
+      deletePage: 'Удалить страницу…',
+    },
+    editor: {
+      newPage: 'Новая страница',
+      editPage: 'Редактирование страницы',
+      draftRestored: 'Ваши несохранённые изменения восстановлены.',
+      discardDraft: 'Отказаться от них',
+      title: 'Название',
+      parent: 'Родительская страница',
+      noParent: 'Нет (верхний уровень)',
+      mode: 'Режим редактора',
+      write: 'Текст',
+      preview: 'Предпросмотр',
+      nothingToPreview: 'Пока нечего показывать.',
+      content: 'Содержимое',
+      contentPlaceholder: (projectKey) =>
+        `Markdown. Ссылка на страницу — [[Название страницы]], на задачу — её номер, например ${projectKey}-1.`,
+      saving: 'Сохранение…',
+      createPage: 'Создать страницу',
+      conflict: {
+        before: 'Ваш текст никуда не делся. Скопируйте нужное или ',
+        action: 'сохраните свою версию поверх чужой',
+        after: '.',
+      },
+    },
+    history: {
+      heading: 'История',
+      version: (version) => `Версия ${version}`,
+      current: 'текущая',
+      noVersion: (version) => `У этой страницы нет версии ${version}.`,
+      restore: 'Восстановить эту версию',
+      noContent: 'В этой версии не было текста.',
+    },
+  },
+}

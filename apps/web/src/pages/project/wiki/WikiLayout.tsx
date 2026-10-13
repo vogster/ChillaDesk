@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet } from 'react-router'
 import { errorMessage } from '../../../api/client'
 import { Alert, Spinner } from '../../../components/ui'
 import { useDebounce } from '../../../hooks/useDebounce'
+import { useT } from '../../../i18n'
 import { useProjectContext } from '../ProjectLayout'
 import { buildTree, newWikiPagePath, wikiPagePath, type TreeNode } from './wikiModel'
 import { useWikiPages } from './wikiQueries'
@@ -37,6 +38,7 @@ function Tree({ projectId, nodes }: { projectId: string; nodes: TreeNode[] }) {
 
 /** The wiki section: page navigation on the side, the selected page next to it. */
 export function WikiLayout() {
+  const t = useT()
   const context = useProjectContext()
   const { project, canEdit } = context
   const [search, setSearch] = useState('')
@@ -51,14 +53,14 @@ export function WikiLayout() {
       <aside className="space-y-3">
         <div>
           <label htmlFor="wiki-search" className="sr-only">
-            Search the wiki
+            {t.project.wiki.search}
           </label>
           <input
             id="wiki-search"
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search the wiki"
+            placeholder={t.project.wiki.search}
             className="block w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus:outline-2 focus:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900"
           />
         </div>
@@ -67,15 +69,15 @@ export function WikiLayout() {
             to={newWikiPagePath(project.id)}
             className="block rounded-md border border-dashed border-slate-300 px-2 py-1.5 text-center text-sm text-slate-600 hover:border-indigo-400 hover:text-indigo-700 dark:border-slate-700 dark:text-slate-300"
           >
-            + New page
+            {t.project.wiki.newPageLink}
           </Link>
         )}
-        <nav aria-label="Wiki pages">
+        <nav aria-label={t.project.wiki.pagesNav}>
           {pages.isPending && <Spinner />}
           {pages.isError && <Alert>{errorMessage(pages.error)}</Alert>}
           {pages.isSuccess && pages.data.length === 0 && (
             <p className="px-2 text-sm text-slate-500">
-              {query ? 'No pages match your search.' : 'No pages yet.'}
+              {query ? t.project.wiki.noMatches : t.project.wiki.noPages}
             </p>
           )}
           {pages.isSuccess && pages.data.length > 0 && (
