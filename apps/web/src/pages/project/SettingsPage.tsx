@@ -12,7 +12,8 @@ export function SettingsPage() {
   if (project.role !== 'owner') return <NotFoundPage />
 
   return (
-    <div className="space-y-6">
+    // Forms read better at a width of their own than across the whole page.
+    <div className="max-w-3xl space-y-6">
       <StatusSettings projectId={project.id} />
       <LabelSettings projectId={project.id} />
       <WebhookSettings projectId={project.id} />

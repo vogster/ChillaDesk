@@ -142,7 +142,7 @@ export function MilestonesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl space-y-6">
       <h2 className="text-lg font-semibold">{texts.heading}</h2>
       {actionError && <Alert>{errorMessage(actionError)}</Alert>}
       {milestones.isPending && <Spinner />}

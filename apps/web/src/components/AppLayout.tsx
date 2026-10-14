@@ -60,7 +60,7 @@ export function AppLayout({ user }: { user: User }) {
   return (
     <div className="min-h-screen">
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
           <Link to="/" className="text-lg font-semibold tracking-tight">
             ChillaDesk
           </Link>
@@ -92,7 +92,7 @@ export function AppLayout({ user }: { user: User }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-8">
         <Suspense fallback={<Spinner />}>
           <Outlet />
         </Suspense>

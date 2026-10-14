@@ -2,6 +2,8 @@
 
 A lightweight, self-hosted project tracker — a small and simple alternative to Jira.
 
+![The board of a project](docs/screenshots/board.png)
+
 - **Tasks** — per-project to-do lists
 - **Kanban** — the same tasks as a board with custom columns
 - **Wiki** — Markdown pages per project, linked to tasks
@@ -17,6 +19,17 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **English and Russian** interface, following the browser language, with a switcher
 - **REST API** with OpenAPI docs — ready for a mobile client
 - **MCP server** — let AI agents read and update your projects
+
+## Screenshots
+
+|                                                                            |                                                              |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| ![A task with its checklist, links and details](docs/screenshots/task.png) | ![The task list with filters](docs/screenshots/list.png)     |
+| A task: description in Markdown, checklist, links, details                 | The list: filters, sorting, bulk actions                     |
+| ![A wiki page](docs/screenshots/wiki.png)                                  | ![Milestones with progress](docs/screenshots/milestones.png) |
+| The wiki: a page tree, links to pages and tasks                            | Milestones and how far along they are                        |
+| ![The board in the dark theme](docs/screenshots/board-dark.png)            | ![The board in Russian](docs/screenshots/board-ru.png)       |
+| A dark theme that follows the system                                       | The interface in Russian                                     |
 
 > Status: 0.2.0. Everything listed above works; see [CHANGELOG.md](CHANGELOG.md) for what is
 > new. Expect rough edges, and back up your data before upgrading.
@@ -262,6 +275,10 @@ pnpm e2e          # browser tests (Playwright) against a fresh API and web app
 The browser tests start their own API (on an empty embedded database) and web app. The
 first time, install a browser with `pnpm --filter @chilladesk/e2e exec playwright install
 chromium`, or use one you have: `PW_CHANNEL=msedge pnpm e2e` (or `chrome`).
+
+The screenshots in `docs/screenshots` come from
+`node apps/e2e/scripts/screenshots.mjs http://localhost:8090`, run against an empty,
+throwaway installation: it signs up demo accounts and fills in a demo project first.
 
 ### Translating the interface
 
