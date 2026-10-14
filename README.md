@@ -31,7 +31,7 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 | ![The board in the dark theme](docs/screenshots/board-dark.png)            | ![The board in Russian](docs/screenshots/board-ru.png)       |
 | A dark theme that follows the system                                       | The interface in Russian                                     |
 
-> Status: 0.2.0. Everything listed above works; see [CHANGELOG.md](CHANGELOG.md) for what is
+> Status: 0.3.0. Everything listed above works; see [CHANGELOG.md](CHANGELOG.md) for what is
 > new. Expect rough edges, and back up your data before upgrading.
 
 ## Install

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 - One-container image `ghcr.io/vogster/chilladesk` for a single `docker run`: the API serves the
   web app, the data is in one folder (embedded database unless `DATABASE_URL` is set),
