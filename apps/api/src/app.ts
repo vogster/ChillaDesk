@@ -1,3 +1,4 @@
+import type { RegistrationMode } from '@chilladesk/shared'
 import cookie from '@fastify/cookie'
 import rateLimit from '@fastify/rate-limit'
 import swagger from '@fastify/swagger'
@@ -54,7 +55,8 @@ export interface AppOptions {
   database: Database
   logLevel: AppConfig['logLevel']
   trustProxy?: AppConfig['trustProxy']
-  registrationEnabled?: boolean
+  /** Who may sign up: anyone (the default), only with an invite link, or nobody. */
+  registration?: RegistrationMode
   cookieSecure?: AppConfig['cookieSecure']
   /** Requests per minute per client across the whole API. */
   rateLimitMax?: number
@@ -88,7 +90,7 @@ export async function buildApp({
   database,
   logLevel,
   trustProxy = false,
-  registrationEnabled = true,
+  registration = 'open',
   cookieSecure = 'auto',
   rateLimitMax = 600,
   authRateLimitMax = 10,
@@ -171,7 +173,7 @@ export async function buildApp({
   await app.register(authRoutes, {
     prefix: '/api/auth',
     db,
-    registrationEnabled,
+    registration,
     cookieSecure,
     rateLimitMax: authRateLimitMax,
     accountRateLimitMax,

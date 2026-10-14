@@ -37,6 +37,8 @@ export const registerRequestSchema = z.object({
   name: userNameSchema,
   password: passwordSchema,
   locale: localeSchema.optional(),
+  /** The token of an invite link; on a server that signs people up by invitation only. */
+  inviteToken: z.string().min(1).max(200).optional(),
 })
 export type RegisterRequest = z.infer<typeof registerRequestSchema>
 
@@ -70,8 +72,15 @@ export const changePasswordRequestSchema = z.object({
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>
 
 /** What a client needs to know before anyone is signed in. */
+/** Who may sign up: anyone, only someone with an invite link, or nobody. */
+export const registrationModeSchema = z.enum(['open', 'invite', 'closed'])
+export type RegistrationMode = z.infer<typeof registrationModeSchema>
+
 export const authOptionsSchema = z.object({
+  /** Whether anyone may sign up; kept for older clients, `registration` says more. */
   registrationEnabled: z.boolean(),
+  /** Missing from servers older than 0.3, which only know open and closed. */
+  registration: registrationModeSchema.optional(),
   /** Whether the server sends email: confirmation links and password resets depend on it. */
   emailEnabled: z.boolean(),
 })

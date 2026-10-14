@@ -52,7 +52,7 @@ async function register(extra: { locale?: 'en' | 'ru' } = {}) {
   const { user, token } = await registerAccount(
     ctx.database.db,
     { email, name: 'Pat', password: TEST_PASSWORD, ...extra },
-    { registrationEnabled: true },
+    { registration: 'open' },
   )
   const headers = { authorization: `Bearer ${token}` }
   const resent = await post('/verify-email/resend', undefined, headers)
@@ -89,14 +89,22 @@ const login = (email: string, password: string) => post('/login', { email, passw
 
 describe('options', () => {
   it('says that this server sends email, and one without mail settings that it does not', async () => {
-    const plain = await createTestContext({ registrationEnabled: false })
+    const plain = await createTestContext({ registration: 'closed' })
 
     const withMail = await ctx.app.inject({ method: 'GET', url: '/api/auth/options' })
     const without = await plain.app.inject({ method: 'GET', url: '/api/auth/options' })
     await plain.close()
 
-    expect(withMail.json()).toEqual({ registrationEnabled: true, emailEnabled: true })
-    expect(without.json()).toEqual({ registrationEnabled: false, emailEnabled: false })
+    expect(withMail.json()).toEqual({
+      registrationEnabled: true,
+      registration: 'open',
+      emailEnabled: true,
+    })
+    expect(without.json()).toEqual({
+      registrationEnabled: false,
+      registration: 'closed',
+      emailEnabled: false,
+    })
   })
 })
 
@@ -203,7 +211,7 @@ describe('signing up on a server that sends email', () => {
     expect((await signUp(nextEmail())).statusCode).toBe(202)
 
     const closed = await createTestContext({
-      registrationEnabled: false,
+      registration: 'closed',
       mail: { publicUrl: PUBLIC_URL, send: async () => undefined },
     })
     const refused = await closed.app.inject({

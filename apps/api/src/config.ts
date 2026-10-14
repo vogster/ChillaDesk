@@ -1,3 +1,4 @@
+import type { RegistrationMode } from '@chilladesk/shared'
 import { z } from 'zod'
 
 const envSchema = z.object({
@@ -19,9 +20,11 @@ const envSchema = z.object({
     .default('auto')
     .transform((value) => (value === 'auto' ? value : value === 'true')),
   REGISTRATION_ENABLED: z
-    .enum(['true', 'false'])
+    .enum(['true', 'false', 'invite'])
     .default('true')
-    .transform((value) => value === 'true'),
+    .transform((value): RegistrationMode =>
+      value === 'invite' ? 'invite' : value === 'true' ? 'open' : 'closed',
+    ),
   RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(600),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(10),
   FILES_DIR: z.string().min(1).default('./.data/files'),
@@ -64,8 +67,11 @@ export interface AppConfig {
   trustProxy: boolean | number
   /** `auto` follows the request protocol; set `true` when TLS ends at an upstream proxy. */
   cookieSecure: boolean | 'auto'
-  /** Turn off once your team has signed up to stop strangers from creating accounts. */
-  registrationEnabled: boolean
+  /**
+   * Who may sign up: anyone, only people with an invite link (`invite`),
+   * or nobody. Close it once your team has signed up, or keep it to invitations.
+   */
+  registration: RegistrationMode
   /**
    * Requests per minute allowed from one client address across the whole API. Everyone
    * behind the same NAT shares it, so a team in one office needs more than a single user.
@@ -110,7 +116,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     databaseUrl: parsed.DATABASE_URL,
     pgliteDataDir: parsed.PGLITE_DATA_DIR,
     trustProxy: parsed.TRUST_PROXY,
-    registrationEnabled: parsed.REGISTRATION_ENABLED,
+    registration: parsed.REGISTRATION_ENABLED,
     cookieSecure: parsed.COOKIE_SECURE,
     rateLimitMax: parsed.RATE_LIMIT_MAX,
     authRateLimitMax: parsed.AUTH_RATE_LIMIT_MAX,

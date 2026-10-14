@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "pending_invite_id" uuid;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_pending_invite_id_project_invites_id_fk" FOREIGN KEY ("pending_invite_id") REFERENCES "public"."project_invites"("id") ON DELETE set null ON UPDATE no action;

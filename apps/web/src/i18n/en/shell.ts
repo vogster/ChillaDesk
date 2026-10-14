@@ -25,6 +25,8 @@ export const shell = {
       submitting: 'Logging in…',
       noAccount: 'No account yet?',
       signUp: 'Sign up',
+      invitationOnly:
+        'Signing up is by invitation only. Open the invite link you were sent to create an account.',
     },
     register: {
       title: 'Create an account',
@@ -32,6 +34,7 @@ export const shell = {
       submitting: 'Creating account…',
       haveAccount: 'Already have an account?',
       logIn: 'Log in',
+      closed: 'Signing up is turned off on this server.',
       passwordHint: (min: number) => `At least ${min} characters`,
       checkEmail: (email: string) =>
         `Almost there. We sent a link to ${email}: open it to finish signing up. If the address already has an account, the email says so instead.`,

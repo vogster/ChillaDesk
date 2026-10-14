@@ -191,3 +191,60 @@ describe('opening an invite link', () => {
     expect(await screen.findByRole('button', { name: 'Join the project' })).toBeInTheDocument()
   })
 })
+
+describe('a server that signs people up by invitation only', () => {
+  const inviteOnly = { registrationEnabled: false, registration: 'invite', emailEnabled: false }
+
+  it('offers no sign-up to someone who came without an invite', async () => {
+    mockApi({
+      'GET /api/auth/me': () => signedOut(),
+      'GET /api/auth/options': () => ok(inviteOnly),
+    })
+    renderApp('/login')
+
+    expect(await screen.findByText(/Signing up is by invitation only/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument()
+  })
+
+  it('lets someone with an invite link sign up, bringing the invite along', async () => {
+    let signedInNow = false
+    const calls = mockApi({
+      'GET /api/auth/me': () => (signedInNow ? ok(ann) : signedOut()),
+      'GET /api/auth/options': () => ok(inviteOnly),
+      'POST /api/auth/register': () => {
+        signedInNow = true
+        return ok(session(ann), 201)
+      },
+      'POST /api/invites/preview': () =>
+        ok({
+          project: { id: project.id, key: project.key, name: project.name },
+          role: 'member',
+          alreadyMember: true,
+        }),
+    })
+    const { user } = renderApp(`/invite#token=${TOKEN}`)
+
+    await user.click(await screen.findByRole('link', { name: 'Sign up' }))
+    await user.type(await screen.findByLabelText('Name'), 'Ann')
+    await user.type(screen.getByLabelText('Email'), 'ann@example.com')
+    await user.type(screen.getByLabelText('Password'), 'correct horse battery')
+    await user.click(screen.getByRole('button', { name: 'Sign up' }))
+
+    // Back on the invite, already in the project the sign-up joined.
+    expect(await screen.findByRole('heading', { name: 'Invitation' })).toBeInTheDocument()
+    expect(calls.find((call) => call.key === 'POST /api/auth/register')?.body).toMatchObject({
+      inviteToken: TOKEN,
+    })
+  })
+
+  it('tells someone on the sign-up page without an invite how to get in', async () => {
+    mockApi({
+      'GET /api/auth/me': () => signedOut(),
+      'GET /api/auth/options': () => ok(inviteOnly),
+    })
+    renderApp('/register')
+
+    expect(await screen.findByText(/Signing up is by invitation only/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument()
+  })
+})

@@ -6,14 +6,16 @@ import {
   type ChangePasswordRequest,
   type LoginRequest,
   type RegisterRequest,
+  type RegistrationMode,
   type UpdateProfileRequest,
   type User,
 } from '@chilladesk/shared'
 import { and, eq, gt, isNotNull, isNull, lt, lte, ne, or } from 'drizzle-orm'
 import type { Db } from '../../db/client'
 import { apiTokens, emailTokens, sessions, users } from '../../db/schema'
-import { AppError, conflict, forbidden, isUniqueViolation, unauthenticated } from '../../errors'
+import { AppError, conflict, isUniqueViolation, unauthenticated } from '../../errors'
 import { hashPassword, verifyPassword } from './password'
+import { joinByInvite, mayRegister } from './registration'
 import { generateToken, hashToken } from './tokens'
 
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
@@ -54,11 +56,10 @@ export async function startSession(db: Executor, user: UserRow, now: Date): Prom
 export async function register(
   db: Db,
   input: RegisterRequest,
-  options: { registrationEnabled: boolean; now?: Date },
+  options: { registration: RegistrationMode; now?: Date },
 ): Promise<AuthResponse> {
-  if (!options.registrationEnabled) {
-    throw forbidden('Registration is disabled on this server')
-  }
+  const now = options.now ?? new Date()
+  const { inviteId } = await mayRegister(db, options.registration, input.inviteToken, now)
 
   const passwordHash = await hashPassword(input.password)
   try {
@@ -77,7 +78,9 @@ export async function register(
         })
         .returning()
       if (!user) throw new Error('Insert returned no user row')
-      return startSession(tx, user, options.now ?? new Date())
+      // Signed up through an invite link: in the project at once.
+      if (inviteId) await joinByInvite(tx, user.id, inviteId, now)
+      return startSession(tx, user, now)
     })
   } catch (error) {
     if (isUniqueViolation(error)) throw conflict('An account with this email already exists')

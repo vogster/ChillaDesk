@@ -6,6 +6,7 @@ import { AppError, conflict, unauthenticated } from '../../errors'
 import type { SendMail } from '../notifications/mailer'
 import { existingAccountEmail, passwordResetEmail, verificationEmail } from './emails'
 import { hashPassword, verifyPassword } from './password'
+import { joinByInvite } from './registration'
 import { generateToken, hashToken } from './tokens'
 
 /** What the API needs to write to people; absent when the server has no SMTP settings. */
@@ -182,6 +183,8 @@ export async function resetPassword(
         passwordHash,
         emailVerifiedAt: user?.emailVerifiedAt ?? now,
         pendingSince: null,
+        // The invite the sign-up came with may be a stranger's; it is not used.
+        pendingInviteId: null,
         ...(user?.pendingSince
           ? { name: user.email.split('@')[0] ?? user.email, locale: null }
           : {}),
@@ -208,6 +211,8 @@ export async function registerByEmail(
   db: Db,
   mail: AccountMail,
   input: RegisterRequest,
+  /** The invite the sign-up came with; it is used once the sign-up is finished. */
+  inviteId: string | null = null,
   now: Date = new Date(),
 ): Promise<void> {
   const email = input.email.toLowerCase()
@@ -227,7 +232,13 @@ export async function registerByEmail(
     return
   }
 
-  const values = { name: input.name, passwordHash, locale: input.locale ?? null, pendingSince: now }
+  const values = {
+    name: input.name,
+    passwordHash,
+    locale: input.locale ?? null,
+    pendingSince: now,
+    pendingInviteId: inviteId,
+  }
   const user = await db.transaction(async (tx) => {
     if (!existing) {
       const [created] = await tx
@@ -306,7 +317,11 @@ export async function completeRegistration(
     // of the address in the meantime must not be finished with the old password.
     const [user] = await tx
       .update(users)
-      .set({ emailVerifiedAt: checked.emailVerifiedAt ?? now, pendingSince: null })
+      .set({
+        emailVerifiedAt: checked.emailVerifiedAt ?? now,
+        pendingSince: null,
+        pendingInviteId: null,
+      })
       .where(
         and(
           eq(users.id, checked.id),
@@ -318,6 +333,8 @@ export async function completeRegistration(
       )
       .returning()
     if (!user) throw invalidLink()
+    // Came through an invite link: in the project now that the sign-up is finished.
+    if (checked.pendingInviteId) await joinByInvite(tx, user.id, checked.pendingInviteId, now)
     return user
   })
 }

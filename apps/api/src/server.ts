@@ -25,7 +25,7 @@ const app = await buildApp({
   mail,
   logLevel: config.logLevel,
   trustProxy: config.trustProxy,
-  registrationEnabled: config.registrationEnabled,
+  registration: config.registration,
   cookieSecure: config.cookieSecure,
   rateLimitMax: config.rateLimitMax,
   authRateLimitMax: config.authRateLimitMax,

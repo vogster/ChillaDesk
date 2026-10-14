@@ -13,12 +13,13 @@ import {
   updateProfileRequestSchema,
   userSchema,
   type AuthResponse,
+  type RegistrationMode,
 } from '@chilladesk/shared'
 import type { FastifyReply } from 'fastify'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import type { Db } from '../../db/client'
-import { AppError, forbidden } from '../../errors'
+import { AppError } from '../../errors'
 import { createAttemptLimiter } from './attempt-limiter'
 import {
   addressOfLink,
@@ -31,11 +32,12 @@ import {
   type AccountMail,
 } from './email-flows'
 import { requireAuth, requireSession, SESSION_COOKIE } from './plugin'
+import { anyAccount, mayRegister } from './registration'
 import { changePassword, login, logout, register, startSession, updateProfile } from './service'
 
 export interface AuthRoutesOptions {
   db: Db
-  registrationEnabled: boolean
+  registration: RegistrationMode
   /** `auto` follows the request protocol; set `true` when TLS ends at an upstream proxy. */
   cookieSecure: boolean | 'auto'
   /** Register/login attempts per minute per client address. */
@@ -94,10 +96,16 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
         response: { 200: authOptionsSchema },
       },
     },
-    async () => ({
-      registrationEnabled: options.registrationEnabled,
-      emailEnabled: mail !== undefined,
-    }),
+    async () => {
+      // On a new server the first person signs up without an invite: nobody could send one.
+      const registration =
+        options.registration === 'invite' && !(await anyAccount(db)) ? 'open' : options.registration
+      return {
+        registrationEnabled: registration === 'open',
+        registration,
+        emailEnabled: mail !== undefined,
+      }
+    },
   )
 
   const setSessionCookie = (reply: FastifyReply, session: AuthResponse): void => {
@@ -132,11 +140,13 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
     },
     async (request, reply) => {
       if (mail) {
-        if (!options.registrationEnabled) throw forbidden('Registration is disabled on this server')
+        // The rules of the server and the invite link do not depend on the address, so
+        // refusing here tells nothing about who is registered.
+        const { inviteId } = await mayRegister(db, options.registration, request.body.inviteToken)
         // Not awaited, and silent when over the limit: neither the answer nor how long it
         // takes may depend on whether the address has an account.
         if ((await signUpEmails.consume(request.body.email.toLowerCase())).allowed) {
-          void registerByEmail(db, mail, request.body).catch((error: unknown) => {
+          void registerByEmail(db, mail, request.body, inviteId).catch((error: unknown) => {
             // Neither the address nor the mail server's words go to the log; what failed does.
             const { name, code } = (error ?? {}) as { name?: unknown; code?: unknown }
             app.log.warn({ name, code }, 'sign-up was not completed')
@@ -144,9 +154,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
         }
         return reply.code(202).send({ confirmationSent: true as const })
       }
-      const session = await register(db, request.body, {
-        registrationEnabled: options.registrationEnabled,
-      })
+      const session = await register(db, request.body, { registration: options.registration })
       setSessionCookie(reply, session)
       return reply.code(201).send(session)
     },

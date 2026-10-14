@@ -104,7 +104,7 @@ describe('POST /api/auth/register', () => {
   })
 
   it('is refused when registration is disabled', async () => {
-    const closed = await createTestContext({ registrationEnabled: false })
+    const closed = await createTestContext({ registration: 'closed' })
 
     const response = await closed.app.inject({
       method: 'POST',

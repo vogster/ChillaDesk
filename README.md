@@ -50,8 +50,12 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 - **Inviting people.** An owner adds someone by email, or creates an invite link on the
   members page: whoever opens it within a week, signs in or signs up, joins the project.
   Removing a member revokes every link of the project.
-- **Sign-ups.** Anyone who can reach the site can register. Once your team is in, set
-  `REGISTRATION_ENABLED=false` and restart.
+- **Sign-ups.** Anyone who can reach the site can register. To let in only the people you
+  invite, set `REGISTRATION_ENABLED=invite` and restart: signing up then works only through
+  an invite link, and puts the newcomer straight into its project (with email set up, once
+  they confirm the address). On a new server the very first person still signs up without an
+  invite, to have someone who can send them. `REGISTRATION_ENABLED=false` closes sign-up
+  entirely.
 - **Several API replicas.** With PostgreSQL, live updates travel between replicas through
   `LISTEN/NOTIFY`, and per-account limits, notification emails and webhook deliveries are
   kept in the database. Two things are still per replica: the per-address request limits
@@ -80,7 +84,7 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 | `POSTGRES_PASSWORD`      | — (required)    | Password of the bundled PostgreSQL (URL-safe characters)           |
 | `CHILLADESK_PORT`        | `8080`          | Host port of the web UI                                            |
 | `COOKIE_SECURE`          | `auto`          | `true` behind an HTTPS proxy, so the session cookie is HTTPS-only  |
-| `REGISTRATION_ENABLED`   | `true`          | Set to `false` once your team has signed up                        |
+| `REGISTRATION_ENABLED`   | `true`          | `invite`: sign-up only with an invite link; `false`: nobody        |
 | `RATE_LIMIT_MAX`         | `600`           | Requests per minute from one address (a shared NAT counts as one)  |
 | `DATABASE_URL`           | embedded PGlite | PostgreSQL connection string (set by compose)                      |
 | `TRUST_PROXY`            | `false`         | Number of reverse proxies in front of the API (compose: `1`)       |

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Sign-up by invitation only: `REGISTRATION_ENABLED=invite` lets people sign up only through an
+  invite link, which also puts them into its project. The first account of a new server
+  needs no invite.
+
 ## 0.2.0
 
 The project is now called **ChillaDesk** (it was ChillaWiki). An existing installation keeps

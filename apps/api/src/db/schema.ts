@@ -41,6 +41,10 @@ export const users = pgTable('users', {
    * and nobody can sign in to the account. Null for every account in use.
    */
   pendingSince: timestamp('pending_since', { withTimezone: true }),
+  /** The invite an unfinished sign-up came with; it is used once the sign-up is finished. */
+  pendingInviteId: uuid('pending_invite_id').references((): AnyPgColumn => projectInvites.id, {
+    onDelete: 'set null',
+  }),
   createdAt: createdAt(),
 })
 

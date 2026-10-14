@@ -9,6 +9,7 @@ import {
   register,
   updateProfile,
 } from '../api/auth'
+import type { RegistrationMode } from '@chilladesk/shared'
 import { currentUserKey } from '../queryClient'
 
 export function useCurrentUser() {
@@ -69,7 +70,10 @@ export function useUpdateProfile() {
 
 export const useChangePassword = () => useMutation({ mutationFn: changePassword })
 
-/** What the server offers; false for everything until it has answered. */
+/**
+ * What the server offers. Until it has answered, sign-up is shown as open (the server has the
+ * last word) and email as off.
+ */
 export function useAuthOptions() {
   const options = useQuery({
     queryKey: ['auth', 'options'],
@@ -77,5 +81,9 @@ export function useAuthOptions() {
     staleTime: Infinity,
     retry: false,
   })
-  return options.data ?? { registrationEnabled: false, emailEnabled: false }
+  const data = options.data ?? { registrationEnabled: true, emailEnabled: false }
+  // Servers before invitation-only sign-up say only whether anyone may sign up.
+  const registration: RegistrationMode =
+    data.registration ?? (data.registrationEnabled ? 'open' : 'closed')
+  return { ...data, registration }
 }

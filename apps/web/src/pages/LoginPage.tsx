@@ -2,6 +2,7 @@ import { loginRequestSchema } from '@chilladesk/shared'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router'
 import { errorMessage } from '../api/client'
+import { inviteTokenFrom } from '../auth/redirect'
 import { useAuthOptions, useLogin } from '../auth/useAuth'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, TextField } from '../components/ui'
@@ -11,9 +12,10 @@ import { authLinkClass, AuthShell } from './AuthShell'
 export function LoginPage() {
   const texts = useT().shell.auth
   const login = useLogin()
-  const { emailEnabled } = useAuthOptions()
+  const { emailEnabled, registration } = useAuthOptions()
   const { forgotLink } = useT().account.email
   const location = useLocation()
+  const invited = inviteTokenFrom(location.state) !== null
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -38,12 +40,17 @@ export function LoginPage() {
     <AuthShell
       title={texts.login.title}
       footer={
-        <>
-          {texts.login.noAccount} {/* Keep the requested page so signing up also returns to it. */}
-          <Link to="/register" state={location.state} className={authLinkClass}>
-            {texts.login.signUp}
-          </Link>
-        </>
+        registration === 'open' || (registration === 'invite' && invited) ? (
+          <>
+            {texts.login.noAccount}{' '}
+            {/* Keep the requested page so signing up also returns to it. */}
+            <Link to="/register" state={location.state} className={authLinkClass}>
+              {texts.login.signUp}
+            </Link>
+          </>
+        ) : registration === 'invite' ? (
+          texts.login.invitationOnly
+        ) : null
       }
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">

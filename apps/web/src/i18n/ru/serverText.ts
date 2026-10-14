@@ -14,6 +14,8 @@ const EXACT: Record<string, string> = {
   'Invite not found': 'Приглашение не найдено',
   'An account with this email already exists': 'Аккаунт с таким email уже существует',
   'Registration is disabled on this server': 'Регистрация на этом сервере отключена',
+  'Registration is by invitation only; open the invite link you were sent':
+    'Регистрация только по приглашениям: откройте присланную вам ссылку-приглашение',
   'This user is already a member of the project': 'Этот пользователь уже участвует в проекте',
   'User with this email not found': 'Пользователь с таким email не найден',
   'A project must keep at least one owner': 'У проекта должен остаться хотя бы один владелец',

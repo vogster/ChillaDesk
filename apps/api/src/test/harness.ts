@@ -88,7 +88,7 @@ export async function createTestContext(
     const { user, token } = await register(
       database.db,
       { email, name, password: TEST_PASSWORD },
-      { registrationEnabled: true },
+      { registration: 'open' },
     )
     // Fixture users are people whose address is known to be theirs; tests about
     // unconfirmed accounts register their own.
