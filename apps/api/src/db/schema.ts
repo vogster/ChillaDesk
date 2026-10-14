@@ -36,6 +36,11 @@ export const users = pgTable('users', {
   emailNotifications: boolean('email_notifications').notNull().default(true),
   /** When the user proved the address is theirs; null until then. */
   emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
+  /**
+   * Set while a sign-up made with email on is unfinished: the address is not confirmed yet
+   * and nobody can sign in to the account. Null for every account in use.
+   */
+  pendingSince: timestamp('pending_since', { withTimezone: true }),
   createdAt: createdAt(),
 })
 

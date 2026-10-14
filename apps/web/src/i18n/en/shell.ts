@@ -33,6 +33,8 @@ export const shell = {
       haveAccount: 'Already have an account?',
       logIn: 'Log in',
       passwordHint: (min: number) => `At least ${min} characters`,
+      checkEmail: (email: string) =>
+        `Almost there. We sent a link to ${email}: open it to finish signing up. If the address already has an account, the email says so instead.`,
     },
   },
   notFound: {

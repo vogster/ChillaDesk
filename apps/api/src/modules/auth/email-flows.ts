@@ -1,11 +1,11 @@
-import { localeSchema } from '@chilladesk/shared'
+import { localeSchema, type RegisterRequest } from '@chilladesk/shared'
 import { and, eq, gt, isNull, lte } from 'drizzle-orm'
 import type { Db } from '../../db/client'
 import { apiTokens, emailTokens, sessions, users } from '../../db/schema'
-import { AppError, conflict } from '../../errors'
+import { AppError, conflict, unauthenticated } from '../../errors'
 import type { SendMail } from '../notifications/mailer'
-import { passwordResetEmail, verificationEmail } from './emails'
-import { hashPassword } from './password'
+import { existingAccountEmail, passwordResetEmail, verificationEmail } from './emails'
+import { hashPassword, verifyPassword } from './password'
 import { generateToken, hashToken } from './tokens'
 
 /** What the API needs to write to people; absent when the server has no SMTP settings. */
@@ -173,10 +173,93 @@ export async function resetPassword(
     await tx
       .update(users)
       // The link arrived at this address, which also proves that it is theirs.
-      .set({ passwordHash, emailVerifiedAt: user?.emailVerifiedAt ?? now })
+      // An unfinished sign-up is finished too: the owner of the address chose the password.
+      .set({ passwordHash, emailVerifiedAt: user?.emailVerifiedAt ?? now, pendingSince: null })
       .where(eq(users.id, userId))
     await tx.delete(sessions).where(eq(sessions.userId, userId))
     await tx.delete(apiTokens).where(eq(apiTokens.userId, userId))
     await tx.delete(emailTokens).where(eq(emailTokens.userId, userId))
   })
+}
+
+/**
+ * A sign-up on a server that sends email. Whether the address is free or not, the caller
+ * answers the same; what differs is only the email that goes to the address:
+ * - a free address gets an unfinished account and a link to finish it;
+ * - an unfinished sign-up is replaced by this one (its owner may have lost the first link,
+ *   and nobody can be signed in to it), with a new link;
+ * - an account in use is left alone, and its owner is told someone tried.
+ */
+export async function registerByEmail(
+  db: Db,
+  mail: AccountMail,
+  input: RegisterRequest,
+  now: Date = new Date(),
+): Promise<void> {
+  const email = input.email.toLowerCase()
+  const passwordHash = await hashPassword(input.password)
+  const [existing] = await db.select().from(users).where(eq(users.email, email))
+
+  if (existing && !existing.pendingSince) {
+    const locale = localeSchema.safeParse(existing.locale)
+    await mail.send(
+      existingAccountEmail({
+        to: existing.email,
+        locale: locale.success ? locale.data : 'en',
+        publicUrl: mail.publicUrl,
+      }),
+    )
+    return
+  }
+
+  const values = { name: input.name, passwordHash, locale: input.locale ?? null, pendingSince: now }
+  const [user] = existing
+    ? await db.update(users).set(values).where(eq(users.id, existing.id)).returning()
+    : await db
+        .insert(users)
+        .values({ email, ...values })
+        .onConflictDoNothing()
+        .returning()
+  // Lost a race with a sign-up of the same address at the same moment; that one wins.
+  if (!user) return
+  const token = await issueToken(db, user.id, 'verify', now)
+  await mail.send(verificationEmail(accountEmail(user, mail, 'verify-email', token)))
+}
+
+/**
+ * Confirms an address from the link in the email for someone who is not signed in, and
+ * signs them in. The link proves the address is theirs, the password that they made the
+ * account: neither is enough alone, so a stranger who signed up with someone's address
+ * cannot have it confirmed by that person clicking the link.
+ */
+export async function completeRegistration(
+  db: Db,
+  token: string,
+  password: string,
+  now: Date = new Date(),
+): Promise<UserRow> {
+  const [link] = await db
+    .select({ user: users })
+    .from(emailTokens)
+    .innerJoin(users, eq(users.id, emailTokens.userId))
+    .where(
+      and(
+        eq(emailTokens.tokenHash, hashToken(token)),
+        eq(emailTokens.kind, 'verify'),
+        gt(emailTokens.expiresAt, now),
+      ),
+    )
+  if (!link) throw invalidLink()
+  // A wrong password leaves the link usable, for the owner to try again.
+  if (!(await verifyPassword(password, link.user.passwordHash))) {
+    throw unauthenticated('Invalid email or password')
+  }
+  await consumeToken(db, token, 'verify', now, link.user.id)
+  const [user] = await db
+    .update(users)
+    .set({ emailVerifiedAt: link.user.emailVerifiedAt ?? now, pendingSince: null })
+    .where(eq(users.id, link.user.id))
+    .returning()
+  if (!user) throw invalidLink()
+  return user
 }

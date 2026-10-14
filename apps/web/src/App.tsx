@@ -80,6 +80,8 @@ function AppRoutes() {
         {/* A forgotten password is recovered signed out; it also works while signed in. */}
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Signed in it confirms at once; signed out it asks for the password first. */}
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route element={<GuestOnly signedIn={user !== null} />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -100,7 +102,6 @@ function AppRoutes() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/invite" element={<InvitePage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/projects/:projectId" element={user && <ProjectLayout currentUser={user} />}>
             <Route index element={<BoardPage />} />
             <Route path="list" element={<ListPage />} />

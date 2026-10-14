@@ -2,12 +2,14 @@ import {
   authOptionsSchema,
   authResponseSchema,
   changePasswordRequestSchema,
+  completeRegistrationSchema,
   emailTokenRequestSchema,
   errorResponseSchema,
   loginRequestSchema,
   passwordResetConfirmSchema,
   passwordResetRequestSchema,
   registerRequestSchema,
+  registrationPendingSchema,
   updateProfileRequestSchema,
   userSchema,
   type AuthResponse,
@@ -16,9 +18,11 @@ import type { FastifyReply } from 'fastify'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import type { Db } from '../../db/client'
-import { AppError } from '../../errors'
+import { AppError, forbidden } from '../../errors'
 import { createAttemptLimiter } from './attempt-limiter'
 import {
+  completeRegistration,
+  registerByEmail,
   requestPasswordReset,
   resetPassword,
   sendVerification,
@@ -26,7 +30,7 @@ import {
   type AccountMail,
 } from './email-flows'
 import { requireAuth, requireSession, SESSION_COOKIE } from './plugin'
-import { changePassword, login, logout, register, updateProfile } from './service'
+import { changePassword, login, logout, register, startSession, updateProfile } from './service'
 
 export interface AuthRoutesOptions {
   db: Db
@@ -104,21 +108,34 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
       config: perClient,
       schema: {
         tags,
-        summary: 'Create an account and start a session',
+        summary: 'Create an account',
+        description:
+          'Without email set up on the server: creates the account and starts a session (201). ' +
+          'With email: answers 202 whether or not the address already has an account, and ' +
+          'emails either a link to finish the sign-up or a note to the existing owner.',
         body: registerRequestSchema,
-        response: { 201: authResponseSchema, 403: errorResponseSchema, 409: errorResponseSchema },
+        response: {
+          201: authResponseSchema,
+          202: registrationPendingSchema,
+          403: errorResponseSchema,
+          409: errorResponseSchema,
+        },
       },
     },
     async (request, reply) => {
+      if (mail) {
+        if (!options.registrationEnabled) throw forbidden('Registration is disabled on this server')
+        // Not awaited, and silent when over the limit: neither the answer nor how long it
+        // takes may depend on whether the address has an account.
+        if ((await emailRequests.consume(request.body.email.toLowerCase())).allowed) {
+          void registerByEmail(db, mail, request.body).catch(logMailFailure('sign-up'))
+        }
+        return reply.code(202).send({ confirmationSent: true as const })
+      }
       const session = await register(db, request.body, {
         registrationEnabled: options.registrationEnabled,
       })
       setSessionCookie(reply, session)
-      // Not awaited: the account exists whether or not the mail server answers.
-      if (mail) {
-        await emailRequests.consume(session.user.id)
-        void sendVerification(db, mail, session.user.id).catch(logMailFailure('confirmation'))
-      }
       return reply.code(201).send(session)
     },
   )
@@ -230,6 +247,28 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
     async (request, reply) => {
       await verifyEmail(db, requireSession(request).user.id, request.body.token)
       return reply.code(204).send(null)
+    },
+  )
+
+  app.post(
+    '/verify-email/complete',
+    {
+      config: perClient,
+      schema: {
+        tags,
+        summary: 'Confirm the address from the email link while signed out, and sign in',
+        description:
+          'Needs the password of the account as well as the token, so the link alone cannot ' +
+          'confirm an account somebody else made with this address.',
+        body: completeRegistrationSchema,
+        response: { 200: authResponseSchema, 400: errorResponseSchema, 401: errorResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const user = await completeRegistration(db, request.body.token, request.body.password)
+      const session = await startSession(db, user, new Date())
+      setSessionCookie(reply, session)
+      return session
     },
   )
 

@@ -5,8 +5,9 @@ import {
 } from '@chilladesk/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { errorMessage } from '../api/client'
+import { useCompleteRegistration, useCurrentUser } from '../auth/useAuth'
 import { confirmPasswordReset, requestPasswordReset, verifyEmail } from '../api/auth'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, Spinner, TextField } from '../components/ui'
@@ -129,14 +130,10 @@ export function ResetPasswordPage() {
   )
 }
 
-/**
- * `/verify-email#token=…`: where the link from the confirmation email leads. Only the
- * signed-in owner of the account can confirm it; a visitor is asked to log in first.
- */
-export function VerifyEmailPage() {
+/** Confirms the address of the signed-in user straight away. */
+function ConfirmSignedIn({ token }: { token: string }) {
   const t = useT()
   const texts = t.account.email.verify
-  const token = useLinkToken()
   const queryClient = useQueryClient()
   // A query, not an effect: the token works once, and a query is not run twice for one key.
   const verification = useQuery({
@@ -146,11 +143,66 @@ export function VerifyEmailPage() {
       await queryClient.invalidateQueries({ queryKey: currentUserKey })
       return true
     },
-    enabled: token !== '',
     retry: false,
     staleTime: Infinity,
     gcTime: Infinity,
   })
+
+  return (
+    <>
+      {verification.isPending && <Spinner />}
+      {verification.isError && <Alert>{errorMessage(verification.error)}</Alert>}
+      {verification.isSuccess && (
+        <p role="status" className="text-sm">
+          {texts.done}
+        </p>
+      )}
+    </>
+  )
+}
+
+/**
+ * Someone signed out opened the link: they confirm with their password and are signed in.
+ * The link alone does not do it, so a stranger who signed up with this address cannot get
+ * the account confirmed by its owner clicking a link they did not expect.
+ */
+function ConfirmWithPassword({ token }: { token: string }) {
+  const t = useT()
+  const texts = t.account.email.verify
+  const complete = useCompleteRegistration()
+  const navigate = useNavigate()
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const password = String(new FormData(event.currentTarget).get('password') ?? '')
+    if (!password) return
+    complete.mutate({ token, password }, { onSuccess: () => void navigate('/', { replace: true }) })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
+      <p className="text-sm">{texts.finishHint}</p>
+      {complete.isError && <Alert>{errorMessage(complete.error)}</Alert>}
+      <TextField
+        label={t.shell.auth.password}
+        name="password"
+        type="password"
+        autoComplete="current-password"
+        required
+      />
+      <Button type="submit" className="w-full" disabled={complete.isPending}>
+        {texts.finish}
+      </Button>
+    </form>
+  )
+}
+
+/** `/verify-email#token=…`: the link from the confirmation email. */
+export function VerifyEmailPage() {
+  const t = useT()
+  const texts = t.account.email.verify
+  const token = useLinkToken()
+  const currentUser = useCurrentUser()
 
   return (
     <AuthShell
@@ -162,13 +214,9 @@ export function VerifyEmailPage() {
       }
     >
       {token === '' && <p className="text-sm">{t.account.email.badLink}</p>}
-      {token !== '' && verification.isPending && <Spinner />}
-      {verification.isError && <Alert>{errorMessage(verification.error)}</Alert>}
-      {verification.isSuccess && (
-        <p role="status" className="text-sm">
-          {texts.done}
-        </p>
-      )}
+      {token !== '' && currentUser.isPending && <Spinner />}
+      {token !== '' && currentUser.data && <ConfirmSignedIn token={token} />}
+      {token !== '' && currentUser.data === null && <ConfirmWithPassword token={token} />}
     </AuthShell>
   )
 }

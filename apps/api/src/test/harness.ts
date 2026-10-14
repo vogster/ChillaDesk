@@ -1,4 +1,4 @@
-import type { AuthResponse, Project, Status } from '@chilladesk/shared'
+import type { Project, Status } from '@chilladesk/shared'
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify'
 import { buildApp, type AppOptions } from '../app'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { eq } from 'drizzle-orm'
 import { createMemoryDatabase, type Database } from '../db/client'
 import { users } from '../db/schema'
+import { register } from '../modules/auth/service'
 
 export interface TestUser {
   id: string
@@ -81,15 +82,13 @@ export async function createTestContext(
   const signUp: TestContext['signUp'] = async (name = 'Test User') => {
     userCounter += 1
     const email = `user${userCounter}@example.com`
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/auth/register',
-      payload: { email, name, password: TEST_PASSWORD },
-    })
-    if (response.statusCode !== 201) {
-      throw new Error(`signUp failed with ${response.statusCode}: ${response.body}`)
-    }
-    const { user, token } = response.json<AuthResponse>()
+    // Through the service rather than the route: on a server that sends email the route
+    // only starts a sign-up, and fixtures need finished accounts either way.
+    const { user, token } = await register(
+      database.db,
+      { email, name, password: TEST_PASSWORD },
+      { registrationEnabled: true },
+    )
     // Fixture users are people whose address is known to be theirs; tests about
     // unconfirmed accounts register their own.
     await database.db

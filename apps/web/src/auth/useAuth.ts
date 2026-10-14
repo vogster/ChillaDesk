@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   changePassword,
+  completeRegistration,
   fetchAuthOptions,
   fetchCurrentUser,
   login,
@@ -31,6 +32,17 @@ export function useRegister() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: register,
+    // A sign-up that is finished by email signs nobody in yet.
+    onSuccess: (user) => {
+      if (user !== 'pending') queryClient.setQueryData(currentUserKey, user)
+    },
+  })
+}
+
+export function useCompleteRegistration() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: completeRegistration,
     onSuccess: (user) => queryClient.setQueryData(currentUserKey, user),
   })
 }

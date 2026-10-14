@@ -149,25 +149,53 @@ describe('confirming the email address', () => {
     expect(await screen.findByText(/This link is incomplete/)).toBeInTheDocument()
   })
 
-  it('asks a visitor to log in first: the link alone confirms nothing', async () => {
+  it('asks a visitor for the password: the link alone confirms nothing', async () => {
     let signedIn = false
     const calls = mockApi({
       'GET /api/auth/me': () => (signedIn ? ok(ann) : signedOut()),
-      'POST /api/auth/login': () => {
+      'GET /api/notifications': () => ok({ items: [], unreadCount: 0 }),
+      'GET /api/projects': () => ok([]),
+      'POST /api/auth/verify-email/complete': (body) => {
+        if ((body as { password: string }).password !== 'correct horse') {
+          return apiError(401, 'UNAUTHENTICATED', 'Invalid email or password')
+        }
         signedIn = true
         return ok({ user: ann, token: 't', expiresAt: ann.createdAt })
       },
-      'POST /api/auth/verify-email': () => noContent(),
     })
     const { user } = renderApp('/verify-email#token=verify-token-2')
 
-    await user.type(await screen.findByLabelText('Email'), 'ann@example.com')
-    expect(calls.some((call) => call.key === 'POST /api/auth/verify-email')).toBe(false)
-    await user.type(screen.getByLabelText('Password'), 'correct horse')
-    await user.click(screen.getByRole('button', { name: 'Log in' }))
+    const password = await screen.findByLabelText('Password')
+    expect(calls.some((call) => call.key.startsWith('POST'))).toBe(false)
+    await user.type(password, 'wrong')
+    await user.click(screen.getByRole('button', { name: 'Confirm and log in' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid email or password')
 
-    expect(await screen.findByText(/your email address is confirmed/)).toBeInTheDocument()
-    expect(bodyOf(calls, 'POST /api/auth/verify-email')).toEqual({ token: 'verify-token-2' })
+    await user.clear(password)
+    await user.type(password, 'correct horse')
+    await user.click(screen.getByRole('button', { name: 'Confirm and log in' }))
+
+    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument()
+    expect(bodyOf(calls, 'POST /api/auth/verify-email/complete')).toEqual({
+      token: 'verify-token-2',
+      password: 'wrong',
+    })
+  })
+
+  it('tells someone who signed up on a server that sends email to check their inbox', async () => {
+    const calls = guest({
+      'POST /api/auth/register': () => ok({ confirmationSent: true }, 202),
+    })
+    const { user } = renderApp('/register')
+
+    await user.type(await screen.findByLabelText('Name'), 'Ann')
+    await user.type(screen.getByLabelText('Email'), 'ann@example.com')
+    await user.type(screen.getByLabelText('Password'), 'correct horse battery')
+    await user.click(screen.getByRole('button', { name: 'Sign up' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/We sent a link to ann@example.com/)
+    expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument()
+    expect(calls.some((call) => call.key === 'GET /api/projects')).toBe(false)
   })
 
   it('offers to send the email again from the profile of an unconfirmed account', async () => {

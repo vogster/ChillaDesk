@@ -46,6 +46,8 @@ export const account = {
       send: 'Send a confirmation email',
       sent: 'Sent. Open the link in the email within two days.',
       why: 'Notification emails are sent only to a confirmed address.',
+      finishHint: 'Enter the password you chose when signing up to confirm the address and log in.',
+      finish: 'Confirm and log in',
     },
   },
   invites: {

@@ -88,3 +88,18 @@ export const passwordResetConfirmSchema = z.object({
   password: passwordSchema,
 })
 export type PasswordResetConfirm = z.infer<typeof passwordResetConfirmSchema>
+
+/**
+ * The answer to a sign-up on a server that sends email: the same whether the address was
+ * free or already had an account, so a sign-up does not tell who is registered. The new
+ * account is finished from the link in the email.
+ */
+export const registrationPendingSchema = z.object({ confirmationSent: z.literal(true) })
+export type RegistrationPending = z.infer<typeof registrationPendingSchema>
+
+/** Finishes a sign-up: the link proves the address, the password that it is the same person. */
+export const completeRegistrationSchema = z.object({
+  token: z.string().min(1).max(200),
+  password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
+})
+export type CompleteRegistration = z.infer<typeof completeRegistrationSchema>

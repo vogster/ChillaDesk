@@ -60,7 +60,8 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
       emails are English (confirmation and reset emails follow the account's language; the
       web app translates the error texts it knows).
 - [ ] **Changing the email address** of an account, and **deleting an account**.
-- [ ] **Registration tells whether an address has an account** ("already exists"); answer
-      the same either way and email the owner instead.
+- [x] **Registration does not tell whether an address has an account** (with email set up):
+      the same answer either way, the owner is emailed, a sign-up is finished from the link
+      with its password. Without email the form still says "already exists".
 - [x] **Limits in the database** — emails and login attempts per account are counted in
       PostgreSQL, so the limits survive restarts and hold across API replicas.

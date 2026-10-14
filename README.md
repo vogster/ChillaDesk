@@ -145,10 +145,14 @@ you can stop watching any of them. Notifications are listed under the bell in th
 
 Email is optional: set `SMTP_URL`, `MAIL_FROM` and `PUBLIC_URL` together. Then
 
-- a new account gets a link to **confirm its address** (it can be sent again from the
-  profile; the link works for the signed-in owner of the account only), and **"Forgot your
-  password?"** appears on the login page. A reset ends every session and revokes the
-  account's API tokens;
+- **signing up is finished from the email**: the sign-up form answers "check your email"
+  whether or not the address already has an account, so it cannot be used to find out who
+  is registered. A free address gets a link that, with the password chosen at sign-up,
+  confirms it and signs in; the owner of a taken address gets a note instead. The link
+  alone confirms nothing, so nobody can claim someone else's address;
+- an older account confirms its address from the profile, and **"Forgot your password?"**
+  appears on the login page. A reset ends every session and revokes the account's API
+  tokens;
 - an account whose address is not confirmed **cannot be added to a project by email** (an
   invite link still works);
 - **notifications** that were not read in the app are also emailed — only to confirmed

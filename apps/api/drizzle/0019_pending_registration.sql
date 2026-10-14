@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "pending_since" timestamp with time zone;

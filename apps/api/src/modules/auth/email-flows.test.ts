@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { emailTokens, notifications, users } from '../../db/schema'
 import { createTestContext, TEST_PASSWORD, type TestContext } from '../../test/harness'
 import { deliverPending, type MailMessage } from '../notifications/mailer'
+import { register as registerAccount } from './service'
 
 const PUBLIC_URL = 'https://desk.example.com/'
 const NEW_PASSWORD = 'a brand new password'
@@ -36,18 +37,31 @@ beforeEach(() => {
 })
 
 let counter = 0
-async function register(extra: Record<string, unknown> = {}) {
+const nextEmail = () => {
   counter += 1
-  const email = `mail${counter}@example.com`
-  const response = await ctx.app.inject({
-    method: 'POST',
-    url: '/api/auth/register',
-    payload: { email, name: 'Pat', password: TEST_PASSWORD, ...extra },
-  })
-  expect(response.statusCode, response.body).toBe(201)
-  const { user, token } = response.json<AuthResponse>()
-  return { user, email, headers: { authorization: `Bearer ${token}` } }
+  return `mail${counter}@example.com`
 }
+
+/**
+ * A signed-in account whose address is not confirmed yet, as accounts made before the
+ * server sent email are, and the confirmation email it asked for.
+ */
+async function register(extra: { locale?: 'en' | 'ru' } = {}) {
+  const email = nextEmail()
+  const { user, token } = await registerAccount(
+    ctx.database.db,
+    { email, name: 'Pat', password: TEST_PASSWORD, ...extra },
+    { registrationEnabled: true },
+  )
+  const headers = { authorization: `Bearer ${token}` }
+  const resent = await post('/verify-email/resend', undefined, headers)
+  expect(resent.statusCode, resent.body).toBe(204)
+  return { user, email, headers }
+}
+
+/** A sign-up through the API, as a visitor makes it. */
+const signUp = (email: string, extra: Record<string, unknown> = {}) =>
+  post('/register', { email, name: 'Pat', password: TEST_PASSWORD, ...extra })
 
 const post = (url: string, payload?: Record<string, unknown>, headers?: Record<string, string>) =>
   ctx.app.inject({
@@ -85,8 +99,134 @@ describe('options', () => {
   })
 })
 
+describe('signing up on a server that sends email', () => {
+  it('answers the same for a free address and a taken one', async () => {
+    const free = nextEmail()
+    const { email: taken } = await register()
+    outbox = []
+
+    const first = await signUp(free)
+    const second = await signUp(taken, { password: 'someone elses password' })
+
+    expect([first.statusCode, second.statusCode]).toEqual([202, 202])
+    expect(first.body).toBe(second.body)
+    expect(first.headers['set-cookie']).toBeUndefined()
+    // The owner of the taken address hears about it; their account is as it was.
+    const notice = await emailTo(taken, /already have a ChillaDesk account/)
+    expect(notice.message.text).toContain('https://desk.example.com/forgot-password')
+    expect((await login(taken, TEST_PASSWORD)).statusCode).toBe(200)
+    expect((await login(taken, 'someone elses password')).statusCode).toBe(401)
+  })
+
+  it('sends a link that finishes the sign-up with the password, in the chosen language', async () => {
+    const english = nextEmail()
+    const russian = nextEmail()
+    await signUp(english)
+    await signUp(russian, { locale: 'ru' })
+
+    const first = await emailTo(english, /Confirm your email address/)
+    const second = await emailTo(russian, /Подтвердите адрес почты/)
+    expect(first.page).toBe('verify-email')
+    expect(second.message.text).toContain('Здравствуйте!')
+    // Nothing the registrant typed is carried to the address, which may not be theirs.
+    expect(first.message.text + second.message.text).not.toContain('Pat')
+
+    // Until then the account cannot be used, and says so no differently than a wrong password.
+    const early = await login(english, TEST_PASSWORD)
+    expect(early.statusCode).toBe(401)
+    expect(early.body).toBe((await login(english, 'wrong password')).body)
+
+    const wrong = await post('/verify-email/complete', { token: first.token, password: 'nope' })
+    const done = await post('/verify-email/complete', {
+      token: first.token,
+      password: TEST_PASSWORD,
+    })
+    expect([wrong.statusCode, done.statusCode]).toEqual([401, 200])
+    const session = done.json<AuthResponse>()
+    expect(session.user).toMatchObject({ email: english, emailVerified: true })
+    expect(done.headers['set-cookie']).toBeDefined()
+    expect((await login(english, TEST_PASSWORD)).statusCode).toBe(200)
+    expect(
+      (await post('/verify-email/complete', { token: first.token, password: TEST_PASSWORD }))
+        .statusCode,
+    ).toBe(400)
+  })
+
+  it('cannot be finished by someone who has the link but not the password', async () => {
+    const victim = nextEmail()
+    // A stranger signs up with the victim's address and a password of their own.
+    await signUp(victim, { password: 'the strangers password' })
+    const strangers = await emailTo(victim, /Confirm/)
+
+    // The victim clicks the link they did not ask for; without that password nothing happens.
+    const attempt = await post('/verify-email/complete', {
+      token: strangers.token,
+      password: TEST_PASSWORD,
+    })
+    expect(attempt.statusCode).toBe(401)
+
+    // Signing up themselves replaces the unfinished account, and the old link stops working.
+    outbox = []
+    await signUp(victim)
+    const own = await emailTo(victim, /Confirm/)
+    expect(
+      (
+        await post('/verify-email/complete', {
+          token: strangers.token,
+          password: 'the strangers password',
+        })
+      ).statusCode,
+    ).toBe(400)
+    expect(
+      (await post('/verify-email/complete', { token: own.token, password: TEST_PASSWORD }))
+        .statusCode,
+    ).toBe(200)
+  })
+
+  it('is also finished by choosing a new password from a reset link', async () => {
+    const email = nextEmail()
+    await signUp(email)
+    await emailTo(email, /Confirm/)
+    await post('/password-reset', { email })
+    const { token } = await emailTo(email, /Reset your/)
+
+    await post('/password-reset/confirm', { token, password: NEW_PASSWORD })
+
+    const session = await login(email, NEW_PASSWORD)
+    expect(session.statusCode).toBe(200)
+    expect(session.json<AuthResponse>().user.emailVerified).toBe(true)
+  })
+
+  it('answers the same when the mail server is down, and when signing up is turned off', async () => {
+    mailDown = true
+    expect((await signUp(nextEmail())).statusCode).toBe(202)
+
+    const closed = await createTestContext({
+      registrationEnabled: false,
+      mail: { publicUrl: PUBLIC_URL, send: async () => undefined },
+    })
+    const refused = await closed.app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { email: nextEmail(), name: 'Pat', password: TEST_PASSWORD },
+    })
+    await closed.close()
+    expect(refused.statusCode).toBe(403)
+  })
+
+  it('sends one address no more emails than the limit, however often it is used', async () => {
+    const email = nextEmail()
+    for (let index = 0; index < 6; index += 1) {
+      expect((await signUp(email)).statusCode).toBe(202)
+    }
+    await emailTo(email, /Confirm/)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(outbox.filter((message) => message.to === email)).toHaveLength(3)
+  })
+})
+
 describe('confirming the email address', () => {
-  it('sends a link on registration, in the language of the account', async () => {
+  it('sends a link on request, in the language of the account', async () => {
     const english = await register()
     const russian = await register({ locale: 'ru' })
 
@@ -96,7 +236,6 @@ describe('confirming the email address', () => {
     expect(first.page).toBe('verify-email')
     expect(first.message.text).toContain('Hello,')
     expect(second.message.text).toContain('Здравствуйте!')
-    // Nothing the registrant typed is carried to the address, which may not be theirs.
     expect(first.message.text + second.message.text).not.toContain('Pat')
     expect(english.user.emailVerified).toBe(false)
   })
@@ -186,14 +325,6 @@ describe('confirming the email address', () => {
     // Registration sent the first of the three allowed.
     expect(statuses).toEqual([204, 204, 429])
     expect((await post('/verify-email/resend')).statusCode).toBe(401)
-  })
-
-  it('still creates the account when the mail server is down', async () => {
-    mailDown = true
-
-    const { headers } = await register()
-
-    expect((await me(headers)).emailVerified).toBe(false)
   })
 })
 

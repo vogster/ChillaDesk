@@ -48,7 +48,17 @@ export function RegisterPage() {
         </>
       }
     >
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+      {register.data === 'pending' && (
+        <p role="status" className="text-sm">
+          {texts.register.checkEmail(register.variables.email)}
+        </p>
+      )}
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="space-y-4"
+        hidden={register.data === 'pending'}
+      >
         {register.isError && <Alert>{errorMessage(register.error)}</Alert>}
         <TextField
           label={texts.name}

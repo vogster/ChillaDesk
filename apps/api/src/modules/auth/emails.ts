@@ -15,7 +15,7 @@ const VERIFY: Record<UserLocale, (link: string) => Omit<MailMessage, 'to'>> = {
     subject: 'Confirm your email address for ChillaDesk',
     text: [
       'Hello,',
-      'please confirm that this address is yours: sign in to ChillaDesk and open the link below. It works for two days.',
+      'please confirm that this address is yours: open the link below and, if asked, enter your ChillaDesk password. It works for two days.',
       link,
       'If you did not create a ChillaDesk account, ignore this message.',
     ].join('\n\n'),
@@ -24,7 +24,7 @@ const VERIFY: Record<UserLocale, (link: string) => Omit<MailMessage, 'to'>> = {
     subject: 'Подтвердите адрес почты для ChillaDesk',
     text: [
       'Здравствуйте!',
-      'Подтвердите, что это ваш адрес: войдите в ChillaDesk и откройте ссылку ниже. Она действует два дня.',
+      'Подтвердите, что это ваш адрес: откройте ссылку ниже и, если попросят, введите пароль от ChillaDesk. Она действует два дня.',
       link,
       'Если вы не создавали учётную запись в ChillaDesk, просто не отвечайте на это письмо.',
     ].join('\n\n'),
@@ -61,3 +61,47 @@ export const passwordResetEmail = ({ to, locale, link }: AccountEmail): MailMess
   to,
   ...RESET[locale](link),
 })
+
+const EXISTING: Record<UserLocale, (links: ExistingAccountLinks) => Omit<MailMessage, 'to'>> = {
+  en: ({ login, reset }) => ({
+    subject: 'You already have a ChillaDesk account',
+    text: [
+      'Hello,',
+      'someone tried to sign up for ChillaDesk with this address, but it already has an account. To sign in, open:',
+      login,
+      'If you have forgotten the password, choose a new one here:',
+      reset,
+      'If that was not you, ignore this message: nothing has changed.',
+    ].join('\n\n'),
+  }),
+  ru: ({ login, reset }) => ({
+    subject: 'У вас уже есть учётная запись ChillaDesk',
+    text: [
+      'Здравствуйте!',
+      'Кто-то пытался зарегистрироваться в ChillaDesk с этим адресом, но учётная запись с ним уже есть. Чтобы войти, откройте:',
+      login,
+      'Если вы забыли пароль, задайте новый здесь:',
+      reset,
+      'Если это были не вы, просто не отвечайте на письмо: ничего не изменилось.',
+    ].join('\n\n'),
+  }),
+}
+
+interface ExistingAccountLinks {
+  login: string
+  reset: string
+}
+
+/** Sent instead of a confirmation when someone signs up with an address that has an account. */
+export const existingAccountEmail = ({
+  to,
+  locale,
+  publicUrl,
+}: {
+  to: string
+  locale: UserLocale
+  publicUrl: string
+}): MailMessage => {
+  const base = publicUrl.replace(/\/+$/, '')
+  return { to, ...EXISTING[locale]({ login: `${base}/login`, reset: `${base}/forgot-password` }) }
+}

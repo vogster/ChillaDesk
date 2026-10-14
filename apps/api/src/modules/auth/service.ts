@@ -44,7 +44,7 @@ export function toUser(row: UserRow): User {
 
 type Executor = Pick<Db, 'insert'>
 
-async function startSession(db: Executor, user: UserRow, now: Date): Promise<AuthResponse> {
+export async function startSession(db: Executor, user: UserRow, now: Date): Promise<AuthResponse> {
   const { token, tokenHash } = generateToken()
   const expiresAt = new Date(now.getTime() + SESSION_TTL_MS)
   await db.insert(sessions).values({ userId: user.id, tokenHash, expiresAt })
@@ -95,7 +95,11 @@ export async function login(
     input.password,
     user?.passwordHash ?? (await dummyHash),
   )
-  if (!user || !passwordMatches) throw unauthenticated('Invalid email or password')
+  // An unfinished sign-up cannot sign in, and says so no differently than a wrong password:
+  // otherwise signing in would tell whether a sign-up had found the address free.
+  if (!user || !passwordMatches || user.pendingSince) {
+    throw unauthenticated('Invalid email or password')
+  }
 
   await db.delete(sessions).where(and(eq(sessions.userId, user.id), lte(sessions.expiresAt, now)))
   return startSession(db, user, now)

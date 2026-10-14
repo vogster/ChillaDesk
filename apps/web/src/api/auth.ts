@@ -1,15 +1,18 @@
 import {
   authOptionsSchema,
   authResponseSchema,
+  registrationPendingSchema,
   userSchema,
   type AuthOptions,
   type ChangePasswordRequest,
+  type CompleteRegistration,
   type LoginRequest,
   type PasswordResetConfirm,
   type RegisterRequest,
   type UpdateProfileRequest,
   type User,
 } from '@chilladesk/shared'
+import { z } from 'zod'
 import { ApiError, apiRequest } from './client'
 
 /** Resolves to null when nobody is signed in. */
@@ -32,8 +35,19 @@ export async function login(input: LoginRequest): Promise<User> {
   return session.user
 }
 
-export async function register(input: RegisterRequest): Promise<User> {
-  const session = await apiRequest('/auth/register', {
+/** The signed-in user, or `pending` when the server finishes sign-ups by email. */
+export async function register(input: RegisterRequest): Promise<User | 'pending'> {
+  const answer = await apiRequest('/auth/register', {
+    method: 'POST',
+    body: input,
+    schema: z.union([authResponseSchema, registrationPendingSchema]),
+  })
+  return 'user' in answer ? answer.user : 'pending'
+}
+
+/** Finishes a sign-up from the email link, and signs in. */
+export async function completeRegistration(input: CompleteRegistration): Promise<User> {
+  const session = await apiRequest('/auth/verify-email/complete', {
     method: 'POST',
     body: input,
     schema: authResponseSchema,
