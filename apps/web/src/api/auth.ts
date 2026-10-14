@@ -4,8 +4,10 @@ import {
   registrationPendingSchema,
   userSchema,
   type AuthOptions,
+  type ChangeEmailRequest,
   type ChangePasswordRequest,
   type CompleteRegistration,
+  type DeleteAccountRequest,
   type LoginRequest,
   type PasswordResetConfirm,
   type RegisterRequest,
@@ -79,3 +81,19 @@ export const requestPasswordReset = (email: string): Promise<void> =>
 
 export const confirmPasswordReset = (input: PasswordResetConfirm): Promise<void> =>
   apiRequest('/auth/password-reset/confirm', { method: 'POST', body: input })
+
+/** The updated user, or `pending` when a link went to the new address first. */
+export async function changeEmail(input: ChangeEmailRequest): Promise<User | 'pending'> {
+  const answer = await apiRequest('/auth/email', {
+    method: 'POST',
+    body: input,
+    schema: z.union([userSchema, registrationPendingSchema]),
+  })
+  return 'confirmationSent' in answer ? 'pending' : answer
+}
+
+export const confirmEmailChange = (token: string): Promise<User> =>
+  apiRequest('/auth/email/confirm', { method: 'POST', body: { token }, schema: userSchema })
+
+export const deleteAccount = (input: DeleteAccountRequest): Promise<void> =>
+  apiRequest('/auth/me/delete', { method: 'POST', body: input })

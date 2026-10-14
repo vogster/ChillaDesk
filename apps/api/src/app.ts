@@ -18,6 +18,7 @@ import { attachmentRoutes } from './modules/attachments/routes'
 import { createFileStore, type FileStore } from './modules/attachments/storage'
 import type { AccountMail } from './modules/auth/email-flows'
 import { MCP_PATH, registerAuth, SESSION_COOKIE } from './modules/auth/plugin'
+import { accountRoutes } from './modules/auth/account.routes'
 import { authRoutes } from './modules/auth/routes'
 import { createEventBus, type EventBus } from './modules/events/bus'
 import { eventRoutes, membersAmong, resourceOfRoute } from './modules/events/routes'
@@ -176,6 +177,14 @@ export async function buildApp({
     accountRateLimitMax,
     accountEmailRateLimitMax,
     mail,
+  })
+  await app.register(accountRoutes, {
+    prefix: '/api/auth',
+    db,
+    mail,
+    rateLimitMax: authRateLimitMax,
+    accountRateLimitMax,
+    accountEmailRateLimitMax,
   })
   await app.register(projectRoutes, {
     prefix: '/api/projects',

@@ -22,6 +22,10 @@ export const NotificationsPage = page(
 )
 export const MyTasksPage = page(() => import('./overview/MyTasksPage'), 'MyTasksPage')
 export const SearchPage = page(() => import('./overview/SearchPage'), 'SearchPage')
+export const ConfirmEmailChangePage = page(
+  () => import('./profile/ConfirmEmailChangePage'),
+  'ConfirmEmailChangePage',
+)
 export const ProfilePage = page(() => import('./ProfilePage'), 'ProfilePage')
 export const TokensPage = page(() => import('./TokensPage'), 'TokensPage')
 export const BoardPage = page(() => import('./project/BoardPage'), 'BoardPage')

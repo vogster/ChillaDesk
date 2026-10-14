@@ -63,7 +63,8 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 - [ ] **Server texts in the user's language** — error texts of the API and notification
       emails are English (confirmation and reset emails follow the account's language; the
       web app translates the error texts it knows).
-- [ ] **Changing the email address** of an account, and **deleting an account**.
+- [x] **Changing the email address** of an account (through a link to the new address when
+      email is set up) and **deleting an account** (projects only its owner is in go with it).
 - [x] **Registration does not tell whether an address has an account** (with email set up):
       the same answer either way, the owner is emailed, a sign-up is finished from the link
       with its password. Without email the form still says "already exists".

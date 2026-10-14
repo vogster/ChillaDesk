@@ -12,6 +12,7 @@ import { useAuthOptions, useChangePassword, useUpdateProfile } from '../auth/use
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../components/form'
 import { Alert, Button, Card, TextField } from '../components/ui'
 import { currentMessages, LanguageSwitcher, useT } from '../i18n'
+import { DeleteAccount, EmailForm } from './profile/AccountSettings'
 
 const headingClass = 'mb-3 text-base font-semibold'
 const hintClass = 'mt-2 text-xs text-slate-500'
@@ -195,7 +196,7 @@ function PasswordForm() {
   )
 }
 
-/** `/profile`: the signed-in user's own name, language, email preference and password. */
+/** `/profile`: the signed-in user's name, language, notifications, address, password, and deletion. */
 export function ProfilePage({ user }: { user: User }) {
   const texts = useT().account.profile
   return (
@@ -203,7 +204,9 @@ export function ProfilePage({ user }: { user: User }) {
       <h1 className="text-2xl font-semibold tracking-tight">{texts.title}</h1>
       <NameForm user={user} />
       <Preferences user={user} />
+      <EmailForm />
       <PasswordForm />
+      <DeleteAccount />
     </div>
   )
 }

@@ -141,6 +141,13 @@
       "when": 1792002737292,
       "tag": "0019_pending_registration",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792003881967,
+      "tag": "0020_email_change",
+      "breakpoints": true
     }
   ]
 }

@@ -69,6 +69,12 @@ const EXACT: Record<string, string> = {
   'Whoever added this webhook no longer owns the project':
     'Тот, кто добавил вебхук, больше не владелец проекта',
   'The address was changed': 'Адрес изменили',
+  'The password is wrong': 'Неверный пароль',
+  'This is the address of your account already': 'Это уже адрес вашей учётной записи',
+  'Make someone else an owner of your projects with other members first':
+    'Сначала назначьте другого владельца в проектах, где есть другие участники',
+  'Too many login attempts for this account, retry later':
+    'Слишком много попыток входа в эту учётную запись. Попробуйте позже.',
   'The connection was refused': 'Соединение отклонено',
   'The connection was dropped': 'Соединение оборвалось',
   'The TLS certificate was not accepted': 'TLS-сертификат не принят',

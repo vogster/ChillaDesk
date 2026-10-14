@@ -21,6 +21,20 @@ export const account = {
     currentPassword: 'Current password',
     newPassword: 'New password',
     changePassword: 'Change password',
+    emailSection: 'Email address',
+    newEmail: 'New address',
+    yourPassword: 'Your password',
+    changeEmail: 'Change address',
+    changeEmailHint:
+      'A link goes to the new address. The change is made when you open it while signed in.',
+    changeEmailSent: (email: string) =>
+      `Check ${email} and open the link there. Until then your address stays as it is.`,
+    emailChanged: 'Address changed.',
+    deleteSection: 'Delete account',
+    deleteHint:
+      'Projects only you are in are deleted with your account. In shared projects your tasks, pages and comments stay, under “deleted user”. This cannot be undone.',
+    deleteAccount: 'Delete my account',
+    handOver: 'First make someone else an owner of these projects:',
     passwordChanged:
       'Password changed. Your other devices were signed out. API tokens keep working: revoke them on the API tokens page if someone else may have them.',
   },
@@ -38,6 +52,10 @@ export const account = {
       title: 'Choose a new password',
       submit: 'Set the new password',
       done: 'Your password was changed, every device was signed out and your API tokens were revoked. You can log in with the new password now.',
+    },
+    change: {
+      title: 'New email address',
+      done: 'Your account now uses this address.',
     },
     verify: {
       title: 'Email confirmation',

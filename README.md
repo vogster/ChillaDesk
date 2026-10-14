@@ -168,6 +168,15 @@ Without these settings nothing is sent, and a forgotten password cannot be recov
 Accounts created before email was turned on are unconfirmed until their owner asks for the
 confirmation email on the profile page. Emails are written in the language of the account.
 
+### Your account
+
+The profile page changes the name, language, notification emails and password, moves the
+account to another email address and deletes it. With email set up, a new address gets a
+link that makes the change when its owner opens it signed in, and the old address is told.
+Deleting the account removes the projects only you are in; in shared projects your tasks,
+pages and comments stay, shown as "deleted user". A project with other members needs
+another owner first.
+
 ## API and authentication
 
 Every endpoint is described in the OpenAPI document at `/api/docs`. Log in with

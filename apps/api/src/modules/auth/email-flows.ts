@@ -15,11 +15,12 @@ export interface AccountMail {
   publicUrl: string
 }
 
-type EmailTokenKind = 'verify' | 'reset'
+type EmailTokenKind = 'verify' | 'reset' | 'change'
 
 const TTL_MS: Record<EmailTokenKind, number> = {
   verify: 48 * 60 * 60 * 1000,
   reset: 60 * 60 * 1000,
+  change: 48 * 60 * 60 * 1000,
 }
 
 /**
@@ -28,14 +29,15 @@ const TTL_MS: Record<EmailTokenKind, number> = {
  */
 const RESET_REISSUE_AFTER_MS = 60 * 1000
 
-type UserRow = typeof users.$inferSelect
+export type UserRow = typeof users.$inferSelect
 
 /** A fresh token of this kind for the user; an older one stops working. */
-async function issueToken(
+export async function issueToken(
   db: Db,
   userId: string,
   kind: EmailTokenKind,
   now: Date,
+  newEmail: string | null = null,
 ): Promise<string> {
   const { token, tokenHash } = generateToken()
   await db.transaction(async (tx) => {
@@ -48,6 +50,7 @@ async function issueToken(
       userId,
       kind,
       tokenHash,
+      newEmail,
       createdAt: now,
       expiresAt: new Date(now.getTime() + TTL_MS[kind]),
     })
@@ -55,7 +58,7 @@ async function issueToken(
   return token
 }
 
-function accountEmail(user: UserRow, mail: AccountMail, page: string, token: string) {
+export function accountEmail(user: UserRow, mail: AccountMail, page: string, token: string) {
   const locale = localeSchema.safeParse(user.locale)
   return {
     to: user.email,
@@ -67,7 +70,7 @@ function accountEmail(user: UserRow, mail: AccountMail, page: string, token: str
 }
 
 /** One answer for unknown, used and expired links, and for links of somebody else. */
-const invalidLink = () =>
+export const invalidLink = () =>
   new AppError('VALIDATION_ERROR', 'This link is not valid any more, ask for a new one')
 
 /** Emails the user a link that proves the address is theirs. */

@@ -67,8 +67,10 @@ export const emailTokens = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    /** `verify` or `reset`. */
+    /** `verify`, `reset` or `change` (of the address). */
     kind: text('kind').notNull(),
+    /** For `change`: the address the link was sent to, which becomes the account's. */
+    newEmail: text('new_email'),
     /** SHA-256 of the token in the link; the token itself is never stored. */
     tokenHash: text('token_hash').notNull().unique(),
     createdAt: createdAt(),

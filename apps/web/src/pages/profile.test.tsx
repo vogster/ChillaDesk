@@ -1,5 +1,5 @@
 import type { User } from '@chilladesk/shared'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { applyLocale } from '../i18n/messages'
 import { ann, apiError, mockApi, noContent, ok, renderApp, type ApiRoutes } from '../test/render'
@@ -204,5 +204,111 @@ describe('the language of the account', () => {
         locale: 'ru',
       }),
     )
+  })
+})
+
+/** The card of the profile page under this heading. */
+async function card(name: string): Promise<HTMLElement> {
+  const heading = await screen.findByRole('heading', { name })
+  return heading.closest('section') as HTMLElement
+}
+
+describe('changing the email address', () => {
+  it('changes it at once on a server without email', async () => {
+    const { bodies } = server(
+      {},
+      {
+        'POST /api/auth/email': (body) => ok({ ...ann, ...(body as object), emailVerified: false }),
+      },
+    )
+    const { user } = renderApp('/profile')
+
+    const section = await card('Email address')
+    await user.type(within(section).getByLabelText('New address'), 'new@example.com')
+    await user.type(within(section).getByLabelText('Your password'), 'secret password')
+    await user.click(within(section).getByRole('button', { name: 'Change address' }))
+
+    expect(await within(section).findByRole('status')).toHaveTextContent('Address changed.')
+    expect(screen.getByText(/new@example.com/)).toBeInTheDocument()
+    expect(bodies('POST /api/auth/email')).toEqual([
+      { email: 'new@example.com', password: 'secret password' },
+    ])
+  })
+
+  it('asks to open the link sent to the new address when the server sends email', async () => {
+    server({}, { 'POST /api/auth/email': () => ok({ confirmationSent: true }, 202) })
+    const { user } = renderApp('/profile')
+
+    const section = await card('Email address')
+    await user.type(within(section).getByLabelText('New address'), 'new@example.com')
+    await user.type(within(section).getByLabelText('Your password'), 'secret password')
+    await user.click(within(section).getByRole('button', { name: 'Change address' }))
+
+    expect(await within(section).findByRole('status')).toHaveTextContent(
+      'Check new@example.com and open the link there',
+    )
+    expect(screen.getByText(/ann@example.com/)).toBeInTheDocument()
+  })
+
+  it('makes the change when the signed-in owner opens the link', async () => {
+    const { bodies } = server(
+      {},
+      { 'POST /api/auth/email/confirm': () => ok({ ...ann, email: 'new@example.com' }) },
+    )
+    renderApp('/confirm-email#token=change-token')
+
+    expect(
+      await screen.findByText('Your account now uses this address. new@example.com'),
+    ).toBeInTheDocument()
+    expect(bodies('POST /api/auth/email/confirm')).toEqual([{ token: 'change-token' }])
+  })
+})
+
+describe('deleting the account', () => {
+  it('lists the projects to hand over first', async () => {
+    server(
+      {},
+      {
+        'POST /api/auth/me/delete': () => ({
+          status: 409,
+          body: {
+            error: {
+              code: 'CONFLICT',
+              message: 'Make someone else an owner of your projects with other members first',
+              details: [{ path: 'projects', message: 'Website' }],
+            },
+          },
+        }),
+      },
+    )
+    const { user } = renderApp('/profile')
+
+    const section = await card('Delete account')
+    await user.type(within(section).getByLabelText('Your password'), 'secret password')
+    await user.click(within(section).getByRole('button', { name: 'Delete my account' }))
+
+    const alert = await within(section).findByRole('alert')
+    expect(alert).toHaveTextContent('First make someone else an owner of these projects:')
+    expect(alert).toHaveTextContent('Website')
+  })
+
+  it('deletes it and goes to the login page', async () => {
+    let deleted = false
+    mockApi({
+      'GET /api/auth/me': () => (deleted ? apiError(401, 'UNAUTHENTICATED', 'x') : ok(ann)),
+      'GET /api/auth/options': () => ok({ registrationEnabled: true, emailEnabled: false }),
+      'GET /api/notifications': () => ok({ items: [], unreadCount: 0 }),
+      'POST /api/auth/me/delete': () => {
+        deleted = true
+        return noContent()
+      },
+    })
+    const { user } = renderApp('/profile')
+
+    const section = await card('Delete account')
+    await user.type(within(section).getByLabelText('Your password'), 'secret password')
+    await user.click(within(section).getByRole('button', { name: 'Delete my account' }))
+
+    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
   })
 })

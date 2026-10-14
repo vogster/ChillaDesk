@@ -1,0 +1,1 @@
+ALTER TABLE "email_tokens" ADD COLUMN "new_email" text;

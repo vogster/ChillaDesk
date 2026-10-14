@@ -13,6 +13,7 @@ import { ProjectLayout } from './pages/project/ProjectLayout'
 import { TaskNumberRedirect } from './pages/project/TaskNumberRedirect'
 import {
   BoardPage,
+  ConfirmEmailChangePage,
   ForgotPasswordPage,
   InvitePage,
   ListPage,
@@ -102,6 +103,7 @@ function AppRoutes() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/invite" element={<InvitePage />} />
+          <Route path="/confirm-email" element={<ConfirmEmailChangePage />} />
           <Route path="/projects/:projectId" element={user && <ProjectLayout currentUser={user} />}>
             <Route index element={<BoardPage />} />
             <Route path="list" element={<ListPage />} />

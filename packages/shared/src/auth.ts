@@ -103,3 +103,16 @@ export const completeRegistrationSchema = z.object({
   password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
 })
 export type CompleteRegistration = z.infer<typeof completeRegistrationSchema>
+
+/** A new address for the account; the password confirms it is its owner asking. */
+export const changeEmailRequestSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
+})
+export type ChangeEmailRequest = z.infer<typeof changeEmailRequestSchema>
+
+/** Deleting the account is confirmed with its password. */
+export const deleteAccountRequestSchema = z.object({
+  password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
+})
+export type DeleteAccountRequest = z.infer<typeof deleteAccountRequestSchema>
