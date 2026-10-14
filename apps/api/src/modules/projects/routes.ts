@@ -2,6 +2,7 @@ import {
   addMemberRequestSchema,
   createProjectRequestSchema,
   errorResponseSchema,
+  memberInvitedSchema,
   projectMemberSchema,
   projectSchema,
   updateMemberRequestSchema,
@@ -10,7 +11,10 @@ import {
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import type { Db } from '../../db/client'
+import { createAttemptLimiter } from '../auth/attempt-limiter'
+import type { AccountMail } from '../auth/email-flows'
 import { requireAuth, requireSession } from '../auth/plugin'
+import { inviteByEmail } from '../invites/service'
 import {
   addMember,
   createProject,
@@ -41,14 +45,21 @@ const errors = {
 export interface ProjectRoutesOptions {
   db: Db
   memberInviteRateLimitMax: number
-  /** Whether only accounts with a confirmed address can be added by email. */
-  confirmedMembersOnly: boolean
+  /** With it, adding by email sends an invite link instead of adding at once. */
+  mail?: AccountMail | undefined
+  /** Emails one address may get per 15 minutes, shared with the other account emails. */
+  accountEmailRateLimitMax: number
 }
 
 export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async (
   app,
-  { db, memberInviteRateLimitMax, confirmedMembersOnly },
+  { db, memberInviteRateLimitMax, mail, accountEmailRateLimitMax },
 ) => {
+  const inviteEmails = createAttemptLimiter(db, {
+    name: 'account-email',
+    max: accountEmailRateLimitMax,
+    windowMs: 15 * 60 * 1000,
+  })
   // onRequest runs before body validation, so anonymous callers get 401 rather than field errors.
   app.addHook('onRequest', async (request) => {
     requireAuth(request)
@@ -161,19 +172,44 @@ export const projectRoutes: FastifyPluginAsyncZod<ProjectRoutesOptions> = async 
       },
       schema: {
         tags: memberTags,
-        summary: 'Add a registered user to the project by email (owner only)',
+        summary: 'Add someone to the project by email (owner only)',
+        description:
+          'Without email set up on the server: adds the registered user at once (201). With ' +
+          'email: sends an invite link to the address (202) whether or not it has an account, ' +
+          'so the answer does not tell who is registered; they join when they open it.',
         params: projectParams,
         body: addMemberRequestSchema,
-        response: { 201: projectMemberSchema, ...errors, 409: errorResponseSchema },
+        response: {
+          201: projectMemberSchema,
+          202: memberInvitedSchema,
+          ...errors,
+          409: errorResponseSchema,
+        },
       },
     },
     async (request, reply) => {
+      if (mail) {
+        await inviteByEmail(
+          db,
+          mail,
+          requireSession(request).user.id,
+          request.params.projectId,
+          request.body,
+          {
+            allowEmail: async (email) => (await inviteEmails.consume(email)).allowed,
+            onError: (error) => {
+              const { name, code } = (error ?? {}) as { name?: unknown; code?: unknown }
+              app.log.warn({ name, code }, 'invite email was not sent')
+            },
+          },
+        )
+        return reply.code(202).send({ invited: true as const })
+      }
       const member = await addMember(
         db,
         requireSession(request).user.id,
         request.params.projectId,
         request.body,
-        { confirmedOnly: confirmedMembersOnly },
       )
       // Their project list has a new entry.
       app.events.publishAccessChange([member.userId])

@@ -14,6 +14,8 @@ export const project: ProjectMessages = {
     addByEmail: 'Добавить участника по эл. почте',
     emailPlaceholder: 'kollega@example.com',
     accountHint: 'У человека уже должна быть учётная запись ChillaDesk',
+    inviteHint: 'Ему придёт ссылка-приглашение; он присоединится, открыв её',
+    invited: (email) => `Приглашение отправлено на ${email}. Оно действует неделю.`,
     role: 'Роль',
   },
   settings: {

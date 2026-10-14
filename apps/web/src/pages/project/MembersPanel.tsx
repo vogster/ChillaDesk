@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router'
 import { errorMessage } from '../../api/client'
 import { focusFirstInvalid, parseForm, type FieldErrors } from '../../components/form'
 import { Alert, Button, Card, selectClass, Spinner, TextField } from '../../components/ui'
+import { useAuthOptions } from '../../auth/useAuth'
 import { useT } from '../../i18n'
 import { useMemberMutations, useMembers } from './projectQueries'
 
@@ -38,6 +39,7 @@ export function MembersPanel({ project, currentUser }: MembersPanelProps) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const isOwner = project.role === 'owner'
   const actionError = add.error ?? changeRole.error ?? remove.error
+  const { emailEnabled } = useAuthOptions()
 
   // Each action starts clean, so the alert always belongs to the latest one.
   const clearErrors = () => {
@@ -155,7 +157,7 @@ export function MembersPanel({ project, currentUser }: MembersPanelProps) {
             type="email"
             placeholder={t.project.members.emailPlaceholder}
             required
-            hint={t.project.members.accountHint}
+            hint={emailEnabled ? t.project.members.inviteHint : t.project.members.accountHint}
             error={fieldErrors.email}
             className="min-w-56 flex-1"
           />
@@ -176,6 +178,11 @@ export function MembersPanel({ project, currentUser }: MembersPanelProps) {
             {t.common.add}
           </Button>
         </form>
+      )}
+      {add.data === 'invited' && (
+        <p role="status" className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+          {t.project.members.invited(add.variables.email)}
+        </p>
       )}
     </Card>
   )

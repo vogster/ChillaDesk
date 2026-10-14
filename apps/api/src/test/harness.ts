@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm'
 import { createMemoryDatabase, type Database } from '../db/client'
 import { users } from '../db/schema'
 import { register } from '../modules/auth/service'
+import { addMember } from '../modules/projects/service'
 
 export interface TestUser {
   id: string
@@ -127,8 +128,8 @@ export async function createTestContext(
       [member, 'member'],
       [viewer, 'viewer'],
     ] as const) {
-      const added = await request(owner, 'POST', `${base}/members`, { email: user.email, role })
-      await expectOk(added, `adding the ${role}`)
+      // Directly: with email on, the route sends an invite link instead of adding.
+      await addMember(database.db, owner.id, project.id, { email: user.email, role })
     }
     const statuses = await request(owner, 'GET', `${base}/statuses`)
     await expectOk(statuses, 'listing statuses')

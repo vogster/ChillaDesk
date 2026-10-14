@@ -211,3 +211,29 @@ export const emailChangeRequestedEmail = ({ to, locale, link }: AccountEmail): M
   to,
   ...CHANGE_REQUESTED[locale](link),
 })
+
+const PROJECT_INVITE: Texts = {
+  en: (link) => ({
+    subject: 'You are invited to a project on ChillaDesk',
+    text: [
+      'Hello,',
+      'someone invited you to a project on ChillaDesk, a tracker for tasks and notes. To join, open the link below within a week; you can sign in or create an account there.',
+      link,
+      'If you do not expect this, ignore this message.',
+    ].join('\n\n'),
+  }),
+  ru: (link) => ({
+    subject: 'Вас пригласили в проект в ChillaDesk',
+    text: [
+      'Здравствуйте!',
+      'Вас пригласили в проект в ChillaDesk — трекере задач и заметок. Чтобы присоединиться, откройте ссылку ниже в течение недели; там можно войти или создать учётную запись.',
+      link,
+      'Если вы этого не ждали, просто не отвечайте на письмо.',
+    ].join('\n\n'),
+  }),
+}
+
+export const projectInviteEmail = ({ to, locale, link }: AccountEmail): MailMessage => ({
+  to,
+  ...PROJECT_INVITE[locale](link),
+})

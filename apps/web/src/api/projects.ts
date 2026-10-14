@@ -1,4 +1,5 @@
 import {
+  memberInvitedSchema,
   projectMemberSchema,
   projectSchema,
   type AddMemberRequest,
@@ -32,12 +33,18 @@ export const deleteProject = (projectId: string): Promise<void> =>
 export const fetchMembers = (projectId: string): Promise<ProjectMember[]> =>
   apiRequest(`/projects/${projectId}/members`, { schema: memberList })
 
-export const addMember = (projectId: string, input: AddMemberRequest): Promise<ProjectMember> =>
-  apiRequest(`/projects/${projectId}/members`, {
+/** The new member, or `invited` when the server sent an invite link to the address. */
+export async function addMember(
+  projectId: string,
+  input: AddMemberRequest,
+): Promise<ProjectMember | 'invited'> {
+  const answer = await apiRequest(`/projects/${projectId}/members`, {
     method: 'POST',
     body: input,
-    schema: projectMemberSchema,
+    schema: z.union([projectMemberSchema, memberInvitedSchema]),
   })
+  return 'invited' in answer ? 'invited' : answer
+}
 
 export const updateMemberRole = (
   projectId: string,

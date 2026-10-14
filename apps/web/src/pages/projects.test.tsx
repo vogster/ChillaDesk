@@ -305,6 +305,34 @@ describe('member list stays in sync', () => {
     await waitFor(() => expect(screen.queryByText('Bob')).not.toBeInTheDocument())
   })
 
+  it('says an invitation went out on a server that sends email', async () => {
+    let invitesRead = 0
+    mockApi({
+      ...memberServer(),
+      'GET /api/auth/options': () => ok({ registrationEnabled: true, emailEnabled: true }),
+      [`GET ${projectUrl}/invites`]: () => {
+        invitesRead += 1
+        return ok([])
+      },
+      [`POST ${projectUrl}/members`]: () => ok({ invited: true }, 202),
+    })
+    const { user } = renderApp(`/projects/${project.id}/members`)
+
+    const field = await screen.findByLabelText('Add a member by email')
+    expect(
+      await screen.findByText('They get an invite link by email and join when they open it'),
+    ).toBeInTheDocument()
+    const before = invitesRead
+    await user.type(field, 'dan@example.com')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Invitation sent to dan@example.com. It works for a week.',
+    )
+    // The new link shows up among the invite links.
+    await waitFor(() => expect(invitesRead).toBeGreaterThan(before))
+  })
+
   it('replaces an old error once a later action succeeds', async () => {
     mockApi(memberServer())
     const { user } = renderApp(`/projects/${project.id}/members`)

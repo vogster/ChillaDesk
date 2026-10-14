@@ -190,8 +190,8 @@ export async function buildApp({
     prefix: '/api/projects',
     db,
     memberInviteRateLimitMax,
-    // Addresses can only be confirmed where the server sends email.
-    confirmedMembersOnly: mail !== undefined,
+    mail,
+    accountEmailRateLimitMax,
   })
   await app.register(projectInviteRoutes, { prefix: '/api/projects/:projectId/invites', db })
   await app.register(inviteRoutes, { prefix: '/api/invites', db, rateLimitMax: inviteRateLimitMax })

@@ -31,3 +31,11 @@ export const invitePreviewSchema = z.object({
   alreadyMember: z.boolean(),
 })
 export type InvitePreview = z.infer<typeof invitePreviewSchema>
+
+/**
+ * The answer to adding a member by email on a server that sends email: an invite link went
+ * to the address, whether or not it has an account, so the answer tells nobody who is
+ * registered. They join when they open it.
+ */
+export const memberInvitedSchema = z.object({ invited: z.literal(true) })
+export type MemberInvited = z.infer<typeof memberInvitedSchema>

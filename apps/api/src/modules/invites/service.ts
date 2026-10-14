@@ -1,15 +1,19 @@
-import type {
-  CreatedInvite,
-  CreateInviteRequest,
-  InvitePreview,
-  InviteRole,
-  Project,
-  ProjectInvite,
+import {
+  localeSchema,
+  type AddMemberRequest,
+  type CreatedInvite,
+  type CreateInviteRequest,
+  type InvitePreview,
+  type InviteRole,
+  type Project,
+  type ProjectInvite,
 } from '@chilladesk/shared'
 import { and, asc, count, eq, gt, lte } from 'drizzle-orm'
 import type { Db } from '../../db/client'
-import { projectInvites, projectMembers, projects } from '../../db/schema'
-import { AppError, conflict, notFound } from '../../errors'
+import { projectInvites, projectMembers, projects, users } from '../../db/schema'
+import { AppError, conflict, invalid, notFound } from '../../errors'
+import type { AccountMail } from '../auth/email-flows'
+import { projectInviteEmail } from '../auth/emails'
 import { generateToken, hashToken } from '../auth/tokens'
 import { getProject } from '../projects/service'
 
@@ -175,4 +179,63 @@ export async function acceptInvite(
   })
 
   return { project: await getProject(db, userId, projectId), joined }
+}
+
+/**
+ * Adds someone by email on a server that sends email: an invite link goes to the address,
+ * whether or not it has an account, so the answer does not tell who is registered. The
+ * email is sent in the background; `onError` hears if it fails. Someone already in the
+ * project is refused, which the owner can see in the member list anyway.
+ */
+export async function inviteByEmail(
+  db: Db,
+  mail: AccountMail,
+  userId: string,
+  projectId: string,
+  input: AddMemberRequest,
+  {
+    now = new Date(),
+    allowEmail,
+    onError,
+  }: {
+    now?: Date
+    /** Whether this address may get another email now. */
+    allowEmail?: (email: string) => Promise<boolean>
+    onError?: (error: unknown) => void
+  } = {},
+): Promise<void> {
+  await getProject(db, userId, projectId, 'owner')
+  const { role } = input
+  if (role === 'owner') {
+    throw invalid('Invite as a member or viewer, then make them an owner once they joined')
+  }
+  const email = input.email.toLowerCase()
+  const [member] = await db
+    .select({ id: users.id })
+    .from(projectMembers)
+    .innerJoin(users, eq(users.id, projectMembers.userId))
+    .where(and(eq(projectMembers.projectId, projectId), eq(users.email, email)))
+  if (member) throw conflict('This user is already a member of the project')
+  const invite = await createInvite(db, userId, projectId, { role }, now)
+
+  void (async () => {
+    if (allowEmail && !(await allowEmail(email))) return
+    // In the language of the account at that address, if there is one, else the inviter's.
+    const [recipient] = await db
+      .select({ locale: users.locale })
+      .from(users)
+      .where(eq(users.email, email))
+    const [inviter] = await db
+      .select({ locale: users.locale })
+      .from(users)
+      .where(eq(users.id, userId))
+    const locale = localeSchema.safeParse(recipient?.locale ?? inviter?.locale)
+    await mail.send(
+      projectInviteEmail({
+        to: email,
+        locale: locale.success ? locale.data : 'en',
+        link: `${mail.publicUrl.replace(/\/+$/, '')}/invite#token=${invite.token}`,
+      }),
+    )
+  })().catch((error: unknown) => onError?.(error))
 }

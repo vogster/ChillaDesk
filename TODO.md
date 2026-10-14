@@ -59,12 +59,12 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
       per-address request limits and attached files on local disk (see S3 storage).
 - [ ] **Undoing a change of address** from the old address (a link that restores it and signs
       everyone out), for when someone with the password moved the account.
-- [ ] **Adding a member by email tells whether the address has an account** ("User with this
-      email" versus added). With email set up, answer the same either way and send an invite
-      to the address instead.
-- [ ] **Server texts in the user's language** — error texts of the API and notification
-      emails are English (confirmation and reset emails follow the account's language; the
-      web app translates the error texts it knows).
+- [x] **Adding a member by email does not tell whether the address has an account** (with
+      email set up): an invite link goes to the address either way.
+- [x] **Emails in the user's language** — notification, confirmation, reset and account emails
+      follow the language of the account.
+- [ ] **API error texts in the user's language** — they are English for API clients (the web
+      app translates the ones it knows); could follow Accept-Language.
 - [x] **Changing the email address** of an account (through a link to the new address when
       email is set up) and **deleting an account** (projects only its owner is in go with it).
 - [x] **Registration does not tell whether an address has an account** (with email set up):

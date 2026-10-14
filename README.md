@@ -158,8 +158,9 @@ Email is optional: set `SMTP_URL`, `MAIL_FROM` and `PUBLIC_URL` together. Then
 - an older account confirms its address from the profile, and **"Forgot your password?"**
   appears on the login page. A reset ends every session and revokes the account's API
   tokens;
-- an account whose address is not confirmed **cannot be added to a project by email** (an
-  invite link still works);
+- **adding a member by email sends an invite link** to the address instead of adding at
+  once, and the answer is the same whether or not the address has an account; they join
+  when they open the link;
 - **notifications** that were not read in the app are also emailed — only to confirmed
   addresses, at most 30 an hour per person, and not to people who turned them off in
   their profile.

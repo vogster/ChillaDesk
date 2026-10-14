@@ -82,7 +82,12 @@ export function useMemberMutations(projectId: string, currentUserId: string) {
   return {
     add: useMutation({
       mutationFn: (input: { email: string; role: ProjectRole }) => addMember(projectId, input),
-      onSuccess: refreshMembers,
+      // An invitation shows up among the invite links.
+      onSuccess: () =>
+        Promise.all([
+          refreshMembers(),
+          queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'invites'] }),
+        ]),
     }),
     changeRole: useMutation({
       mutationFn: (input: { userId: string; role: ProjectRole }) =>

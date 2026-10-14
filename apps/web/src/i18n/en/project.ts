@@ -13,6 +13,8 @@ export const project = {
     addByEmail: 'Add a member by email',
     emailPlaceholder: 'teammate@example.com',
     accountHint: 'They need a ChillaDesk account first',
+    inviteHint: 'They get an invite link by email and join when they open it',
+    invited: (email: string) => `Invitation sent to ${email}. It works for a week.`,
     role: 'Role',
   },
   settings: {

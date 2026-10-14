@@ -545,28 +545,47 @@ describe('resetting a forgotten password', () => {
   })
 })
 
-describe('adding members by email on a server that confirms addresses', () => {
-  it('treats an account with an unconfirmed address as if it did not exist', async () => {
+describe('adding members by email on a server that sends email', () => {
+  it('sends an invite link whoever the address belongs to, and answers the same', async () => {
     const fixture = await ctx.createProject()
-    const squatter = await register()
-    const add = () =>
-      fixture.call(fixture.owner, 'POST', '/members', { email: squatter.email, role: 'member' })
+    const { email: unconfirmed } = await register()
+    const add = (email: string, role = 'member') =>
+      fixture.call(fixture.owner, 'POST', '/members', { email, role })
 
-    const unconfirmed = await add()
-    const unknown = await fixture.call(fixture.owner, 'POST', '/members', {
-      email: 'nobody-at-all@example.com',
-      role: 'member',
+    const answers = [
+      await add(unconfirmed),
+      await add('nobody-at-all@example.com'),
+      await add(fixture.outsider.email, 'viewer'),
+    ]
+
+    expect(answers.map((answer) => answer.statusCode)).toEqual([202, 202, 202])
+    expect(new Set(answers.map((answer) => answer.body)).size).toBe(1)
+    const invite = await emailTo(fixture.outsider.email, /invited to a project/)
+    expect(invite.page).toBe('invite')
+    // Nothing the owner typed (the project name) is carried to the address.
+    expect(invite.message.text).not.toContain(fixture.project.name)
+    // Nobody was added; the outsider joins by opening the link.
+    expect((await fixture.call(fixture.outsider, 'GET', '')).statusCode).toBe(404)
+    const joined = await ctx.request(fixture.outsider, 'POST', '/api/invites/accept', {
+      token: invite.token,
     })
-    await ctx.database.db
-      .update(users)
-      .set({ emailVerifiedAt: new Date() })
-      .where(eq(users.id, squatter.user.id))
-    const confirmed = await add()
+    expect(joined.statusCode, joined.body).toBe(200)
+    expect((await fixture.call(fixture.outsider, 'GET', '')).statusCode).toBe(200)
+  })
 
-    expect([unconfirmed.statusCode, unknown.statusCode, confirmed.statusCode]).toEqual([
-      404, 404, 201,
-    ])
-    expect(unconfirmed.body).toBe(unknown.body)
+  it('refuses a member twice and an invitation straight to owner', async () => {
+    const fixture = await ctx.createProject()
+
+    const again = await fixture.call(fixture.owner, 'POST', '/members', {
+      email: fixture.member.email,
+      role: 'viewer',
+    })
+    const owner = await fixture.call(fixture.owner, 'POST', '/members', {
+      email: 'someone@example.com',
+      role: 'owner',
+    })
+
+    expect([again.statusCode, owner.statusCode]).toEqual([409, 400])
   })
 })
 
