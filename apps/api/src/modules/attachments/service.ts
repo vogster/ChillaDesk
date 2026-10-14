@@ -128,7 +128,7 @@ export async function addAttachment(
         .select({ id: projects.id })
         .from(projects)
         .where(eq(projects.id, projectId))
-        .for('update')
+        .for('no key update')
       const [here] = await tx
         .select({ total: count() })
         .from(attachments)

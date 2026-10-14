@@ -290,7 +290,7 @@ export async function getTask(
  * Everything that reads a column's positions and then writes one holds this lock, so two
  * changes to the same column run one after the other; it also blocks deleting the status.
  */
-async function lockStatus(tx: Tx, projectId: string, statusId: string): Promise<void> {
+export async function lockStatus(tx: Tx, projectId: string, statusId: string): Promise<void> {
   const [status] = await tx
     .select({ id: statuses.id })
     .from(statuses)
@@ -508,9 +508,12 @@ export async function moveTask(
   if (beforeTaskId === taskId) throw invalid('A task cannot be placed before itself')
 
   return db.transaction(async (tx) => {
+    // The column is locked before the task, the order every change of the board keeps
+    // (project, then column, then task); the other way round, a move and the deletion of
+    // its target column could each wait for the other.
+    await lockStatus(tx, projectId, statusId)
     const [before] = await tx.select().from(tasks).where(inProject(projectId, taskId)).for('update')
     if (!before) throw notFound('Task')
-    await lockStatus(tx, projectId, statusId)
 
     let position: number | null
     if (beforeTaskId === null) {

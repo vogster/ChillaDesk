@@ -4,7 +4,7 @@ import type { Db } from '../../db/client'
 import { savedFilters, tasks } from '../../db/schema'
 import { conflict, isUniqueViolation, notFound } from '../../errors'
 import { getProject } from '../projects/service'
-import { deleteTask, moveTask, updateTask } from './service'
+import { deleteTask, lockStatus, moveTask, updateTask } from './service'
 
 /**
  * Applies one action to several tasks, all or nothing: each task goes through the same
@@ -18,6 +18,10 @@ export async function bulkTasks(
 ): Promise<{ affected: number }> {
   await getProject(db, userId, projectId, 'member')
   return db.transaction(async (tx) => {
+    // A move locks its column first, before any task, like a single move does.
+    if (action.type !== 'delete' && action.patch.statusId) {
+      await lockStatus(tx, projectId, action.patch.statusId)
+    }
     // Locked in a fixed order, so two bulk actions over the same tasks cannot deadlock.
     const found = await tx
       .select({ id: tasks.id })

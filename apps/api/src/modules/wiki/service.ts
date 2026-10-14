@@ -110,7 +110,7 @@ async function lockTree(tx: Tx, projectId: string): Promise<void> {
     .select({ id: projects.id })
     .from(projects)
     .where(eq(projects.id, projectId))
-    .for('update')
+    .for('no key update')
 }
 
 const PARENT_GONE = 'parentId must be a page of this project'

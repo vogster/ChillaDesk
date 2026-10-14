@@ -129,7 +129,7 @@ export async function createWebhook(
       .select({ id: projects.id })
       .from(projects)
       .where(eq(projects.id, projectId))
-      .for('update')
+      .for('no key update')
     const [existing] = await tx
       .select({ total: count() })
       .from(webhooks)

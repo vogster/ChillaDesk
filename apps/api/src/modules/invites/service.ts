@@ -64,7 +64,7 @@ export async function createInvite(
       .select({ id: projects.id })
       .from(projects)
       .where(eq(projects.id, projectId))
-      .for('update')
+      .for('no key update')
     await tx
       .delete(projectInvites)
       .where(and(eq(projectInvites.projectId, projectId), lte(projectInvites.expiresAt, now)))

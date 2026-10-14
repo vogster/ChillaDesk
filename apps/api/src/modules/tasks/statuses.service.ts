@@ -52,13 +52,18 @@ export function loadStatuses(db: Executor, projectId: string): Promise<StatusRow
 /**
  * Makes changes to a project's set of columns run one at a time. Without it two owners
  * could each delete "one of the last two" columns, or append two columns at the same position.
+ *
+ * `no key update`, like every lock that only queues changes of a project: a plain
+ * `for update` would also stop rows that merely refer to the project (a notification, a
+ * history line) from being written, and a task move holding its column would then wait for
+ * this lock while this waits for that column.
  */
 async function lockBoard(tx: Tx, projectId: string): Promise<void> {
   await tx
     .select({ id: projects.id })
     .from(projects)
     .where(eq(projects.id, projectId))
-    .for('update')
+    .for('no key update')
 }
 
 export async function listStatuses(db: Db, userId: string, projectId: string): Promise<Status[]> {
