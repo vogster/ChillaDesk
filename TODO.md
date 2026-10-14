@@ -62,5 +62,5 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 - [ ] **Changing the email address** of an account, and **deleting an account**.
 - [ ] **Registration tells whether an address has an account** ("already exists"); answer
       the same either way and email the owner instead.
-- [ ] **Email limits in the database** — the per-account limit on confirmation and reset
-      emails is kept in memory, so it resets on restart and is per API replica.
+- [x] **Limits in the database** — emails and login attempts per account are counted in
+      PostgreSQL, so the limits survive restarts and hold across API replicas.

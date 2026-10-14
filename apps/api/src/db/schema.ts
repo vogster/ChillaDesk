@@ -536,3 +536,18 @@ export const webhookDeliveries = pgTable(
       .where(sql`${table.status} = 'pending'`),
   ],
 )
+
+/**
+ * Counts of attempts per key in fixed windows: logins per account, emails per account.
+ * Kept in the database so the limits hold across restarts and API replicas.
+ */
+export const attemptCounters = pgTable(
+  'attempt_counters',
+  {
+    /** What is counted, hashed: it may hold an email address. */
+    key: text('key').primaryKey(),
+    count: integer('count').notNull(),
+    resetAt: timestamp('reset_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [index('attempt_counters_reset_at_idx').on(table.resetAt)],
+)

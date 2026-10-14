@@ -50,13 +50,15 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
 
   // Slows password guessing against one account from many addresses, at the cost of letting
   // an attacker delay that account's login for the window.
-  const accountAttempts = createAttemptLimiter({
+  const accountAttempts = createAttemptLimiter(db, {
+    name: 'login',
     max: options.accountRateLimitMax,
     windowMs: 15 * 60 * 1000,
   })
 
   // Bounds how much mail one account can cause, whoever asks for it.
-  const emailRequests = createAttemptLimiter({
+  const emailRequests = createAttemptLimiter(db, {
+    name: 'account-email',
     max: options.accountEmailRateLimitMax,
     windowMs: 15 * 60 * 1000,
   })
@@ -114,7 +116,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
       setSessionCookie(reply, session)
       // Not awaited: the account exists whether or not the mail server answers.
       if (mail) {
-        emailRequests.consume(session.user.id)
+        await emailRequests.consume(session.user.id)
         void sendVerification(db, mail, session.user.id).catch(logMailFailure('confirmation'))
       }
       return reply.code(201).send(session)
@@ -136,7 +138,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
       },
     },
     async (request, reply) => {
-      const attempt = accountAttempts.consume(request.body.email.toLowerCase())
+      const attempt = await accountAttempts.consume(request.body.email.toLowerCase())
       if (!attempt.allowed) {
         const minutes = Math.ceil(attempt.retryAfterMs / 60_000)
         throw new AppError(
@@ -249,7 +251,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
     async (request, reply) => {
       const { user } = requireSession(request)
       const sender = requireMail()
-      if (!emailRequests.consume(user.id).allowed) {
+      if (!(await emailRequests.consume(user.id)).allowed) {
         throw new AppError('RATE_LIMITED', 'Too many emails requested, try again later')
       }
       try {
@@ -283,7 +285,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
       const email = request.body.email.toLowerCase()
       // Not awaited, and silent when over the limit: the answer and how long it takes
       // must not depend on whether the account exists.
-      if (emailRequests.consume(email).allowed) {
+      if ((await emailRequests.consume(email)).allowed) {
         void requestPasswordReset(db, sender, email).catch(logMailFailure('password reset'))
       }
       return reply.code(204).send(null)
