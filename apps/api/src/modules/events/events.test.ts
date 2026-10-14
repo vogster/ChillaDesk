@@ -1,6 +1,7 @@
 import type { LiveEvent, Task } from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createTestContext, type TestContext, type TestUser } from '../../test/harness'
+import type { Relay } from '../../db/client'
 import { createEventBus, type Subscriber } from './bus'
 import { resourceOfRoute } from './routes'
 
@@ -105,6 +106,103 @@ describe('event bus', () => {
     await expect(bus.publishProject(PROJECT, 'wiki')).resolves.toBeUndefined()
 
     expect(errors).toEqual([failure])
+  })
+})
+
+describe('event bus across replicas', () => {
+  const everyone = (_projectId: string, userIds: string[]) => Promise.resolve(userIds)
+  const ANN = '11111111-1111-4111-8111-111111111111'
+  const BOB = '22222222-2222-4222-8222-222222222222'
+
+  /** A stand-in for LISTEN/NOTIFY: every listener hears every message, in order. */
+  function memoryRelay() {
+    const listeners = new Set<(payload: string) => void>()
+    const sent: string[] = []
+    let failing = false
+    const relay: Relay = {
+      publish: async (payload) => {
+        if (failing) throw new Error('database gone')
+        sent.push(payload)
+        for (const listener of listeners) listener(payload)
+      },
+      subscribe: async (handler) => {
+        listeners.add(handler)
+        return async () => void listeners.delete(handler)
+      },
+    }
+    return {
+      relay,
+      sent,
+      fail: () => (failing = true),
+      heard: (payload: string) => listeners.forEach((l) => l(payload)),
+    }
+  }
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 10))
+
+  it('delivers a change made through one replica to streams open on another', async () => {
+    const shared = memoryRelay()
+    const first = createEventBus({ membersAmong: everyone, relay: shared.relay })
+    const second = createEventBus({ membersAmong: everyone, relay: shared.relay })
+    await first.connect()
+    await second.connect()
+    const [onFirst, onSecond] = [subscriber(ANN), subscriber(BOB)]
+    first.subscribe(onFirst.self)
+    second.subscribe(onSecond.self)
+
+    await first.publishProject(PROJECT, 'wiki')
+    second.publishAccessChange([ANN])
+    await settle()
+
+    const changed = { type: 'project_changed', projectId: PROJECT, resource: 'wiki' }
+    expect(onFirst.received).toEqual([changed, { type: 'access_changed' }])
+    expect(onSecond.received).toEqual([changed])
+  })
+
+  it('splits a long list of people into notifications PostgreSQL accepts', async () => {
+    const shared = memoryRelay()
+    const bus = createEventBus({ membersAmong: everyone, relay: shared.relay })
+    await bus.connect()
+    const many = Array.from(
+      { length: 500 },
+      (_, index) => `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+    )
+    const last = subscriber(many.at(-1) ?? '')
+    bus.subscribe(last.self)
+
+    bus.publishAccessChange(many)
+    await settle()
+
+    expect(shared.sent.length).toBeGreaterThan(1)
+    expect(shared.sent.every((payload) => Buffer.byteLength(payload) <= 7900)).toBe(true)
+    expect(last.received).toEqual([{ type: 'access_changed' }])
+  })
+
+  it('tells its own streams when the relay fails, and ignores messages it cannot read', async () => {
+    const shared = memoryRelay()
+    const errors: unknown[] = []
+    const bus = createEventBus({
+      membersAmong: everyone,
+      relay: shared.relay,
+      onError: (error) => errors.push(error),
+    })
+    const ann = subscriber(ANN)
+    bus.subscribe(ann.self)
+
+    // Not listening yet: delivered here directly.
+    await bus.publishProject(PROJECT, 'tasks')
+    expect(shared.sent).toEqual([])
+    await bus.connect()
+    shared.heard('not json')
+    shared.heard(JSON.stringify({ p: 'not-an-id', r: 'tasks' }))
+    shared.fail()
+    await bus.publishProject(PROJECT, 'labels')
+
+    expect(ann.received.map((event) => 'resource' in event && event.resource)).toEqual([
+      'tasks',
+      'labels',
+    ])
+    expect(errors).toHaveLength(3)
   })
 })
 

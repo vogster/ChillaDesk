@@ -145,11 +145,19 @@ export async function buildApp({
 
   const events = createEventBus({
     membersAmong: membersAmong(db),
+    relay: database.relay,
     onError: (error) => app.log.warn({ err: error }, 'live event was not delivered'),
   })
   app.decorate('events', events)
   // Open streams would otherwise keep the server from closing.
   app.addHook('preClose', async () => events.closeAll())
+  // Hearing the other replicas; if that fails, this one still tells its own streams.
+  try {
+    const disconnect = await events.connect()
+    app.addHook('onClose', async () => disconnect())
+  } catch (error) {
+    app.log.error({ err: error }, 'live events from other replicas are not received')
+  }
   // Every successful change under /api/projects/:projectId is announced to that project.
   app.addHook('onResponse', async (request, reply) => {
     if (SAFE_METHODS.has(request.method) || reply.statusCode >= 400) return

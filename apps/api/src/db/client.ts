@@ -22,9 +22,27 @@ export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
 /** Anything that can run queries: the database itself or an open transaction. */
 export type Executor = Db | Tx
 
+/**
+ * Messages between the replicas of the API, through the database: what one publishes,
+ * every one (itself included) hears. Live events travel this way, so a browser hears of a
+ * change whichever replica it is connected to.
+ */
+export interface Relay {
+  publish(payload: string): Promise<void>
+  /** Starts listening; the returned function stops it. */
+  subscribe(handler: (payload: string) => void): Promise<() => Promise<void>>
+}
+
+/** PostgreSQL limits a notification to 8000 bytes; senders split what is longer. */
+export const RELAY_PAYLOAD_MAX = 7900
+
+const RELAY_CHANNEL = 'chilladesk_events'
+
 export interface Database {
   driver: 'pglite' | 'postgres'
   db: Db
+  /** Null for the embedded database, which only ever has one API process. */
+  relay: Relay | null
   /** Applies pending SQL migrations from the `drizzle` folder. */
   migrate(): Promise<void>
   /** Resolves to false instead of throwing so health checks can report the outage. */
@@ -61,6 +79,7 @@ function fromPglite(client: PGlite, onPingError?: PingErrorHandler): Database {
   return {
     driver: 'pglite',
     db,
+    relay: null,
     migrate: () => migratePglite(db, { migrationsFolder: findMigrationsFolder() }),
     ping: () => (client.closed ? Promise.resolve(false) : safePing(db, onPingError)),
     close: async () => {
@@ -87,6 +106,16 @@ export async function createDatabase(
   return {
     driver: 'postgres',
     db,
+    relay: {
+      publish: async (payload) => {
+        await client.notify(RELAY_CHANNEL, payload)
+      },
+      // postgres-js keeps a connection of its own for listening and reconnects it.
+      subscribe: async (handler) => {
+        const { unlisten } = await client.listen(RELAY_CHANNEL, handler)
+        return unlisten
+      },
+    },
     migrate: () => migratePostgres(db, { migrationsFolder: findMigrationsFolder() }),
     ping: () => safePing(db, onPingError),
     close: () => client.end({ timeout: 5 }),
