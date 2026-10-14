@@ -53,7 +53,7 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 - [x] **Moving cards with the keyboard** — left and right now move a card to the next column
       in one press (it took two), and the drop is announced with the column.
 - [ ] **Dragging on a phone** — not checked on a real touch device.
-- [ ] **Version 0.2.0** — six large features since 0.1.0, same version and tag.
+- [x] **Version 0.2.0** — version numbers and CHANGELOG.md; the tag publishes the images.
 - [x] **Several API replicas** — live events go through PostgreSQL LISTEN/NOTIFY, per-account
       limits and the mail and webhook queues are in the database. Still per replica: the
       per-address request limits and attached files on local disk (see S3 storage).

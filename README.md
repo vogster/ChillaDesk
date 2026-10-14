@@ -18,8 +18,8 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **REST API** with OpenAPI docs — ready for a mobile client
 - **MCP server** — let AI agents read and update your projects
 
-> Status: 0.1.0, the first usable release. Everything listed above works. Expect rough
-> edges, and back up your data before upgrading.
+> Status: 0.2.0. Everything listed above works; see [CHANGELOG.md](CHANGELOG.md) for what is
+> new. Expect rough edges, and back up your data before upgrading.
 
 ## Quick start (Docker)
 
