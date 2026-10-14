@@ -1,10 +1,10 @@
 import { attachmentSchema, errorResponseSchema } from '@chilladesk/shared'
-import type { Readable } from 'node:stream'
 import type { FastifyRequest } from 'fastify'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import type { Db } from '../../db/client'
-import { invalid, notFound } from '../../errors'
+import { invalid } from '../../errors'
+import { acceptRawBodies } from '../../http/raw-body'
 import { requireAuth } from '../auth/plugin'
 import { getProject } from '../projects/service'
 import {
@@ -35,43 +35,6 @@ const errors = {
   404: errorResponseSchema,
 }
 
-const tooLarge = () =>
-  Object.assign(new Error('The file is too large'), { statusCode: 413 as const })
-
-/**
- * Reads past a body nobody wants, so that the answer can be sent: a proxy in front goes on
- * sending the file and only then listens. Far more than a file could be is not waited for.
- */
-async function discard(payload: Readable, maxBytes: number): Promise<void> {
-  let seen = 0
-  try {
-    for await (const chunk of payload) {
-      seen += (chunk as Buffer).length
-      if (seen > maxBytes * 2) {
-        payload.destroy()
-        return
-      }
-    }
-  } catch {
-    // The sender went away; there is nobody left to answer.
-  }
-}
-
-/** Collects a body of at most `maxBytes`; a longer one is read to its end and refused. */
-async function readLimited(payload: Readable, maxBytes: number): Promise<Buffer> {
-  const chunks: Buffer[] = []
-  let size = 0
-  for await (const chunk of payload) {
-    size += (chunk as Buffer).length
-    if (size > maxBytes) {
-      await discard(payload, maxBytes)
-      throw tooLarge()
-    }
-    chunks.push(chunk as Buffer)
-  }
-  return Buffer.concat(chunks)
-}
-
 /** The header carrying the name of an uploaded file, percent-encoded. */
 export const FILE_NAME_HEADER = 'x-file-name'
 
@@ -97,21 +60,13 @@ export const attachmentRoutes: FastifyPluginAsyncZod<AttachmentRoutesOptions> = 
   app,
   { db, store, maxUploadBytes, projectQuotaBytes, uploadRateLimitMax },
 ) => {
-  // In this plugin every body is a file: nothing is parsed, whatever type it claims.
-  app.removeAllContentTypeParsers()
-  app.addContentTypeParser('*', async (request: FastifyRequest, payload: Readable) => {
-    try {
-      // Before a single byte is kept: who is sending, and may they attach files here?
-      // The address is not validated yet at this point, so the id is checked here.
-      const projectId = z.uuid().safeParse((request.params as { projectId?: unknown }).projectId)
-      const userId = requireAuth(request).user.id
-      if (!projectId.success) throw notFound('Project')
-      await getProject(db, userId, projectId.data, 'member')
-    } catch (error) {
-      await discard(payload, maxUploadBytes)
-      throw error
-    }
-    return readLimited(payload, maxUploadBytes)
+  // In this plugin every body is a file. Before a single byte is kept: who is sending,
+  // and may they attach files here?
+  acceptRawBodies(app, {
+    maxBytes: maxUploadBytes,
+    authorize: async (auth, projectId) => {
+      await getProject(db, auth.user.id, projectId, 'member')
+    },
   })
 
   const tags = ['attachments']

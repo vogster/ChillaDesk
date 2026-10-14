@@ -9,6 +9,8 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **Attachments** — files on tasks and wiki pages, pictures shown right in the text
 - **Checklists, links between tasks, milestones**, a history of every task, and a task list
   with sorting, saved filters and bulk actions
+- **Import and export** — tasks from CSV (ours or Jira) and Trello boards; tasks to CSV and
+  the wiki to a ZIP of Markdown files
 - **Mentions and notifications** — in the app, and by email if you configure SMTP
 - **Live updates** — boards, tasks and pages refresh as your teammates change them
 - **English and Russian** interface, following the browser language, with a switcher
@@ -76,6 +78,22 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 | `SMTP_URL`             | — (no email)    | `smtp://user:password@host:587`; turns notification emails on     |
 | `MAIL_FROM`            | —               | Sender of the emails, e.g. `ChillaDesk <wiki@example.com>`        |
 | `PUBLIC_URL`           | —               | Address people open ChillaDesk at; links in emails point there    |
+
+### Import and export
+
+Project owners find both on the **Settings** page.
+
+- **Export:** all tasks as CSV (opens in Excel, LibreOffice and Google Sheets), and the wiki
+  as a ZIP of Markdown files — a page is `Title.md`, the pages under it are in `Title/`.
+  Through the API (`GET /api/projects/{id}/export/tasks.csv`, `…/export/wiki.zip`) any
+  member can export.
+- **Import of tasks** (up to 1000 per file, 5 MB): CSV exported by ChillaDesk or Jira, or any
+  sheet with a `Title` (or `Summary`) column, separated by commas, semicolons or tabs; or
+  a Trello board exported as JSON. Statuses are matched by name, then by meaning
+  (`Done`, `In Progress`), and otherwise added as new columns; missing labels and
+  milestones are created; assignees are found by email or name among the members. Rows that
+  cannot become tasks are listed with the reason. Nobody is notified about imported tasks.
+  Comments, attachments and history are not imported.
 
 ### Mentions and notifications
 

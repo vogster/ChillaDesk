@@ -1,12 +1,17 @@
 import type { CreateLabelRequest, Label, UpdateLabelRequest } from '@chilladesk/shared'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, sql } from 'drizzle-orm'
 import type { Db, Executor, Tx } from '../../db/client'
 import { labels, taskLabels } from '../../db/schema'
 import { conflict, invalid, isUniqueViolation, notFound } from '../../errors'
 import { getProject } from '../projects/service'
 
 const labelColumns = { id: labels.id, name: labels.name, color: labels.color }
-const byName = sql`lower(${labels.name})`
+/** Labels one project may have; every board and task form loads all of them. */
+export const MAX_LABELS = 200
+
+/** A name compared ignoring case, the way label names are unique. */
+export const lowerName = (column: typeof labels.name) => sql`lower(${column})`
+const byName = lowerName(labels.name)
 
 const nameTaken = (name: string) => conflict(`A label named "${name}" already exists`)
 
@@ -22,6 +27,13 @@ export async function createLabel(
   input: CreateLabelRequest,
 ): Promise<Label> {
   await getProject(db, userId, projectId, 'member')
+  const [existing] = await db
+    .select({ total: count() })
+    .from(labels)
+    .where(eq(labels.projectId, projectId))
+  if ((existing?.total ?? 0) >= MAX_LABELS) {
+    throw conflict('This project has too many labels, delete some first')
+  }
   try {
     const [created] = await db
       .insert(labels)

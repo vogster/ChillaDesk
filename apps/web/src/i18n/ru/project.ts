@@ -1,4 +1,5 @@
 import type { ProjectMessages } from '../en/project'
+import { ruPlural } from '../messages'
 
 export const project: ProjectMessages = {
   confirmDelete: 'Да, удалить',
@@ -43,6 +44,28 @@ export const project: ProjectMessages = {
     newColumn: 'Новая колонка',
     kind: 'Тип',
     add: 'Добавить колонку',
+  },
+  transfer: {
+    heading: 'Импорт и экспорт',
+    exportHint: 'Скачайте всё, чтобы сохранить копию или перенести в другое место.',
+    exportTasks: 'Задачи в CSV',
+    exportWiki: 'Вики — ZIP с файлами Markdown',
+    importHeading: 'Импорт задач',
+    importHint:
+      'Недостающие метки, вехи и колонки будут добавлены. Уведомлений об импортированных задачах никто не получит.',
+    format: 'Формат',
+    formats: {
+      csv: 'CSV — выгрузка ChillaDesk или Jira, или любая таблица с колонкой Title',
+      trello: 'Доска Trello (выгрузка в JSON)',
+    },
+    file: 'Файл',
+    import: 'Импортировать',
+    importing: 'Импорт…',
+    created: (count: number) =>
+      `${ruPlural(count, 'Импортирована', 'Импортировано', 'Импортировано')} ${count} ${ruPlural(count, 'задача', 'задачи', 'задач')}.`,
+    skippedHeading: 'Пропущено',
+    row: (row: number) => `Строка ${row}`,
+    warningsHeading: 'Стоит проверить',
   },
   milestones: {
     heading: 'Вехи',

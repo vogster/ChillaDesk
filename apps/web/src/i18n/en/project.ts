@@ -43,6 +43,27 @@ export const project = {
     kind: 'Kind',
     add: 'Add column',
   },
+  transfer: {
+    heading: 'Import and export',
+    exportHint: 'Download everything to keep a copy or to move it elsewhere.',
+    exportTasks: 'Tasks as CSV',
+    exportWiki: 'Wiki as ZIP of Markdown files',
+    importHeading: 'Import tasks',
+    importHint:
+      'Missing labels, milestones and columns are added. Nobody gets notifications about imported tasks.',
+    format: 'Format',
+    formats: {
+      csv: 'CSV — ChillaDesk or Jira export, or any sheet with a Title column',
+      trello: 'Trello board (JSON export)',
+    },
+    file: 'File',
+    import: 'Import',
+    importing: 'Importing…',
+    created: (count: number) => `Imported ${count} ${count === 1 ? 'task' : 'tasks'}.`,
+    skippedHeading: 'Left out',
+    row: (row: number) => `Row ${row}`,
+    warningsHeading: 'Worth checking',
+  },
   milestones: {
     heading: 'Milestones',
     empty:

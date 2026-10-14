@@ -33,6 +33,7 @@ import { savedFilterRoutes } from './modules/tasks/filters.routes'
 import { taskRoutes } from './modules/tasks/routes'
 import { statusRoutes } from './modules/tasks/statuses.routes'
 import { tokenRoutes } from './modules/tokens/routes'
+import { transferRoutes } from './modules/transfer/routes'
 import { wikiRoutes } from './modules/wiki/routes'
 import { healthRoutes } from './routes/health'
 
@@ -199,6 +200,11 @@ export async function buildApp({
     maxUploadBytes,
     projectQuotaBytes,
     uploadRateLimitMax,
+  })
+  await app.register(transferRoutes, {
+    prefix: '/api/projects/:projectId',
+    db,
+    rateLimitMax: uploadRateLimitMax,
   })
 
   return app

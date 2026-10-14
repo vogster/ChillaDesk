@@ -1,6 +1,8 @@
 import { labelSchema, type Label, type Task, type TaskList } from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { labels } from '../../db/schema'
 import { createTestContext, type ProjectFixture, type TestContext } from '../../test/harness'
+import { MAX_LABELS } from './service'
 
 let ctx: TestContext
 
@@ -75,6 +77,18 @@ describe('managing labels', () => {
 
     expect(updated.json()).toEqual({ id: label.id, name: 'Improvement', color: 'blue' })
     expect(taken.statusCode).toBe(409)
+  })
+
+  it('refuses more labels than a project may have', async () => {
+    const fixture = await ctx.createProject()
+    await ctx.database.db.insert(labels).values(
+      Array.from({ length: MAX_LABELS }, (_, index) => ({
+        projectId: fixture.project.id,
+        name: `label ${index}`,
+      })),
+    )
+    const response = await fixture.call(fixture.member, 'POST', '/labels', { name: 'one more' })
+    expect(response.statusCode).toBe(409)
   })
 
   it('is read-only for viewers and hidden from outsiders', async () => {

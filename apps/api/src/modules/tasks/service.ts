@@ -339,6 +339,7 @@ export async function createTask(
   userId: string,
   projectId: string,
   input: CreateTaskRequest,
+  { notify = true }: { notify?: boolean } = {},
 ): Promise<Task> {
   await getProject(db, userId, projectId, 'member')
   return db.transaction(async (tx) => {
@@ -377,6 +378,8 @@ export async function createTask(
     await recordTaskChanges(tx, created.id, userId, [{ field: 'created' }])
     await watchTask(tx, created.id, [userId, input.assigneeId])
 
+    // An import brings in many tasks at once; nobody wants a notification for each.
+    if (!notify) return loadTask(tx, projectId, created.id)
     const subject = { projectId, actorId: userId, taskId: created.id }
     await notifyAssignment(tx, subject, input.assigneeId, input.title)
     // The assignee has just been told about this task; a mention in it adds nothing.

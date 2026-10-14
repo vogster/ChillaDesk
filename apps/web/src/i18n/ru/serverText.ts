@@ -46,6 +46,20 @@ const EXACT: Record<string, string> = {
   'At least one field is required': 'Нужно изменить хотя бы одно поле',
   'Labels must not repeat': 'Метки не должны повторяться',
   'Year must be 1900-2999': 'Год должен быть от 1900 до 2999',
+  'No title': 'Нет названия',
+  'The file has no Title (or Summary) column': 'В файле нет колонки Title (или Summary)',
+  'The file is not JSON; export the Trello board as JSON':
+    'Это не JSON. Выгрузите доску Trello в формате JSON.',
+  'The file is not a Trello board export': 'Это не выгрузка доски Trello',
+  'This project has too many labels, delete some first':
+    'В проекте слишком много меток. Сначала удалите часть.',
+  'The wiki has too many pages to export': 'В вики слишком много страниц для выгрузки',
+}
+
+const SHORTENED: Record<string, string> = {
+  Titles: 'Названия',
+  Descriptions: 'Описания',
+  'Checklist items': 'Пункты чек-листов',
 }
 
 const THINGS: Record<string, string> = {
@@ -86,6 +100,45 @@ const PATTERNS: [RegExp, (...groups: string[]) => string][] = [
     /^At most (\d+) files can be attached here$/,
     (max) => `Сюда можно прикрепить не больше ${max} файлов`,
   ],
+  [
+    /^A file can bring in at most (\d+) tasks at once$/,
+    (max) => `За один раз можно импортировать не больше ${max} задач`,
+  ],
+  [/^Added the column "(.+)"$/, (name) => `Добавлена колонка «${name}»`],
+  [
+    /^No column "(.+)"; its tasks were put into the first column$/,
+    (name) => `Колонки «${name}» нет; её задачи попали в первую колонку`,
+  ],
+  [
+    /^Unknown priority "(.+)"; medium was used$/,
+    (value) => `Неизвестный приоритет «${value}»; поставлен средний`,
+  ],
+  [
+    /^"(.+)" is not a member of this project; left unassigned$/,
+    (who) => `«${who}» не участвует в проекте; задача оставлена без исполнителя`,
+  ],
+  [/^Could not read the date "(.+)"$/, (value) => `Не удалось прочитать дату «${value}»`],
+  [
+    /^A task can have at most (\d+) labels; the rest were left out$/,
+    (max) => `У задачи может быть не больше ${max} меток; остальные пропущены`,
+  ],
+  [
+    /^A checklist can have at most (\d+) items; the rest were left out$/,
+    (max) => `В чек-листе может быть не больше ${max} пунктов; остальные пропущены`,
+  ],
+  [
+    /^The project has too many labels; "(.+)" was not added$/,
+    (name) => `В проекте слишком много меток; «${name}» не добавлена`,
+  ],
+  [
+    /^The project has too many milestones; "(.+)" was not added$/,
+    (name) => `В проекте слишком много вех; «${name}» не добавлена`,
+  ],
+  [
+    /^(Titles|Descriptions|Checklist items) longer than (\d+) characters were shortened$/,
+    (what, max) => `${SHORTENED[what] ?? what} длиннее ${max} символов были сокращены`,
+  ],
+  [/^Archived card "(.+)"$/, (name) => `Карточка «${name}» в архиве`],
   [/^(.+) not found$/, (what) => THINGS[what] ?? 'Не найдено'],
 ]
 

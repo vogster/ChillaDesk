@@ -34,8 +34,11 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 
 - [ ] **Webhooks** for project events — the base for Telegram, Slack and CI.
 - [x] **MCP tools** for labels, notifications and members.
-- [ ] **Import and export** — CSV for tasks, a Markdown archive for the wiki, import from
+- [x] **Import and export** — CSV for tasks, a Markdown archive for the wiki, import from
       Jira or Trello.
+- [ ] **Import of comments, attachments and history** from Jira and Trello (only tasks now).
+- [ ] **Export links for members and viewers** — the exports are allowed to them by the API,
+      but the buttons are on the owner-only settings page.
 
 ## Quality and release
 
