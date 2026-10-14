@@ -185,3 +185,29 @@ export const emailChangedEmail = ({ to, locale, link }: AccountEmail): MailMessa
   to,
   ...CHANGED[locale](link),
 })
+
+const CHANGE_REQUESTED: Texts = {
+  en: (link) => ({
+    subject: 'Someone asked to move your ChillaDesk account to another email address',
+    text: [
+      'Hello,',
+      'someone signed in to your ChillaDesk account asked to move it to another email address. The move happens only when the link sent to that address is opened.',
+      'If that was not you, change your password now, which also cancels the move:',
+      link,
+    ].join('\n\n'),
+  }),
+  ru: (link) => ({
+    subject: 'Запрошен перенос вашей учётной записи ChillaDesk на другой адрес',
+    text: [
+      'Здравствуйте!',
+      'Кто-то, войдя в вашу учётную запись ChillaDesk, попросил перенести её на другой адрес почты. Перенос произойдёт, только когда откроют ссылку, отправленную на тот адрес.',
+      'Если это были не вы, смените пароль сейчас — это отменит перенос:',
+      link,
+    ].join('\n\n'),
+  }),
+}
+
+export const emailChangeRequestedEmail = ({ to, locale, link }: AccountEmail): MailMessage => ({
+  to,
+  ...CHANGE_REQUESTED[locale](link),
+})

@@ -17,7 +17,13 @@ import {
   tasks,
   users,
 } from '../../db/schema'
-import { conflict, forbidden, isUniqueViolation, notFound } from '../../errors'
+import {
+  conflict,
+  forbidden,
+  isForeignKeyViolation,
+  isUniqueViolation,
+  notFound,
+} from '../../errors'
 import { createDefaultStatuses } from '../tasks/statuses.service'
 
 const ROLE_RANK: Record<ProjectRole, number> = { viewer: 0, member: 1, owner: 2 }
@@ -179,6 +185,8 @@ export async function addMember(
     })
   } catch (error) {
     if (isUniqueViolation(error)) throw conflict('This user is already a member of the project')
+    // The account was deleted between finding it and adding it.
+    if (isForeignKeyViolation(error)) throw notFound('User with this email')
     throw error
   }
 }

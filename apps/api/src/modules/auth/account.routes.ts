@@ -76,10 +76,12 @@ export const accountRoutes: FastifyPluginAsyncZod<AccountRoutesOptions> = async 
     async (request, reply) => {
       const { user } = requireSession(request)
       await limitPasswords(user.email)
-      if (mail && !(await emailRequests.consume(user.id)).allowed) {
-        throw new AppError('RATE_LIMITED', 'Too many emails requested, try again later')
-      }
       const result = await changeEmail(db, mail, user.id, request.body, {
+        limits: {
+          account: async () => (await emailRequests.consume(user.id)).allowed,
+          // Many accounts must not be able to flood one address with notes either.
+          address: async (email) => (await emailRequests.consume(email)).allowed,
+        },
         onError: (error) => {
           const { name, code } = (error ?? {}) as { name?: unknown; code?: unknown }
           app.log.warn({ name, code }, 'change of address email was not sent')
@@ -107,8 +109,8 @@ export const accountRoutes: FastifyPluginAsyncZod<AccountRoutesOptions> = async 
     },
     async (request) => {
       if (!mail) throw new AppError('CONFLICT', 'This server is not set up to send email')
-      const { user } = requireSession(request)
-      return confirmEmailChange(db, mail, user.id, request.body.token)
+      const { user, sessionId } = requireSession(request)
+      return confirmEmailChange(db, mail, user.id, sessionId ?? '', request.body.token)
     },
   )
 
@@ -136,7 +138,9 @@ export const accountRoutes: FastifyPluginAsyncZod<AccountRoutesOptions> = async 
     async (request, reply) => {
       const { user } = requireSession(request)
       await limitPasswords(user.email)
-      await deleteAccount(db, user.id, request.body.password)
+      const shared = await deleteAccount(db, user.id, request.body.password)
+      // The people left in those projects see the member list change at once.
+      for (const projectId of shared) void app.events.publishProject(projectId, 'members')
       reply.clearCookie(SESSION_COOKIE, { path: '/' })
       return reply.code(204).send(null)
     },

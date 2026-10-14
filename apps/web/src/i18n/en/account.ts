@@ -32,7 +32,7 @@ export const account = {
     emailChanged: 'Address changed.',
     deleteSection: 'Delete account',
     deleteHint:
-      'Projects only you are in are deleted with your account. In shared projects your tasks, pages and comments stay, under “deleted user”. This cannot be undone.',
+      'Projects only you are in are deleted with your account. In shared projects your tasks, pages and comments stay, under “deleted user”; webhooks you added there stop. This cannot be undone.',
     deleteAccount: 'Delete my account',
     handOver: 'First make someone else an owner of these projects:',
     passwordChanged:
@@ -56,6 +56,7 @@ export const account = {
     change: {
       title: 'New email address',
       done: 'Your account now uses this address.',
+      wrongAccount: 'Open the link signed in as the account that asked for this change.',
     },
     verify: {
       title: 'Email confirmation',

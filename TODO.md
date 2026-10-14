@@ -57,6 +57,8 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 - [x] **Several API replicas** — live events go through PostgreSQL LISTEN/NOTIFY, per-account
       limits and the mail and webhook queues are in the database. Still per replica: the
       per-address request limits and attached files on local disk (see S3 storage).
+- [ ] **Undoing a change of address** from the old address (a link that restores it and signs
+      everyone out), for when someone with the password moved the account.
 - [ ] **Adding a member by email tells whether the address has an account** ("User with this
       email" versus added). With email set up, answer the same either way and send an invite
       to the address instead.

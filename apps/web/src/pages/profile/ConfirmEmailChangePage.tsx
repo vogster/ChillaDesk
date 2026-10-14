@@ -39,7 +39,12 @@ export function ConfirmEmailChangePage() {
     >
       {token === '' && <p className="text-sm">{t.account.email.badLink}</p>}
       {token !== '' && confirmation.isPending && <Spinner />}
-      {confirmation.isError && <Alert>{errorMessage(confirmation.error)}</Alert>}
+      {confirmation.isError && (
+        <>
+          <Alert>{errorMessage(confirmation.error)}</Alert>
+          <p className="text-sm">{texts.wrongAccount}</p>
+        </>
+      )}
       {confirmation.isSuccess && (
         <p role="status" className="text-sm">
           {texts.done} {confirmation.data.email}

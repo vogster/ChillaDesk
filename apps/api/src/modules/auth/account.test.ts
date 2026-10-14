@@ -132,7 +132,84 @@ describe('changing the email address with email set up', () => {
   })
 })
 
+describe('changing the address safely', () => {
+  it('tells the current address at once, and ends other sessions when the change is made', async () => {
+    const ann = await withMail.signUp()
+    const elsewhere = (await login(withMail, ann.email)).json<{ token: string }>().token
+    const address = freshAddress()
+
+    await withMail.request(ann, 'POST', '/api/auth/email', {
+      email: address,
+      password: TEST_PASSWORD,
+    })
+    const requested = await emailTo(ann.email, /asked to move your ChillaDesk account/)
+    expect(requested.message.text).toContain('https://desk.example.com/profile')
+    const { token } = await emailTo(address, /Confirm the new email address/)
+    await withMail.request(ann, 'POST', '/api/auth/email/confirm', { token })
+
+    const other = await withMail.app.inject({
+      method: 'GET',
+      url: '/api/auth/me',
+      headers: { authorization: `Bearer ${elsewhere}` },
+    })
+    expect(other.statusCode).toBe(401)
+    expect((await withMail.request(ann, 'GET', '/api/auth/me')).statusCode).toBe(200)
+  })
+
+  it('treats an unfinished sign-up of the address as free, and removes it', async () => {
+    const ann = await withMail.signUp()
+    const address = freshAddress()
+    await withMail.app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { email: address, name: 'Squatter', password: 'squatters password' },
+    })
+    await emailTo(address, /Confirm your email address/)
+
+    await withMail.request(ann, 'POST', '/api/auth/email', {
+      email: address,
+      password: TEST_PASSWORD,
+    })
+    const { token } = await emailTo(address, /Confirm the new email address/)
+    const confirmed = await withMail.request(ann, 'POST', '/api/auth/email/confirm', { token })
+
+    expect(confirmed.statusCode, confirmed.body).toBe(200)
+    expect(confirmed.json<User>().email).toBe(address)
+  })
+
+  it('does not spend the email allowance on wrong passwords', async () => {
+    const ann = await withMail.signUp()
+    for (let index = 0; index < 4; index += 1) {
+      await withMail.request(ann, 'POST', '/api/auth/email', {
+        email: freshAddress(),
+        password: 'wrong',
+      })
+    }
+
+    const right = await withMail.request(ann, 'POST', '/api/auth/email', {
+      email: freshAddress(),
+      password: TEST_PASSWORD,
+    })
+
+    expect(right.statusCode).toBe(202)
+  })
+})
+
 describe('deleting the account', () => {
+  it('revokes the invite links its owner made', async () => {
+    const fixture = await plain.createProject()
+    await fixture.call(fixture.owner, 'PATCH', `/members/${fixture.member.id}`, { role: 'owner' })
+    const made = await fixture.call(fixture.member, 'POST', '/invites', { role: 'member' })
+    expect(made.statusCode, made.body).toBe(201)
+
+    await plain.request(fixture.member, 'POST', '/api/auth/me/delete', {
+      password: TEST_PASSWORD,
+    })
+
+    const left = await fixture.call(fixture.owner, 'GET', '/invites')
+    expect(left.json()).toEqual([])
+  })
+
   async function project(ctx: TestContext, owner: Awaited<ReturnType<TestContext['signUp']>>) {
     counter += 1
     const created = await ctx.request(owner, 'POST', '/api/projects', {
