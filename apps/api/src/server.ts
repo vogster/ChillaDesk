@@ -28,6 +28,7 @@ const app = await buildApp({
   registrationEnabled: config.registrationEnabled,
   cookieSecure: config.cookieSecure,
   rateLimitMax: config.rateLimitMax,
+  authRateLimitMax: config.authRateLimitMax,
   filesDir: config.filesDir,
   maxUploadBytes: config.maxUploadMb * 1024 * 1024,
   projectQuotaBytes: config.projectFilesMb * 1024 * 1024,

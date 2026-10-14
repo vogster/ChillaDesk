@@ -23,6 +23,7 @@ const envSchema = z.object({
     .default('true')
     .transform((value) => value === 'true'),
   RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(600),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(10),
   FILES_DIR: z.string().min(1).default('./.data/files'),
   MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(100).default(10),
   PROJECT_FILES_MB: z.coerce.number().int().min(1).default(1024),
@@ -70,6 +71,8 @@ export interface AppConfig {
    * behind the same NAT shares it, so a team in one office needs more than a single user.
    */
   rateLimitMax: number
+  /** Sign-ins and sign-ups per minute from one client address. */
+  authRateLimitMax: number
   /** Directory the files attached to tasks and pages are kept in. */
   filesDir: string
   /** Largest file that can be attached, in megabytes. */
@@ -110,6 +113,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     registrationEnabled: parsed.REGISTRATION_ENABLED,
     cookieSecure: parsed.COOKIE_SECURE,
     rateLimitMax: parsed.RATE_LIMIT_MAX,
+    authRateLimitMax: parsed.AUTH_RATE_LIMIT_MAX,
     filesDir: parsed.FILES_DIR,
     maxUploadMb: parsed.MAX_UPLOAD_MB,
     projectFilesMb: parsed.PROJECT_FILES_MB,

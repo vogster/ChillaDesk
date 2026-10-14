@@ -93,10 +93,12 @@ export const currentMessages = (): Messages => DICTIONARIES[current]
 
 /**
  * The locale for dates and numbers. The browser's own one is kept when it already is in
- * the chosen language, so its regional habits (day first, 24 hours) stay.
+ * the chosen language, so its regional habits (day first, 24 hours) stay. It is named
+ * rather than left to the default, which follows the operating system and may be another
+ * language than both.
  */
-export function intlLocale(locale: Locale = current): string | undefined {
-  return navigator.language.toLowerCase().startsWith(locale) ? undefined : locale
+export function intlLocale(locale: Locale = current): string {
+  return navigator.language.toLowerCase().startsWith(locale) ? navigator.language : locale
 }
 
 /** Picks the Russian form for a number: 1 задача, 2 задачи, 5 задач. */

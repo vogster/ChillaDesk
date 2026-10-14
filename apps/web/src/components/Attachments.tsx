@@ -149,6 +149,8 @@ export function Attachments({ path, queryKey, canEdit }: AttachmentsProps) {
             multiple
             className="sr-only"
             aria-label={texts.attach}
+            // The button below opens it; screen readers should meet the button only.
+            aria-hidden="true"
             tabIndex={-1}
             onChange={handleFiles}
           />

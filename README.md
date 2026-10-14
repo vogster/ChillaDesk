@@ -233,7 +233,12 @@ pnpm install
 pnpm dev          # API on :3000, web on :5173 (proxies /api to the API)
 pnpm test         # unit + integration tests with coverage
 pnpm lint && pnpm typecheck
+pnpm e2e          # browser tests (Playwright) against a fresh API and web app
 ```
+
+The browser tests start their own API (on an empty embedded database) and web app. The
+first time, install a browser with `pnpm --filter @chilladesk/e2e exec playwright install
+chromium`, or use one you have: `PW_CHANNEL=msedge pnpm e2e` (or `chrome`).
 
 ### Translating the interface
 

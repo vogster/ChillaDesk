@@ -7,6 +7,9 @@ const COLUMN_PREFIX = 'column:'
 /** Drop-target id of a whole column, as opposed to a task card inside it. */
 export const columnDropId = (statusId: string) => `${COLUMN_PREFIX}${statusId}`
 
+/** Whether a drop-target id stands for a whole column. */
+export const isColumnDropId = (id: string) => id.startsWith(COLUMN_PREFIX)
+
 const byPosition = (left: Task, right: Task) =>
   left.position - right.position || left.number - right.number
 

@@ -141,7 +141,7 @@ describe('serverText', () => {
 describe('intlLocale and ruPlural', () => {
   it('keeps the browser locale when it is already in the chosen language', () => {
     browserLanguages('en-GB')
-    expect(intlLocale('en')).toBeUndefined()
+    expect(intlLocale('en')).toBe('en-GB')
     expect(intlLocale('ru')).toBe('ru')
   })
 

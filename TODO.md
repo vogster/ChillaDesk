@@ -44,12 +44,14 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 
 ## Quality and release
 
-- [ ] **Publish on GitHub** — the repository is local only, CI has never run, there are no
-      prebuilt Docker images.
-- [ ] **Browser tests (Playwright)** — browser scenarios are checked by hand so far.
+- [x] **Publish on GitHub** — github.com/vogster/ChillaDesk, CI on every push, Docker images
+      on ghcr.io for every version tag.
+- [x] **Browser tests (Playwright)** — sign-up, board (mouse and keyboard), wiki, a team with
+      live updates and mentions, language, import and export; run in CI.
 - [ ] **Smaller web bundle** — about 700 kB in one file; split it by page.
-- [ ] **Dragging on a phone and with the keyboard** — not checked on real devices; moving a
-      card between columns with the keyboard looked wrong in a simulation.
+- [x] **Moving cards with the keyboard** — left and right now move a card to the next column
+      in one press (it took two), and the drop is announced with the column.
+- [ ] **Dragging on a phone** — not checked on a real touch device.
 - [ ] **Version 0.2.0** — six large features since 0.1.0, same version and tag.
 - [ ] **Several API replicas** — live events are delivered inside one process; more than one
       replica needs PostgreSQL LISTEN/NOTIFY or similar.

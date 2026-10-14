@@ -7,7 +7,13 @@ import { vi } from 'vitest'
 import { App } from '../App'
 import { createQueryClient } from '../queryClient'
 
-type Handler = (body: unknown, query: URLSearchParams) => { status: number; body?: unknown }
+interface MockResponse {
+  status: number
+  body?: unknown
+}
+
+/** Answers at once, or later when it returns a promise (to hold a request open). */
+type Handler = (body: unknown, query: URLSearchParams) => MockResponse | Promise<MockResponse>
 
 /**
  * Routes keyed by `"METHOD /api/path"`; anything else answers 404 like the real API.
@@ -29,9 +35,9 @@ export function mockApi(routes: ApiRoutes): RecordedCall[] {
 
     const [path = '', search = ''] = String(input).split('?')
     const handler = routes[key] ?? routes[`${init?.method ?? 'GET'} ${path}`]
-    const result = handler
+    const result = await (handler
       ? handler(body, new URLSearchParams(search))
-      : { status: 404, body: { error: { code: 'NOT_FOUND', message: `No mock for ${key}` } } }
+      : { status: 404, body: { error: { code: 'NOT_FOUND', message: `No mock for ${key}` } } })
     return new Response(result.body === undefined ? null : JSON.stringify(result.body), {
       status: result.status,
     })

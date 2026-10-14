@@ -16,11 +16,20 @@ function QuickAdd({ projectId, status }: { projectId: string; status: Status }) 
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const form = event.currentTarget
-    const title = String(new FormData(form).get('title') ?? '').trim()
+    const input = event.currentTarget.elements.namedItem('title') as HTMLInputElement
+    const title = input.value.trim()
     if (!title) return
-    // The form stays open so several tasks can be typed in a row.
-    createTask.mutate({ title, statusId: status.id }, { onSuccess: () => form.reset() })
+    // The form stays open and is emptied at once, so the next title can be typed while this
+    // one is saved. A title that could not be saved comes back, unless something new is there.
+    input.value = ''
+    createTask.mutate(
+      { title, statusId: status.id },
+      {
+        onError: () => {
+          if (!input.value) input.value = title
+        },
+      },
+    )
   }
 
   if (!open) {
@@ -51,9 +60,7 @@ function QuickAdd({ projectId, status }: { projectId: string; status: Status }) 
         className="block w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-2 focus:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900"
       />
       <div className="flex gap-2">
-        <Button type="submit" disabled={createTask.isPending}>
-          {t.common.add}
-        </Button>
+        <Button type="submit">{t.common.add}</Button>
         <Button variant="secondary" onClick={() => setOpen(false)}>
           {t.tasks.board.done}
         </Button>

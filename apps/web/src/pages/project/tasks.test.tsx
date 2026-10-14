@@ -268,8 +268,39 @@ describe('board', () => {
     await user.type(screen.getByLabelText('Title of the new task in To Do'), '   {Enter}')
     expect(calls.some((call) => call.key === `POST ${url}/tasks`)).toBe(false)
 
-    await user.type(screen.getByLabelText('Title of the new task in To Do'), 'Real{Enter}')
+    const input = screen.getByLabelText('Title of the new task in To Do')
+    await user.type(input, 'Real{Enter}')
     expect(await screen.findByRole('alert')).toHaveTextContent('Internal server error')
+    // The title that was not saved is given back, to try again.
+    expect(input).toHaveValue('Real')
+  })
+
+  it('lets the next title be typed while the previous one is still saved', async () => {
+    let release: () => void = () => undefined
+    const saved = new Promise<void>((resolve) => (release = resolve))
+    const { calls } = server({
+      extra: {
+        [`POST ${url}/tasks`]: async (body) => {
+          await saved
+          return ok(makeTask(9, { title: (body as { title: string }).title }), 201)
+        },
+      },
+    })
+    const { user } = renderApp(boardPath)
+
+    await user.click(await screen.findByRole('button', { name: 'Add a task to To Do' }))
+    const input = screen.getByLabelText('Title of the new task in To Do')
+    await user.type(input, 'First{Enter}')
+    expect(input).toHaveValue('')
+    await user.type(input, 'Second')
+    release()
+
+    await waitFor(() =>
+      expect(calls.filter((call) => call.key === `POST ${url}/tasks`)).toHaveLength(1),
+    )
+    // The answer about the first title does not wipe out the second.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(input).toHaveValue('Second')
   })
 
   it('is read-only for viewers', async () => {

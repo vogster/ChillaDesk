@@ -48,3 +48,27 @@ jobs:
       - name: Stop the stack
         if: always()
         run: docker compose down --volumes
+
+  # The app in a real browser: the API and the web app started from source, Chromium
+  # driven by Playwright through sign-up, the board, the wiki, a team and import/export.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @chilladesk/e2e exec playwright install --with-deps chromium
+      - run: pnpm e2e
+        env:
+          CI: 'true'
+      - name: Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/e2e/playwright-report
+          retention-days: 7

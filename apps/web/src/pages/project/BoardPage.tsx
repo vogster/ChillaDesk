@@ -13,13 +13,14 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useEffect, useMemo, useState } from 'react'
 import { errorMessage } from '../../api/client'
 import { Alert, Spinner } from '../../components/ui'
 import { useT } from '../../i18n'
 import { BoardColumn } from './board/BoardColumn'
+import { boardKeyboardCoordinates } from './board/keyboard'
 import {
+  columnDropId,
   columnOf,
   dragItemOf,
   groupByStatus,
@@ -63,7 +64,7 @@ export function BoardPage() {
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     // A press-and-hold starts a drag on touch screens, so a swipe still scrolls the board.
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: boardKeyboardCoordinates }),
   )
 
   const items = tasks.data?.items
@@ -116,8 +117,14 @@ export function BoardPage() {
       if (over?.id === active.id) return undefined
       return over ? drag.over(item(active.id), item(over.id)) : drag.notOver(item(active.id))
     },
-    onDragEnd: ({ active, over }) =>
-      over ? drag.dropped(item(active.id), item(over.id)) : drag.putBack(item(active.id)),
+    onDragEnd: ({ active, over }) => {
+      if (!over) return drag.putBack(item(active.id))
+      // A card moved into another column ends up over its own new place; the column says
+      // where it went.
+      const column = local ? columnOf(local.order, String(active.id)) : undefined
+      const target = over.id === active.id && column ? columnDropId(column) : over.id
+      return drag.dropped(item(active.id), item(target))
+    },
     onDragCancel: ({ active }) => drag.cancelled(item(active.id)),
   }
 
