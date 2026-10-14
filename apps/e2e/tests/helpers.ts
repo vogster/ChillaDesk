@@ -29,8 +29,8 @@ export async function signUp(page: Page, who: Person = person()): Promise<Person
 
 /** A short project key nobody else in this run has. */
 export function projectKey(): string {
-  counter += 1
-  return `E${(Date.now() % 46_656).toString(36).toUpperCase()}${counter}`.slice(0, 10)
+  // Random, not counted: tests run in several processes at once, each with its own counter.
+  return `E${randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`
 }
 
 export interface CreatedProject {

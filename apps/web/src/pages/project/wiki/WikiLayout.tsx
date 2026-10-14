@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { errorMessage } from '../../../api/client'
 import { Alert, Spinner } from '../../../components/ui'
@@ -95,7 +95,9 @@ export function WikiLayout() {
         </nav>
       </aside>
       <div className="min-w-0">
-        <Outlet context={context} />
+        <Suspense fallback={<Spinner />}>
+          <Outlet context={context} />
+        </Suspense>
       </div>
     </div>
   )

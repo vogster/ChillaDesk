@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test'
-import { column, createProject, createTask, signUp } from './helpers'
+import { column, createProject, createTask, projectKey, signUp } from './helpers'
 
 test('a new person signs up, creates a project and adds tasks on the board', async ({ page }) => {
   await signUp(page)
 
   await page.getByRole('button', { name: 'New project' }).click()
   await page.getByLabel('Name', { exact: true }).fill('Website relaunch')
-  await page.getByLabel('Key').fill('WEB')
+  await page.getByLabel('Key').fill(projectKey())
   await page.getByRole('button', { name: 'Create project' }).click()
 
   const todo = column(page, 'To Do')

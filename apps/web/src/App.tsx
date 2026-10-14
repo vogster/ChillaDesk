@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
 import { errorMessage } from './api/client'
 import { redirectTarget } from './auth/redirect'
@@ -6,29 +7,34 @@ import { useProfileLocale } from './auth/useProfileLocale'
 import { AppLayout } from './components/AppLayout'
 import { Alert, Button, Spinner } from './components/ui'
 import { I18nProvider, useT } from './i18n'
-import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from './pages/EmailFlowPages'
-import { InvitePage } from './pages/InvitePage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { NotificationsPage } from './pages/notifications/NotificationsPage'
-import { MyTasksPage } from './pages/overview/MyTasksPage'
-import { SearchPage } from './pages/overview/SearchPage'
-import { BoardPage } from './pages/project/BoardPage'
-import { ListPage } from './pages/project/ListPage'
-import { MembersPage } from './pages/project/MembersPage'
-import { MilestonesPage } from './pages/project/milestones/MilestonesPage'
 import { ProjectLayout } from './pages/project/ProjectLayout'
-import { SettingsPage } from './pages/project/SettingsPage'
 import { TaskNumberRedirect } from './pages/project/TaskNumberRedirect'
-import { WikiEditPage, WikiNewPage } from './pages/project/wiki/WikiEditor'
-import { WikiHistory } from './pages/project/wiki/WikiHistory'
-import { WikiHome } from './pages/project/wiki/WikiHome'
-import { WikiLayout } from './pages/project/wiki/WikiLayout'
-import { WikiPageView } from './pages/project/wiki/WikiPageView'
-import { ProfilePage } from './pages/ProfilePage'
+import {
+  BoardPage,
+  ForgotPasswordPage,
+  InvitePage,
+  ListPage,
+  MembersPage,
+  MilestonesPage,
+  MyTasksPage,
+  NotificationsPage,
+  ProfilePage,
+  ResetPasswordPage,
+  SearchPage,
+  SettingsPage,
+  TokensPage,
+  VerifyEmailPage,
+  WikiEditPage,
+  WikiHistory,
+  WikiHome,
+  WikiLayout,
+  WikiNewPage,
+  WikiPageView,
+} from './pages/lazyPages'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
-import { TokensPage } from './pages/TokensPage'
 
 /**
  * Wraps the login and registration pages. Once the user is signed in this is the single place
@@ -68,48 +74,51 @@ function AppRoutes() {
   const user = currentUser.data
   const requested = location.pathname + location.search + location.hash
   return (
-    <Routes>
-      {/* A forgotten password is recovered signed out; it also works while signed in. */}
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route element={<GuestOnly signedIn={user !== null} />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Route>
-      <Route
-        element={
-          user ? (
-            <AppLayout user={user} />
-          ) : (
-            <Navigate to="/login" replace state={{ from: requested }} />
-          )
-        }
-      >
-        <Route index element={<ProjectsPage />} />
-        <Route path="/tokens" element={<TokensPage />} />
-        <Route path="/profile" element={user && <ProfilePage user={user} />} />
-        <Route path="/my-tasks" element={<MyTasksPage />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/invite" element={<InvitePage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/projects/:projectId" element={user && <ProjectLayout currentUser={user} />}>
-          <Route index element={<BoardPage />} />
-          <Route path="list" element={<ListPage />} />
-          <Route path="tasks/:number" element={<TaskNumberRedirect />} />
-          <Route path="wiki" element={<WikiLayout />}>
-            <Route index element={<WikiHome />} />
-            <Route path="new" element={<WikiNewPage />} />
-            <Route path=":pageId" element={<WikiPageView />} />
-            <Route path=":pageId/edit" element={<WikiEditPage />} />
-            <Route path=":pageId/history" element={<WikiHistory />} />
-          </Route>
-          <Route path="milestones" element={<MilestonesPage />} />
-          <Route path="members" element={<MembersPage />} />
-          <Route path="settings" element={<SettingsPage />} />
+    // Pages load the first time they are opened; the layouts show their own wait inside.
+    <Suspense fallback={<Spinner />}>
+      <Routes>
+        {/* A forgotten password is recovered signed out; it also works while signed in. */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route element={<GuestOnly signedIn={user !== null} />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Route>
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
+        <Route
+          element={
+            user ? (
+              <AppLayout user={user} />
+            ) : (
+              <Navigate to="/login" replace state={{ from: requested }} />
+            )
+          }
+        >
+          <Route index element={<ProjectsPage />} />
+          <Route path="/tokens" element={<TokensPage />} />
+          <Route path="/profile" element={user && <ProfilePage user={user} />} />
+          <Route path="/my-tasks" element={<MyTasksPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/invite" element={<InvitePage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/projects/:projectId" element={user && <ProjectLayout currentUser={user} />}>
+            <Route index element={<BoardPage />} />
+            <Route path="list" element={<ListPage />} />
+            <Route path="tasks/:number" element={<TaskNumberRedirect />} />
+            <Route path="wiki" element={<WikiLayout />}>
+              <Route index element={<WikiHome />} />
+              <Route path="new" element={<WikiNewPage />} />
+              <Route path=":pageId" element={<WikiPageView />} />
+              <Route path=":pageId/edit" element={<WikiEditPage />} />
+              <Route path=":pageId/history" element={<WikiHistory />} />
+            </Route>
+            <Route path="milestones" element={<MilestonesPage />} />
+            <Route path="members" element={<MembersPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </Suspense>
   )
 }

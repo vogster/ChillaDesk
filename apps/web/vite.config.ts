@@ -10,6 +10,31 @@ export default defineConfig({
     port: 5173,
     proxy: { '/api': apiTarget },
   },
+  build: {
+    rolldownOptions: {
+      output: {
+        // Libraries change less often than the app, so they get chunks of their own that
+        // browsers keep cached across releases; Markdown and dragging load with the pages
+        // that use them.
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react',
+              test: /node_modules[\\/](react|react-dom|scheduler|react-router|@tanstack)[\\/]/,
+              priority: 3,
+            },
+            {
+              name: 'markdown',
+              test: /node_modules[\\/](react-markdown|remark-|rehype-|micromark|mdast-|hast-|unist-|unified|vfile|property-information|space-separated-tokens|comma-separated-tokens|decode-named-character-reference|character-entities|html-url-attributes|devlop|bail|trough|zwitch|ccount|markdown-table|longest-streak|estree-util|style-to|inline-style-parser|trim-lines|is-plain-obj)/,
+              priority: 2,
+            },
+            { name: 'dnd', test: /node_modules[\\/]@dnd-kit[\\/]/, priority: 2 },
+            { name: 'zod', test: /node_modules[\\/]zod[\\/]/, priority: 2 },
+          ],
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

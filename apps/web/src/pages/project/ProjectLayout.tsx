@@ -1,4 +1,5 @@
 import type { Project, User } from '@chilladesk/shared'
+import { Suspense } from 'react'
 import { Link, NavLink, Outlet, useOutletContext, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { ApiError, errorMessage } from '../../api/client'
@@ -108,7 +109,9 @@ export function ProjectLayout({ currentUser }: { currentUser: User }) {
         )}
       </nav>
 
-      <Outlet context={context} />
+      <Suspense fallback={<Spinner />}>
+        <Outlet context={context} />
+      </Suspense>
 
       {openTaskId && (
         <TaskDialog key={openTaskId} context={context} taskId={openTaskId} onClose={closeTask} />

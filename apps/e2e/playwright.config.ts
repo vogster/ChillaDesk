@@ -5,7 +5,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 /**
  * Browser tests against the real app: the API on an empty embedded database of its own and
- * the web app's dev server in front of it, both started for the run.
+ * the built web app in front of it, both started for the run.
  */
 const API_PORT = 3100
 const WEB_PORT = 5180
@@ -53,7 +53,8 @@ export default defineConfig({
       },
     },
     {
-      command: `corepack pnpm --filter @chilladesk/web exec vite --port ${WEB_PORT} --strictPort`,
+      // The built app, as it is shipped: split into chunks, no dev server reloading.
+      command: `corepack pnpm --filter @chilladesk/web exec vite build && corepack pnpm --filter @chilladesk/web exec vite preview --port ${WEB_PORT} --strictPort`,
       url: `http://localhost:${WEB_PORT}`,
       reuseExistingServer: false,
       timeout: 120_000,

@@ -1,45 +1,20 @@
-import type { Project } from '@chilladesk/shared'
-import { useMemo } from 'react'
-import { Markdown } from '../../components/Markdown'
-import { useMembers } from './projectQueries'
-import { MISSING_PAGE_ATTRIBUTE, remarkProjectLinks } from './wiki/projectLinks'
-import { useWikiPages } from './wiki/wikiQueries'
+import { lazy, Suspense } from 'react'
+import type { ProjectMarkdownProps } from './ProjectMarkdownBody'
 
-interface ProjectMarkdownProps {
-  project: Pick<Project, 'id' | 'key' | 'role'>
-  children: string
-  /** Open links in a new tab, for previews inside a form. */
-  linksLeaveInNewTab?: boolean
-}
+// The Markdown libraries are a large part of the app; they load with the first text shown.
+const ProjectMarkdownBody = lazy(async () => ({
+  default: (await import('./ProjectMarkdownBody')).ProjectMarkdownBody,
+}))
 
 /**
- * Markdown written inside a project: `[[Page title]]` links to the wiki page of that name
+ * Markdown written inside a project: `[[Page title]]` links to the wiki page of that name,
  * task keys such as `CHL-12` link to the task, and `@email` of a member reads as `@Name`.
+ * Until the renderer has loaded, the text is shown as it was written.
  */
-export function ProjectMarkdown({ project, children, linksLeaveInNewTab }: ProjectMarkdownProps) {
-  // The page list is only needed to resolve titles, so plain text does not fetch it.
-  const pages = useWikiPages(project.id, '', { enabled: children.includes('[[') })
-  const members = useMembers(project.id, { enabled: children.includes('@') })
-  const plugins = useMemo(
-    () => [
-      remarkProjectLinks({
-        projectId: project.id,
-        projectKey: project.key,
-        pages: pages.data,
-        // Viewers cannot create pages, so a title without a page stays plain text for them.
-        linkMissingPages: project.role !== 'viewer',
-        members: members.data,
-      }),
-    ],
-    [project.id, project.key, project.role, pages.data, members.data],
-  )
+export function ProjectMarkdown(props: ProjectMarkdownProps) {
   return (
-    <Markdown
-      plugins={plugins}
-      missingLinkAttribute={MISSING_PAGE_ATTRIBUTE}
-      linksLeaveInNewTab={linksLeaveInNewTab ?? false}
-    >
-      {children}
-    </Markdown>
+    <Suspense fallback={<div className="whitespace-pre-wrap break-words">{props.children}</div>}>
+      <ProjectMarkdownBody {...props} />
+    </Suspense>
   )
 }

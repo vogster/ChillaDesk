@@ -48,7 +48,8 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
       on ghcr.io for every version tag.
 - [x] **Browser tests (Playwright)** — sign-up, board (mouse and keyboard), wiki, a team with
       live updates and mentions, language, import and export; run in CI.
-- [ ] **Smaller web bundle** — about 700 kB in one file; split it by page.
+- [x] **Smaller web bundle** — pages and the Markdown renderer load when first needed; the
+      first screen loads 518 kB (159 kB gzipped) instead of 804 kB (238 kB).
 - [x] **Moving cards with the keyboard** — left and right now move a card to the next column
       in one press (it took two), and the drop is announced with the column.
 - [ ] **Dragging on a phone** — not checked on a real touch device.

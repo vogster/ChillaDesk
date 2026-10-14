@@ -1,11 +1,11 @@
 import type { User } from '@chilladesk/shared'
-import type { FormEvent } from 'react'
+import { Suspense, type FormEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useLogout } from '../auth/useAuth'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { LanguageSwitcher, useT } from '../i18n'
 import { NotificationBell } from '../pages/notifications/NotificationBell'
-import { Button } from './ui'
+import { Button, Spinner } from './ui'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `text-sm hover:underline ${
@@ -93,7 +93,9 @@ export function AppLayout({ user }: { user: User }) {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-8">
-        <Outlet />
+        <Suspense fallback={<Spinner />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   )
