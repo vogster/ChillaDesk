@@ -15,6 +15,7 @@ import type { AppConfig } from './config'
 import type { Database } from './db/client'
 import { AppError } from './errors'
 import { registerErrorHandlers } from './http/error-handler'
+import { serveWebApp } from './http/web-app'
 import { attachmentRoutes } from './modules/attachments/routes'
 import { createFileStore, type FileStore } from './modules/attachments/storage'
 import type { AccountMail } from './modules/auth/email-flows'
@@ -80,6 +81,8 @@ export interface AppOptions {
   projectQuotaBytes?: number
   /** Files one client may upload per minute. */
   uploadRateLimitMax?: number
+  /** The built web app, to serve it from the API (the all-in-one image). */
+  webDir?: string | undefined
   /** Lets webhooks point at private addresses. */
   webhooksAllowPrivate?: boolean
   /** How long one event stream lives before the client has to reconnect. */
@@ -105,6 +108,7 @@ export async function buildApp({
   projectQuotaBytes = 1024 * 1024 * 1024,
   uploadRateLimitMax = 60,
   webhooksAllowPrivate = false,
+  webDir,
 }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: logLevel },
@@ -115,7 +119,8 @@ export async function buildApp({
 
   app.setValidatorCompiler(validatorCompiler)
   app.setSerializerCompiler(serializerCompiler)
-  registerErrorHandlers(app)
+  registerErrorHandlers(app, { serveApp: webDir !== undefined })
+  if (webDir) await serveWebApp(app, webDir)
 
   await app.register(cookie)
   await app.register(rateLimit, {

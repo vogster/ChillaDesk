@@ -1,0 +1,60 @@
+# ChillaDesk from the published images, with PostgreSQL: no need to clone the repository.
+#
+#   1. Save this file as docker-compose.yml in an empty folder.
+#   2. Next to it, create .env with a password for the database:
+#        POSTGRES_PASSWORD=a-long-random-password
+#   3. docker compose up -d
+#
+# Then open http://localhost:8080. Settings are the environment variables below; see
+# https://github.com/vogster/ChillaDesk#configuration for all of them.
+name: chilladesk
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chilladesk
+      POSTGRES_USER: chilladesk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U chilladesk -d chilladesk']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # The web image passes /api on to a service of exactly this name.
+  api:
+    image: ghcr.io/vogster/chilladesk-api:${CHILLADESK_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://chilladesk:${POSTGRES_PASSWORD}@db:5432/chilladesk
+      TRUST_PROXY: '1'
+      # true: anyone may sign up; invite: only with an invite link; false: nobody.
+      REGISTRATION_ENABLED: 'true'
+      FILES_DIR: /data/files
+      # For email (confirmation, password reset, notifications), set all three:
+      # SMTP_URL: smtp://user:password@smtp.example.com:587
+      # MAIL_FROM: ChillaDesk <desk@example.com>
+      # PUBLIC_URL: https://desk.example.com
+    volumes:
+      # Attached files. Named volumes keep the ownership the image expects.
+      - files:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: ghcr.io/vogster/chilladesk-web:${CHILLADESK_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      - '8080:80'
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres:
+  files:

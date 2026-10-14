@@ -28,6 +28,7 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(600),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(10),
   FILES_DIR: z.string().min(1).default('./.data/files'),
+  WEB_DIR: z.string().min(1).optional(),
   MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(100).default(10),
   PROJECT_FILES_MB: z.coerce.number().int().min(1).default(1024),
   SMTP_URL: z
@@ -81,6 +82,8 @@ export interface AppConfig {
   authRateLimitMax: number
   /** Directory the files attached to tasks and pages are kept in. */
   filesDir: string
+  /** The built web app, served by the API itself when set (the all-in-one image). */
+  webDir: string | undefined
   /** Largest file that can be attached, in megabytes. */
   maxUploadMb: number
   /** Megabytes all the files of one project may take up together. */
@@ -121,6 +124,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     rateLimitMax: parsed.RATE_LIMIT_MAX,
     authRateLimitMax: parsed.AUTH_RATE_LIMIT_MAX,
     filesDir: parsed.FILES_DIR,
+    webDir: parsed.WEB_DIR,
     maxUploadMb: parsed.MAX_UPLOAD_MB,
     projectFilesMb: parsed.PROJECT_FILES_MB,
     mail: smtpUrl && from && publicUrl ? { smtpUrl, from, publicUrl } : null,

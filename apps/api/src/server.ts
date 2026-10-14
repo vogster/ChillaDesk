@@ -33,6 +33,7 @@ const app = await buildApp({
   maxUploadBytes: config.maxUploadMb * 1024 * 1024,
   projectQuotaBytes: config.projectFilesMb * 1024 * 1024,
   webhooksAllowPrivate: config.webhooksAllowPrivate,
+  webDir: config.webDir,
 })
 late.log = app.log
 

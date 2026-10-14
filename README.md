@@ -34,24 +34,77 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 > Status: 0.2.0. Everything listed above works; see [CHANGELOG.md](CHANGELOG.md) for what is
 > new. Expect rough edges, and back up your data before upgrading.
 
-## Quick start (Docker)
+## Install
+
+Three ways, from the quickest to the most complete. Each opens on http://localhost:8080: sign
+up there, and whoever creates a project owns it. API docs live at `/api/docs`. Images are on
+`ghcr.io/vogster` for amd64 and arm64; add a version (`:0.3.0`) instead of `:latest` to pin one.
+
+### One container
+
+Everything in one image, with the data in one folder: the quickest way to try ChillaDesk,
+and enough for a small team. It uses an embedded database (PGlite) unless you give it
+`DATABASE_URL` of a PostgreSQL server.
+
+```bash
+docker run \
+  --detach \
+  --name=chilladesk \
+  --restart unless-stopped \
+  --volume ./chilladesk:/data \
+  --env REGISTRATION_ENABLED=true \
+  --publish 8080:3000 \
+  ghcr.io/vogster/chilladesk:latest
+```
+
+The same as a `docker-compose.yml`:
+
+```yaml
+services:
+  chilladesk:
+    container_name: chilladesk
+    image: ghcr.io/vogster/chilladesk:latest
+    restart: unless-stopped
+    ports:
+      - '8080:3000'
+    volumes:
+      - ./chilladesk:/data
+    environment:
+      - REGISTRATION_ENABLED=true
+      # - PUBLIC_URL=https://desk.example.com
+```
+
+`./chilladesk` holds the database and attached files: back it up, and keep it when you
+update (`docker pull ghcr.io/vogster/chilladesk:latest`, then recreate the container). The
+folder is given to user 1000:1000 on start; set `PUID` and `PGID` to use another.
+
+### With PostgreSQL
+
+Three containers (PostgreSQL, the API, and Caddy serving the web app), from the published
+images, without the source code:
+
+```bash
+mkdir chilladesk && cd chilladesk
+curl -fsSLO https://raw.githubusercontent.com/vogster/ChillaDesk/main/deploy/docker-compose.yml
+echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)" > .env
+docker compose up -d
+```
+
+The data is in the `postgres` and `files` volumes. Settings are the environment variables of
+the `api` service in [deploy/docker-compose.yml](deploy/docker-compose.yml).
+
+### From source
 
 ```bash
 git clone https://github.com/vogster/ChillaDesk.git && cd ChillaDesk
 cp .env.example .env   # then set POSTGRES_PASSWORD
-docker compose pull    # released images; skip it to build from source
-docker compose up -d
+docker compose pull    # released images; skip it to build the checkout
+docker compose up -d   # or: docker compose up -d --build
 ```
 
-Released images are `ghcr.io/vogster/chilladesk-api` and `ghcr.io/vogster/chilladesk-web`
-(amd64 and arm64). Pin a version with `CHILLADESK_VERSION=0.2.0` in `.env`;
-`docker compose up -d --build` builds the checked-out source instead.
-
-Open http://localhost:8080 and sign up; whoever creates a project owns it. API docs live at
-http://localhost:8080/api/docs.
-
-This starts three containers: PostgreSQL (data in the `db-data` volume), the API, and Caddy
-serving the web app and proxying `/api`. Database migrations run when the API starts.
+This starts the same three containers (data in the `db-data` and `api-data` volumes), with
+every setting in `.env`. Pin a version with `CHILLADESK_VERSION=0.3.0` there. Database
+migrations run when the API starts, whichever way it is installed.
 
 ### Running it for a team
 
@@ -92,23 +145,25 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 
 ### Configuration
 
-| Variable                 | Default         | Purpose                                                            |
-| ------------------------ | --------------- | ------------------------------------------------------------------ |
-| `POSTGRES_PASSWORD`      | — (required)    | Password of the bundled PostgreSQL (URL-safe characters)           |
-| `CHILLADESK_PORT`        | `8080`          | Host port of the web UI                                            |
-| `COOKIE_SECURE`          | `auto`          | `true` behind an HTTPS proxy, so the session cookie is HTTPS-only  |
-| `REGISTRATION_ENABLED`   | `true`          | `invite`: sign-up only with an invite link; `false`: nobody        |
-| `RATE_LIMIT_MAX`         | `600`           | Requests per minute from one address (a shared NAT counts as one)  |
-| `DATABASE_URL`           | embedded PGlite | PostgreSQL connection string (set by compose)                      |
-| `TRUST_PROXY`            | `false`         | Number of reverse proxies in front of the API (compose: `1`)       |
-| `LOG_LEVEL`              | `info`          | `fatal` … `trace`, or `silent`                                     |
-| `MAX_UPLOAD_MB`          | `10`            | Largest file that can be attached to a task or a wiki page         |
-| `PROJECT_FILES_MB`       | `1024`          | Room all the files of one project may take up together             |
-| `FILES_DIR`              | `./.data/files` | Where attached files are kept (compose: the `api-data` volume)     |
-| `SMTP_URL`               | — (no email)    | `smtp://user:password@host:587`; turns notification emails on      |
-| `MAIL_FROM`              | —               | Sender of the emails, e.g. `ChillaDesk <wiki@example.com>`         |
-| `PUBLIC_URL`             | —               | Address people open ChillaDesk at; links in emails and webhooks    |
-| `WEBHOOKS_ALLOW_PRIVATE` | `false`         | Let webhooks reach private addresses (a CI server in your network) |
+| Variable                 | Default         | Purpose                                                                      |
+| ------------------------ | --------------- | ---------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD`      | — (required)    | Password of the bundled PostgreSQL (URL-safe characters)                     |
+| `CHILLADESK_PORT`        | `8080`          | Host port of the web UI                                                      |
+| `COOKIE_SECURE`          | `auto`          | `true` behind an HTTPS proxy, so the session cookie is HTTPS-only            |
+| `REGISTRATION_ENABLED`   | `true`          | `invite`: sign-up only with an invite link; `false`: nobody                  |
+| `RATE_LIMIT_MAX`         | `600`           | Requests per minute from one address (a shared NAT counts as one)            |
+| `DATABASE_URL`           | embedded PGlite | PostgreSQL connection string (set by compose)                                |
+| `TRUST_PROXY`            | `false`         | Number of reverse proxies in front of the API (compose: `1`)                 |
+| `LOG_LEVEL`              | `info`          | `fatal` … `trace`, or `silent`                                               |
+| `MAX_UPLOAD_MB`          | `10`            | Largest file that can be attached to a task or a wiki page                   |
+| `PROJECT_FILES_MB`       | `1024`          | Room all the files of one project may take up together                       |
+| `FILES_DIR`              | `./.data/files` | Where attached files are kept (compose: the `api-data` volume)               |
+| `SMTP_URL`               | — (no email)    | `smtp://user:password@host:587`; turns notification emails on                |
+| `MAIL_FROM`              | —               | Sender of the emails, e.g. `ChillaDesk <wiki@example.com>`                   |
+| `PUBLIC_URL`             | —               | Address people open ChillaDesk at; links in emails and webhooks              |
+| `WEBHOOKS_ALLOW_PRIVATE` | `false`         | Let webhooks reach private addresses (a CI server in your network)           |
+| `WEB_DIR`                | —               | The built web app, served by the API itself (set in the one-container image) |
+| `PUID`, `PGID`           | `1000`          | One-container image: the user that owns `/data` and runs the server          |
 
 ### Import and export
 

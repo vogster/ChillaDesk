@@ -1,3 +1,4 @@
+import { isAppPath } from './web-app'
 import type { ErrorCode, ErrorResponse } from '@chilladesk/shared'
 import type { FastifyError, FastifyInstance } from 'fastify'
 import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod'
@@ -28,10 +29,19 @@ export function loggableError(error: Error): { err: unknown; query?: string } {
 }
 
 /** Gives every failure the shared `{ error: { code, message } }` shape. */
-export function registerErrorHandlers(app: FastifyInstance): void {
-  app.setNotFoundHandler((request, reply) =>
-    reply.code(404).send(body('NOT_FOUND', `Route ${request.method} ${request.url} not found`)),
-  )
+export function registerErrorHandlers(
+  app: FastifyInstance,
+  { serveApp = false }: { serveApp?: boolean } = {},
+): void {
+  app.setNotFoundHandler((request, reply) => {
+    // With the web app served from here, its pages are routes of the browser, not of the API.
+    if (serveApp && isAppPath(request.method, request.url)) {
+      return reply.header('Cache-Control', 'no-cache').sendFile('index.html')
+    }
+    return reply
+      .code(404)
+      .send(body('NOT_FOUND', `Route ${request.method} ${request.url} not found`))
+  })
 
   app.setErrorHandler((error: FastifyError | AppError, request, reply) => {
     if (error instanceof AppError) {

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- One-container image `ghcr.io/vogster/chilladesk` for a single `docker run`: the API serves the
+  web app, the data is in one folder (embedded database unless `DATABASE_URL` is set),
+  `PUID`/`PGID` choose who owns it.
+- `deploy/docker-compose.yml` installs the full stack with PostgreSQL from the published
+  images, without the source code.
+- Screenshots in the README; the app is wider, so a board with four columns fits.
 - Sign-up by invitation only: `REGISTRATION_ENABLED=invite` lets people sign up only through an
   invite link, which also puts them into its project. The first account of a new server
   needs no invite.

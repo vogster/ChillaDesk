@@ -72,3 +72,31 @@ jobs:
           name: playwright-report
           path: apps/e2e/playwright-report
           retention-days: 7
+
+  # The single-container image, started the way its users start it: docker run with a data
+  # folder, then the same end-to-end check as the full stack.
+  all-in-one:
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Build and start the image
+        run: |
+          docker build --target all-in-one -t chilladesk:ci .
+          mkdir -p chilladesk-data
+          docker run --detach --name chilladesk --volume "$PWD/chilladesk-data:/data" \
+            --publish 8080:3000 chilladesk:ci
+          for i in $(seq 1 60); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' chilladesk)" = healthy ] && break
+            sleep 2
+          done
+      - name: End-to-end check
+        run: pnpm --filter @chilladesk/api stack-check http://localhost:8080
+      - name: Logs
+        if: failure()
+        run: docker logs chilladesk
