@@ -7,6 +7,7 @@ import { notifyComment, notifyMentions } from '../notifications/service'
 import { watchTask } from './watchers.service'
 import { getProject } from '../projects/service'
 import { assertTaskInProject } from './service'
+import { queueWebhookEvent } from '../webhooks/events'
 
 const commentColumns = {
   comment: comments,
@@ -76,6 +77,10 @@ export async function addComment(
     await notifyComment(tx, subject, input.body, mentioned)
     // Whoever joins the conversation hears how it goes on.
     await watchTask(tx, taskId, [userId])
+    await queueWebhookEvent(tx, projectId, userId, 'comment.created', {
+      taskId,
+      comment: { id: created.id, body: input.body },
+    })
     return loadComment(tx, taskId, created.id)
   })
 }

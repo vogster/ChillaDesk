@@ -477,3 +477,62 @@ export const notifications = pgTable(
       .where(sql`${table.emailedAt} is null`),
   ],
 )
+
+export const webhookFormat = pgEnum('webhook_format', ['json', 'slack', 'telegram'])
+
+/** An address told about what happens in a project. */
+export const webhooks = pgTable(
+  'webhooks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    format: webhookFormat('format').notNull().default('json'),
+    /** Names of the events it is told about, such as `task.created`. */
+    events: text('events').array().notNull(),
+    /** Deliveries are signed with it, so the receiver can tell them from forgeries. */
+    secret: text('secret').notNull(),
+    active: boolean('active').notNull().default(true),
+    /** The owner who added it; deliveries stop once they no longer own the project. */
+    createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (table) => [index('webhooks_project_id_idx').on(table.projectId)],
+)
+
+export const webhookDeliveryStatus = pgEnum('webhook_delivery_status', [
+  'pending',
+  'delivered',
+  'failed',
+])
+
+/** An event waiting to be sent to a webhook, or how sending it went. */
+export const webhookDeliveries = pgTable(
+  'webhook_deliveries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    webhookId: uuid('webhook_id')
+      .notNull()
+      .references(() => webhooks.id, { onDelete: 'cascade' }),
+    event: text('event').notNull(),
+    /** The event as it was when it happened; written out in the webhook's format when sent. */
+    payload: jsonb('payload').notNull(),
+    status: webhookDeliveryStatus('status').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    /** While sending: nobody else tries before this. After a failure: when to retry. */
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+    responseStatus: integer('response_status'),
+    error: text('error'),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index('webhook_deliveries_webhook_idx').on(table.webhookId, table.createdAt),
+    // The delivery worker looks for rows that are still to be sent.
+    index('webhook_deliveries_outbox_idx')
+      .on(table.nextAttemptAt)
+      .where(sql`${table.status} = 'pending'`),
+  ],
+)

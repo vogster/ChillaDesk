@@ -28,6 +28,7 @@ function server(importAnswer: ApiRoutes[string]) {
     [`GET ${url}/statuses`]: () => ok([todo, doing, done]),
     [`GET ${url}/labels`]: () => ok([]),
     [`GET ${url}/milestones`]: () => ok([]),
+    [`GET ${url}/webhooks`]: () => ok([]),
     [`POST ${url}/import/tasks`]: importAnswer,
   })
   return calls

@@ -31,6 +31,10 @@ const envSchema = z.object({
     .regex(/^smtps?:\/\//, 'SMTP_URL must be an smtp:// or smtps:// URL')
     .optional(),
   MAIL_FROM: z.string().min(3).optional(),
+  WEBHOOKS_ALLOW_PRIVATE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
   PUBLIC_URL: z
     .string()
     .regex(/^https?:\/\//, 'PUBLIC_URL must be an http:// or https:// URL')
@@ -74,6 +78,10 @@ export interface AppConfig {
   projectFilesMb: number
   /** Null until SMTP is configured: notifications then stay in the app only. */
   mail: MailConfig | null
+  /** Where people open ChillaDesk, for links in emails and webhook messages. */
+  publicUrl: string | null
+  /** Lets webhooks reach private addresses, such as a CI server in the same network. */
+  webhooksAllowPrivate: boolean
 }
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -106,5 +114,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     maxUploadMb: parsed.MAX_UPLOAD_MB,
     projectFilesMb: parsed.PROJECT_FILES_MB,
     mail: smtpUrl && from && publicUrl ? { smtpUrl, from, publicUrl } : null,
+    publicUrl: publicUrl ?? null,
+    webhooksAllowPrivate: parsed.WEBHOOKS_ALLOW_PRIVATE,
   }
 }

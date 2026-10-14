@@ -34,6 +34,7 @@ import { taskRoutes } from './modules/tasks/routes'
 import { statusRoutes } from './modules/tasks/statuses.routes'
 import { tokenRoutes } from './modules/tokens/routes'
 import { transferRoutes } from './modules/transfer/routes'
+import { webhookRoutes } from './modules/webhooks/routes'
 import { wikiRoutes } from './modules/wiki/routes'
 import { healthRoutes } from './routes/health'
 
@@ -76,6 +77,8 @@ export interface AppOptions {
   projectQuotaBytes?: number
   /** Files one client may upload per minute. */
   uploadRateLimitMax?: number
+  /** Lets webhooks point at private addresses. */
+  webhooksAllowPrivate?: boolean
   /** How long one event stream lives before the client has to reconnect. */
   eventStreamLifetimeMs?: number
 }
@@ -98,6 +101,7 @@ export async function buildApp({
   maxUploadBytes = 10 * 1024 * 1024,
   projectQuotaBytes = 1024 * 1024 * 1024,
   uploadRateLimitMax = 60,
+  webhooksAllowPrivate = false,
 }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: logLevel },
@@ -200,6 +204,11 @@ export async function buildApp({
     maxUploadBytes,
     projectQuotaBytes,
     uploadRateLimitMax,
+  })
+  await app.register(webhookRoutes, {
+    prefix: '/api/projects/:projectId/webhooks',
+    db,
+    allowPrivate: webhooksAllowPrivate,
   })
   await app.register(transferRoutes, {
     prefix: '/api/projects/:projectId',

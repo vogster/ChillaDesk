@@ -15,6 +15,7 @@ import { projects, users, wikiPages, wikiPageVersions } from '../../db/schema'
 import { conflict, invalid, isForeignKeyViolation, isUniqueViolation, notFound } from '../../errors'
 import { notifyMentions } from '../notifications/service'
 import { getProject } from '../projects/service'
+import { queueWebhookEvent } from '../webhooks/events'
 
 const author = { id: users.id, name: users.name, email: users.email }
 
@@ -162,6 +163,9 @@ export async function createPage(
         { projectId, actorId: userId, wikiPageId: created.id },
         created.content,
       )
+      await queueWebhookEvent(tx, projectId, userId, 'page.created', {
+        page: { id: created.id, title: created.title },
+      })
       return loadPage(tx, projectId, created.id)
     })
   } catch (error) {
@@ -241,6 +245,9 @@ export async function updatePage(
           content,
           current.content,
         )
+        await queueWebhookEvent(tx, projectId, userId, 'page.updated', {
+          page: { id: pageId, title },
+        })
       }
       return loadPage(tx, projectId, pageId)
     })
@@ -261,11 +268,14 @@ export async function deletePage(
   await db.transaction(async (tx) => {
     await lockTree(tx, projectId)
     const [page] = await tx
-      .select({ parentId: wikiPages.parentId })
+      .select({ parentId: wikiPages.parentId, title: wikiPages.title })
       .from(wikiPages)
       .where(inProject(projectId, pageId))
       .for('update')
     if (!page) throw notFound('Wiki page')
+    await queueWebhookEvent(tx, projectId, userId, 'page.deleted', {
+      page: { id: pageId, title: page.title },
+    })
 
     // Subpages are kept: they take the deleted page's place in the tree.
     await tx

@@ -54,6 +54,25 @@ const EXACT: Record<string, string> = {
   'This project has too many labels, delete some first':
     'В проекте слишком много меток. Сначала удалите часть.',
   'The wiki has too many pages to export': 'В вики слишком много страниц для выгрузки',
+  'Webhooks cannot point at private addresses on this server':
+    'На этом сервере вебхуки не могут вести на внутренние адреса',
+  'This project has too many webhooks, delete some first':
+    'У проекта слишком много вебхуков. Сначала удалите часть.',
+  'Turn the webhook on to send it a test': 'Включите вебхук, чтобы отправить проверку',
+  'Must be an http:// or https:// address': 'Нужен адрес http:// или https://',
+  'Choose at least one event': 'Выберите хотя бы одно событие',
+  'Events must not repeat': 'События не должны повторяться',
+  'The webhook was turned off': 'Вебхук выключили',
+  'The address could not be found or is not public': 'Адрес не найден или не публичный',
+  'Webhooks can use ports 80, 443 and 1024 and above':
+    'Вебхуки могут использовать порты 80, 443 и от 1024',
+  'Whoever added this webhook no longer owns the project':
+    'Тот, кто добавил вебхук, больше не владелец проекта',
+  'The address was changed': 'Адрес изменили',
+  'The connection was refused': 'Соединение отклонено',
+  'The connection was dropped': 'Соединение оборвалось',
+  'The TLS certificate was not accepted': 'TLS-сертификат не принят',
+  'The delivery could not be sent': 'Доставку не удалось отправить',
 }
 
 const SHORTENED: Record<string, string> = {
@@ -64,6 +83,7 @@ const SHORTENED: Record<string, string> = {
 
 const THINGS: Record<string, string> = {
   Comment: 'Комментарий не найден',
+  Webhook: 'Вебхук не найден',
   Label: 'Метка не найдена',
   Milestone: 'Веха не найдена',
   Member: 'Участник не найден',
@@ -139,6 +159,9 @@ const PATTERNS: [RegExp, (...groups: string[]) => string][] = [
     (what, max) => `${SHORTENED[what] ?? what} длиннее ${max} символов были сокращены`,
   ],
   [/^Archived card "(.+)"$/, (name) => `Карточка «${name}» в архиве`],
+  [/^The receiver answered HTTP (\d+)$/, (status) => `Получатель ответил HTTP ${status}`],
+  [/^No answer within (\d+) s$/, (seconds) => `Нет ответа за ${seconds} с`],
+  [/^(\S+) is not a public address$/, (host) => `${host} — не публичный адрес`],
   [/^(.+) not found$/, (what) => THINGS[what] ?? 'Не найдено'],
 ]
 

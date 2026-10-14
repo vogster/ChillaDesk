@@ -46,6 +46,7 @@ import { loadChecklistProgress } from './checklist.service'
 import { diffTask, labelNamesOf, recordTaskChanges } from './history.service'
 import { toStatus } from './statuses.service'
 import { watchTask } from './watchers.service'
+import { queueWebhookEvent } from '../webhooks/events'
 
 const assignee = alias(users, 'assignee')
 const reporter = alias(users, 'reporter')
@@ -380,6 +381,7 @@ export async function createTask(
 
     // An import brings in many tasks at once; nobody wants a notification for each.
     if (!notify) return loadTask(tx, projectId, created.id)
+    await queueWebhookEvent(tx, projectId, userId, 'task.created', { taskId: created.id })
     const subject = { projectId, actorId: userId, taskId: created.id }
     await notifyAssignment(tx, subject, input.assigneeId, input.title)
     // The assignee has just been told about this task; a mention in it adds nothing.
@@ -426,6 +428,9 @@ export async function updateTask(
       { fields: updated, ...(labelsBefore ? { labels: await labelNamesOf(tx, taskId) } : {}) },
     )
     await recordTaskChanges(tx, taskId, userId, changes)
+    if (changes.length > 0) {
+      await queueWebhookEvent(tx, projectId, userId, 'task.updated', { taskId, changes })
+    }
 
     const subject = { projectId, actorId: userId, taskId }
     const newAssignee =
@@ -526,6 +531,9 @@ export async function moveTask(
     // Only a change of column is history; a new place in the same column is not.
     const changes = await diffTask(tx, { fields: before }, { fields: { ...before, statusId } })
     await recordTaskChanges(tx, taskId, userId, changes)
+    if (changes.length > 0) {
+      await queueWebhookEvent(tx, projectId, userId, 'task.updated', { taskId, changes })
+    }
     for (const change of changes) {
       if (change.field === 'status') {
         await notifyMove(tx, { projectId, actorId: userId, taskId }, change.from, change.to)
@@ -542,11 +550,15 @@ export async function deleteTask(
   taskId: string,
 ): Promise<void> {
   await getProject(db, userId, projectId, 'member')
-  const removed = await db
-    .delete(tasks)
-    .where(inProject(projectId, taskId))
-    .returning({ id: tasks.id })
-  if (removed.length === 0) throw notFound('Task')
+  await db.transaction(async (tx) => {
+    // Announced first, while the task can still be described; a failed delete takes it back.
+    await queueWebhookEvent(tx, projectId, userId, 'task.deleted', { taskId })
+    const removed = await tx
+      .delete(tasks)
+      .where(inProject(projectId, taskId))
+      .returning({ id: tasks.id })
+    if (removed.length === 0) throw notFound('Task')
+  })
 }
 
 /** For modules that hang off a task (comments): confirms it exists in the project. */

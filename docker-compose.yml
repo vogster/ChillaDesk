@@ -39,6 +39,8 @@ services:
       FILES_DIR: /data/files
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
       PROJECT_FILES_MB: ${PROJECT_FILES_MB:-1024}
+      # Set to true to let webhooks reach addresses in your own network (a CI server).
+      WEBHOOKS_ALLOW_PRIVATE: ${WEBHOOKS_ALLOW_PRIVATE:-false}
     volumes:
       # Files attached to tasks and wiki pages.
       - api-data:/data

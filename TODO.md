@@ -32,7 +32,9 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
 
 ## Integrations
 
-- [ ] **Webhooks** for project events — the base for Telegram, Slack and CI.
+- [x] **Webhooks** for project events — the base for Telegram, Slack and CI.
+- [ ] **Webhook delivery log in the UI** (the API lists recent deliveries) and rotating the
+      secret without re-creating the webhook.
 - [x] **MCP tools** for labels, notifications and members.
 - [x] **Import and export** — CSV for tasks, a Markdown archive for the wiki, import from
       Jira or Trello.

@@ -4,6 +4,7 @@ import { loadConfig } from './config'
 import { createDatabase } from './db/client'
 import { sweepFiles } from './modules/attachments/service'
 import { createMailSender, startMailWorker } from './modules/notifications/mailer'
+import { startWebhookWorker } from './modules/webhooks/delivery'
 
 const config = loadConfig(process.env)
 
@@ -30,6 +31,7 @@ const app = await buildApp({
   filesDir: config.filesDir,
   maxUploadBytes: config.maxUploadMb * 1024 * 1024,
   projectQuotaBytes: config.projectFilesMb * 1024 * 1024,
+  webhooksAllowPrivate: config.webhooksAllowPrivate,
 })
 late.log = app.log
 
@@ -50,6 +52,12 @@ app.log.info({ driver: database.driver }, 'database connected and migrated')
 const stopMailWorker = mail
   ? startMailWorker({ db: database.db, ...mail, log: app.log })
   : undefined
+const stopWebhookWorker = startWebhookWorker({
+  db: database.db,
+  publicUrl: config.publicUrl,
+  allowPrivate: config.webhooksAllowPrivate,
+  log: app.log,
+})
 app.log.info(mail ? 'emails are on' : 'SMTP_URL is not set, notifications stay in the app')
 
 // Files whose task, page or project was deleted are removed from the disk now and then.
@@ -70,6 +78,7 @@ async function shutdown(signal: string): Promise<void> {
   app.log.info({ signal }, 'shutting down')
   try {
     await stopMailWorker?.()
+    await stopWebhookWorker()
     await app.close()
     await database.close()
     process.exit(0)

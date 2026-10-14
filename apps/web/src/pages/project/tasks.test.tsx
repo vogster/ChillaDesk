@@ -124,6 +124,7 @@ function server({ role = 'owner', extra = {}, ...initial }: ServerOptions = {}) 
     [`GET ${url}/members`]: () => ok([makeMember(ann, role), makeMember(bob, 'member')]),
     [`GET ${url}/statuses`]: () => ok(statuses),
     [`GET ${url}/labels`]: () => ok(labels),
+    [`GET ${url}/webhooks`]: () => ok([]),
     [`POST ${url}/labels`]: (body) => {
       const input = body as Pick<Label, 'name' | 'color'>
       if (labels.some((label) => label.name.toLowerCase() === input.name.toLowerCase())) {

@@ -9,6 +9,7 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 - **Attachments** — files on tasks and wiki pages, pictures shown right in the text
 - **Checklists, links between tasks, milestones**, a history of every task, and a task list
   with sorting, saved filters and bulk actions
+- **Webhooks** — tell Slack, Telegram, Discord or your CI about tasks, comments and pages
 - **Import and export** — tasks from CSV (ours or Jira) and Trello boards; tasks to CSV and
   the wiki to a ZIP of Markdown files
 - **Mentions and notifications** — in the app, and by email if you configure SMTP
@@ -62,22 +63,23 @@ serving the web app and proxying `/api`. Database migrations run when the API st
 
 ### Configuration
 
-| Variable               | Default         | Purpose                                                           |
-| ---------------------- | --------------- | ----------------------------------------------------------------- |
-| `POSTGRES_PASSWORD`    | — (required)    | Password of the bundled PostgreSQL (URL-safe characters)          |
-| `CHILLADESK_PORT`      | `8080`          | Host port of the web UI                                           |
-| `COOKIE_SECURE`        | `auto`          | `true` behind an HTTPS proxy, so the session cookie is HTTPS-only |
-| `REGISTRATION_ENABLED` | `true`          | Set to `false` once your team has signed up                       |
-| `RATE_LIMIT_MAX`       | `600`           | Requests per minute from one address (a shared NAT counts as one) |
-| `DATABASE_URL`         | embedded PGlite | PostgreSQL connection string (set by compose)                     |
-| `TRUST_PROXY`          | `false`         | Number of reverse proxies in front of the API (compose: `1`)      |
-| `LOG_LEVEL`            | `info`          | `fatal` … `trace`, or `silent`                                    |
-| `MAX_UPLOAD_MB`        | `10`            | Largest file that can be attached to a task or a wiki page        |
-| `PROJECT_FILES_MB`     | `1024`          | Room all the files of one project may take up together            |
-| `FILES_DIR`            | `./.data/files` | Where attached files are kept (compose: the `api-data` volume)    |
-| `SMTP_URL`             | — (no email)    | `smtp://user:password@host:587`; turns notification emails on     |
-| `MAIL_FROM`            | —               | Sender of the emails, e.g. `ChillaDesk <wiki@example.com>`        |
-| `PUBLIC_URL`           | —               | Address people open ChillaDesk at; links in emails point there    |
+| Variable                 | Default         | Purpose                                                            |
+| ------------------------ | --------------- | ------------------------------------------------------------------ |
+| `POSTGRES_PASSWORD`      | — (required)    | Password of the bundled PostgreSQL (URL-safe characters)           |
+| `CHILLADESK_PORT`        | `8080`          | Host port of the web UI                                            |
+| `COOKIE_SECURE`          | `auto`          | `true` behind an HTTPS proxy, so the session cookie is HTTPS-only  |
+| `REGISTRATION_ENABLED`   | `true`          | Set to `false` once your team has signed up                        |
+| `RATE_LIMIT_MAX`         | `600`           | Requests per minute from one address (a shared NAT counts as one)  |
+| `DATABASE_URL`           | embedded PGlite | PostgreSQL connection string (set by compose)                      |
+| `TRUST_PROXY`            | `false`         | Number of reverse proxies in front of the API (compose: `1`)       |
+| `LOG_LEVEL`              | `info`          | `fatal` … `trace`, or `silent`                                     |
+| `MAX_UPLOAD_MB`          | `10`            | Largest file that can be attached to a task or a wiki page         |
+| `PROJECT_FILES_MB`       | `1024`          | Room all the files of one project may take up together             |
+| `FILES_DIR`              | `./.data/files` | Where attached files are kept (compose: the `api-data` volume)     |
+| `SMTP_URL`               | — (no email)    | `smtp://user:password@host:587`; turns notification emails on      |
+| `MAIL_FROM`              | —               | Sender of the emails, e.g. `ChillaDesk <wiki@example.com>`         |
+| `PUBLIC_URL`             | —               | Address people open ChillaDesk at; links in emails and webhooks    |
+| `WEBHOOKS_ALLOW_PRIVATE` | `false`         | Let webhooks reach private addresses (a CI server in your network) |
 
 ### Import and export
 
@@ -94,6 +96,35 @@ Project owners find both on the **Settings** page.
   milestones are created; assignees are found by email or name among the members. Rows that
   cannot become tasks are listed with the reason. Nobody is notified about imported tasks.
   Comments, attachments and history are not imported.
+
+### Webhooks
+
+Project owners add webhooks on the **Settings** page and choose the events: tasks created,
+changed (including moves between columns) or deleted, comments added, wiki pages created,
+edited or deleted. Each webhook writes in one of three formats:
+
+- **JSON** — the whole event (`event`, `project`, `actor`, `task` with the `changes`,
+  `comment` or `page`, and a `url` into the app when `PUBLIC_URL` is set), for your own
+  services and CI;
+- **Slack** — a message to a Slack incoming webhook (Discord takes it at its webhook address
+  ending in `/slack`);
+- **Telegram** — a message from your bot: use
+  `https://api.telegram.org/bot<token>/sendMessage?chat_id=<chat>` as the address.
+
+Every delivery is signed. The secret is shown once, when the webhook is added. Check
+`X-ChillaDesk-Signature: sha256=<hex>`: it is the HMAC-SHA256 of
+`<X-ChillaDesk-Timestamp>.<body>`, computed with that secret. Refuse old timestamps.
+
+Deliveries go out within seconds. A failed one is retried after 1, 4, 16, 64 and 256
+minutes, and then given up. The settings show how the last delivery went, and **Send test**
+sends a test message. A delivery may arrive twice (after a crash mid-send); use the
+`X-ChillaDesk-Delivery` id to tell. At most 500 deliveries wait for one webhook, and a
+webhook stops when whoever added it no longer owns the project. Addresses are shown
+masked, as Slack, Discord and Telegram addresses carry a key.
+
+Webhooks cannot reach private addresses (the server itself, its networks) unless
+`WEBHOOKS_ALLOW_PRIVATE=true`, and never cloud metadata addresses. They use ports 80, 443
+and 1024 and above, wait at most 5 seconds for an answer, and do not follow redirects.
 
 ### Mentions and notifications
 

@@ -17,6 +17,8 @@ describe('loadConfig', () => {
       maxUploadMb: 10,
       projectFilesMb: 1024,
       mail: null,
+      publicUrl: null,
+      webhooksAllowPrivate: false,
     })
   })
 
@@ -47,6 +49,8 @@ describe('loadConfig', () => {
       maxUploadMb: 10,
       projectFilesMb: 1024,
       mail: null,
+      publicUrl: null,
+      webhooksAllowPrivate: false,
     })
   })
 
@@ -62,6 +66,17 @@ describe('loadConfig', () => {
 
   it('lets COOKIE_SECURE be switched off explicitly', () => {
     expect(loadConfig({ COOKIE_SECURE: 'false' }).cookieSecure).toBe(false)
+  })
+
+  it('lets webhooks reach private addresses only when told to', () => {
+    expect(loadConfig({ WEBHOOKS_ALLOW_PRIVATE: 'true' }).webhooksAllowPrivate).toBe(true)
+    expect(() => loadConfig({ WEBHOOKS_ALLOW_PRIVATE: 'yes' })).toThrow(/WEBHOOKS_ALLOW_PRIVATE/)
+  })
+
+  it('keeps PUBLIC_URL for links even without email', () => {
+    expect(loadConfig({ PUBLIC_URL: 'https://desk.example.com' }).publicUrl).toBe(
+      'https://desk.example.com',
+    )
   })
 
   it('rejects a rate limit that would block every request', () => {
