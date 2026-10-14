@@ -21,6 +21,7 @@ import type { Db } from '../../db/client'
 import { AppError, forbidden } from '../../errors'
 import { createAttemptLimiter } from './attempt-limiter'
 import {
+  addressOfLink,
   completeRegistration,
   registerByEmail,
   requestPasswordReset,
@@ -63,6 +64,13 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
   // Bounds how much mail one account can cause, whoever asks for it.
   const emailRequests = createAttemptLimiter(db, {
     name: 'account-email',
+    max: options.accountEmailRateLimitMax,
+    windowMs: 15 * 60 * 1000,
+  })
+  // Sign-ups of one address get their own count, so they cannot use up the password resets
+  // of its owner (or the other way round).
+  const signUpEmails = createAttemptLimiter(db, {
+    name: 'sign-up-email',
     max: options.accountEmailRateLimitMax,
     windowMs: 15 * 60 * 1000,
   })
@@ -127,8 +135,12 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
         if (!options.registrationEnabled) throw forbidden('Registration is disabled on this server')
         // Not awaited, and silent when over the limit: neither the answer nor how long it
         // takes may depend on whether the address has an account.
-        if ((await emailRequests.consume(request.body.email.toLowerCase())).allowed) {
-          void registerByEmail(db, mail, request.body).catch(logMailFailure('sign-up'))
+        if ((await signUpEmails.consume(request.body.email.toLowerCase())).allowed) {
+          void registerByEmail(db, mail, request.body).catch((error: unknown) => {
+            // Neither the address nor the mail server's words go to the log; what failed does.
+            const { name, code } = (error ?? {}) as { name?: unknown; code?: unknown }
+            app.log.warn({ name, code }, 'sign-up was not completed')
+          })
         }
         return reply.code(202).send({ confirmationSent: true as const })
       }
@@ -265,6 +277,13 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
       },
     },
     async (request, reply) => {
+      requireMail()
+      // Wrong passwords count against the account as on the login form, so a link cannot be
+      // used to guess its password from many addresses.
+      const address = await addressOfLink(db, request.body.token)
+      if (address && !(await accountAttempts.consume(address)).allowed) {
+        throw new AppError('RATE_LIMITED', 'Too many login attempts for this account, retry later')
+      }
       const user = await completeRegistration(db, request.body.token, request.body.password)
       const session = await startSession(db, user, new Date())
       setSessionCookie(reply, session)

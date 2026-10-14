@@ -54,8 +54,12 @@ when it is merged; move anything that turns out to be a bad idea to the bottom w
       in one press (it took two), and the drop is announced with the column.
 - [ ] **Dragging on a phone** — not checked on a real touch device.
 - [ ] **Version 0.2.0** — six large features since 0.1.0, same version and tag.
-- [ ] **Several API replicas** — live events are delivered inside one process; more than one
-      replica needs PostgreSQL LISTEN/NOTIFY or similar.
+- [x] **Several API replicas** — live events go through PostgreSQL LISTEN/NOTIFY, per-account
+      limits and the mail and webhook queues are in the database. Still per replica: the
+      per-address request limits and attached files on local disk (see S3 storage).
+- [ ] **Adding a member by email tells whether the address has an account** ("User with this
+      email" versus added). With email set up, answer the same either way and send an invite
+      to the address instead.
 - [ ] **Server texts in the user's language** — error texts of the API and notification
       emails are English (confirmation and reset emails follow the account's language; the
       web app translates the error texts it knows).

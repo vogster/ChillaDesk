@@ -9,7 +9,7 @@ import {
   type UpdateProfileRequest,
   type User,
 } from '@chilladesk/shared'
-import { and, eq, gt, isNull, lt, lte, ne, or } from 'drizzle-orm'
+import { and, eq, gt, isNotNull, isNull, lt, lte, ne, or } from 'drizzle-orm'
 import type { Db } from '../../db/client'
 import { apiTokens, emailTokens, sessions, users } from '../../db/schema'
 import { AppError, conflict, forbidden, isUniqueViolation, unauthenticated } from '../../errors'
@@ -64,10 +64,13 @@ export async function register(
   try {
     // One transaction, so a failed session insert cannot leave an account the client never saw.
     return await db.transaction(async (tx) => {
+      const email = input.email.toLowerCase()
+      // An unfinished sign-up from when the server sent email can never be finished now.
+      await tx.delete(users).where(and(eq(users.email, email), isNotNull(users.pendingSince)))
       const [user] = await tx
         .insert(users)
         .values({
-          email: input.email.toLowerCase(),
+          email,
           name: input.name,
           passwordHash,
           locale: input.locale ?? null,
@@ -117,6 +120,7 @@ async function authenticateApiToken(db: Db, token: string, now: Date): Promise<A
       and(
         eq(apiTokens.tokenHash, hashToken(token)),
         or(isNull(apiTokens.expiresAt), gt(apiTokens.expiresAt, now)),
+        isNull(users.pendingSince),
       ),
     )
   if (!row) return null
@@ -158,7 +162,14 @@ export async function authenticate(
     .select({ user: users, sessionId: sessions.id })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
-    .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, now)))
+    .where(
+      and(
+        eq(sessions.tokenHash, hashToken(token)),
+        gt(sessions.expiresAt, now),
+        // An unfinished sign-up has no way in, whatever is found for it.
+        isNull(users.pendingSince),
+      ),
+    )
   return row ? { user: toUser(row.user), sessionId: row.sessionId, apiToken: null } : null
 }
 

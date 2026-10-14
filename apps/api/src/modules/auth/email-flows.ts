@@ -1,5 +1,5 @@
 import { localeSchema, type RegisterRequest } from '@chilladesk/shared'
-import { and, eq, gt, isNull, lte } from 'drizzle-orm'
+import { and, eq, gt, isNotNull, isNull, lt, lte } from 'drizzle-orm'
 import type { Db } from '../../db/client'
 import { apiTokens, emailTokens, sessions, users } from '../../db/schema'
 import { AppError, conflict, unauthenticated } from '../../errors'
@@ -174,13 +174,24 @@ export async function resetPassword(
       .update(users)
       // The link arrived at this address, which also proves that it is theirs.
       // An unfinished sign-up is finished too: the owner of the address chose the password.
-      .set({ passwordHash, emailVerifiedAt: user?.emailVerifiedAt ?? now, pendingSince: null })
+      // What a stranger may have typed into it (a name, a language) does not stay.
+      .set({
+        passwordHash,
+        emailVerifiedAt: user?.emailVerifiedAt ?? now,
+        pendingSince: null,
+        ...(user?.pendingSince
+          ? { name: user.email.split('@')[0] ?? user.email, locale: null }
+          : {}),
+      })
       .where(eq(users.id, userId))
     await tx.delete(sessions).where(eq(sessions.userId, userId))
     await tx.delete(apiTokens).where(eq(apiTokens.userId, userId))
     await tx.delete(emailTokens).where(eq(emailTokens.userId, userId))
   })
 }
+
+/** Unfinished sign-ups older than their link are removed: nobody can finish them any more. */
+const PENDING_TTL_MS = TTL_MS.verify
 
 /**
  * A sign-up on a server that sends email. Whether the address is free or not, the caller
@@ -198,6 +209,7 @@ export async function registerByEmail(
 ): Promise<void> {
   const email = input.email.toLowerCase()
   const passwordHash = await hashPassword(input.password)
+  await db.delete(users).where(lt(users.pendingSince, new Date(now.getTime() - PENDING_TTL_MS)))
   const [existing] = await db.select().from(users).where(eq(users.email, email))
 
   if (existing && !existing.pendingSince) {
@@ -213,17 +225,47 @@ export async function registerByEmail(
   }
 
   const values = { name: input.name, passwordHash, locale: input.locale ?? null, pendingSince: now }
-  const [user] = existing
-    ? await db.update(users).set(values).where(eq(users.id, existing.id)).returning()
-    : await db
+  const user = await db.transaction(async (tx) => {
+    if (!existing) {
+      const [created] = await tx
         .insert(users)
         .values({ email, ...values })
         .onConflictDoNothing()
         .returning()
-  // Lost a race with a sign-up of the same address at the same moment; that one wins.
+      return created
+    }
+    // Only while it is still unfinished: if its owner finished it meanwhile, it stays theirs.
+    const [replaced] = await tx
+      .update(users)
+      .set(values)
+      .where(and(eq(users.id, existing.id), isNotNull(users.pendingSince)))
+      .returning()
+    if (replaced) {
+      await tx.delete(sessions).where(eq(sessions.userId, replaced.id))
+      await tx.delete(apiTokens).where(eq(apiTokens.userId, replaced.id))
+    }
+    return replaced
+  })
+  // Lost a race with a sign-up of the same address, or with its owner finishing it.
   if (!user) return
   const token = await issueToken(db, user.id, 'verify', now)
   await mail.send(verificationEmail(accountEmail(user, mail, 'verify-email', token)))
+}
+
+/** The address a confirmation link was sent to, to count wrong passwords for that account. */
+export async function addressOfLink(db: Db, token: string, now: Date = new Date()) {
+  const [link] = await db
+    .select({ email: users.email })
+    .from(emailTokens)
+    .innerJoin(users, eq(users.id, emailTokens.userId))
+    .where(
+      and(
+        eq(emailTokens.tokenHash, hashToken(token)),
+        eq(emailTokens.kind, 'verify'),
+        gt(emailTokens.expiresAt, now),
+      ),
+    )
+  return link?.email ?? null
 }
 
 /**
@@ -251,15 +293,28 @@ export async function completeRegistration(
     )
   if (!link) throw invalidLink()
   // A wrong password leaves the link usable, for the owner to try again.
-  if (!(await verifyPassword(password, link.user.passwordHash))) {
+  const checked = link.user
+  if (!(await verifyPassword(password, checked.passwordHash))) {
     throw unauthenticated('Invalid email or password')
   }
-  await consumeToken(db, token, 'verify', now, link.user.id)
-  const [user] = await db
-    .update(users)
-    .set({ emailVerifiedAt: link.user.emailVerifiedAt ?? now, pendingSince: null })
-    .where(eq(users.id, link.user.id))
-    .returning()
-  if (!user) throw invalidLink()
-  return user
+  return db.transaction(async (tx) => {
+    await consumeToken(tx, token, 'verify', now, checked.id)
+    // Only if the account is still the one whose password was just checked: a new sign-up
+    // of the address in the meantime must not be finished with the old password.
+    const [user] = await tx
+      .update(users)
+      .set({ emailVerifiedAt: checked.emailVerifiedAt ?? now, pendingSince: null })
+      .where(
+        and(
+          eq(users.id, checked.id),
+          eq(users.passwordHash, checked.passwordHash),
+          checked.pendingSince
+            ? eq(users.pendingSince, checked.pendingSince)
+            : isNull(users.pendingSince),
+        ),
+      )
+      .returning()
+    if (!user) throw invalidLink()
+    return user
+  })
 }

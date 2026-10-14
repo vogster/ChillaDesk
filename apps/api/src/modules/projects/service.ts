@@ -159,7 +159,8 @@ export async function addMember(
 ): Promise<ProjectMember> {
   await getProject(db, userId, projectId, 'owner')
   const [invitee] = await db.select().from(users).where(eq(users.email, input.email.toLowerCase()))
-  if (!invitee || (confirmedOnly && !invitee.emailVerifiedAt)) {
+  // An unfinished sign-up is nobody's account yet, whatever the server's settings.
+  if (!invitee || invitee.pendingSince || (confirmedOnly && !invitee.emailVerifiedAt)) {
     throw notFound('User with this email')
   }
 

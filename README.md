@@ -52,6 +52,11 @@ serving the web app and proxying `/api`. Database migrations run when the API st
   Removing a member revokes every link of the project.
 - **Sign-ups.** Anyone who can reach the site can register. Once your team is in, set
   `REGISTRATION_ENABLED=false` and restart.
+- **Several API replicas.** With PostgreSQL, live updates travel between replicas through
+  `LISTEN/NOTIFY`, and per-account limits, notification emails and webhook deliveries are
+  kept in the database. Two things are still per replica: the per-address request limits
+  (`RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_MAX`) and attached files, which need a disk all
+  replicas share.
 - **Backups.** Everything but attached files is in PostgreSQL; the files are in the
   `api-data` volume (`/data/files` in the API container), so copy that as well:
 

@@ -16,6 +16,7 @@ let mailDown = false
 beforeAll(async () => {
   ctx = await createTestContext({
     accountEmailRateLimitMax: 3,
+    accountRateLimitMax: 5,
     mail: {
       publicUrl: PUBLIC_URL,
       send: async (message) => {
@@ -222,6 +223,100 @@ describe('signing up on a server that sends email', () => {
     await emailTo(email, /Confirm/)
     await new Promise((resolve) => setTimeout(resolve, 100))
     expect(outbox.filter((message) => message.to === email)).toHaveLength(3)
+  })
+})
+
+describe('unfinished sign-ups under pressure', () => {
+  it('does not finish an account whose password changed after the link was opened', async () => {
+    const email = nextEmail()
+    await signUp(email)
+    const { token } = await emailTo(email, /Confirm/)
+    // As if a second sign-up of the address had just replaced the password.
+    await ctx.database.db
+      .update(users)
+      .set({ passwordHash: 'replaced' })
+      .where(eq(users.email, email))
+
+    const late = await post('/verify-email/complete', { token, password: TEST_PASSWORD })
+
+    expect(late.statusCode).toBe(401)
+    const [stored] = await ctx.database.db.select().from(users).where(eq(users.email, email))
+    expect(stored?.pendingSince).not.toBeNull()
+  })
+
+  it('counts wrong passwords at the link against the account', async () => {
+    const email = nextEmail()
+    await signUp(email)
+    const { token } = await emailTo(email, /Confirm/)
+
+    const statuses = []
+    for (let index = 0; index < 6; index += 1) {
+      statuses.push(
+        (await post('/verify-email/complete', { token, password: `guess ${index}` })).statusCode,
+      )
+    }
+
+    expect(statuses).toEqual([401, 401, 401, 401, 401, 429])
+  })
+
+  it('keeps sign-ups from using up the password resets of an address', async () => {
+    const { email } = await register()
+    outbox = []
+    for (let index = 0; index < 4; index += 1) await signUp(email)
+
+    await post('/password-reset', { email })
+
+    await emailTo(email, /Reset your/)
+  })
+
+  it('drops what a stranger typed when the owner finishes the sign-up with a reset', async () => {
+    const email = nextEmail()
+    await signUp(email, { name: 'Strange Name', locale: 'ru' })
+    await emailTo(email, /Подтвердите/)
+    await post('/password-reset', { email })
+    const { token } = await emailTo(email, /Сброс пароля/)
+
+    await post('/password-reset/confirm', { token, password: NEW_PASSWORD })
+
+    const session = (await login(email, NEW_PASSWORD)).json<AuthResponse>()
+    expect(session.user.name).toBe(email.split('@')[0])
+    expect(session.user.locale).toBeNull()
+  })
+
+  it('forgets sign-ups nobody finished in time', async () => {
+    const stale = nextEmail()
+    await signUp(stale)
+    await emailTo(stale, /Confirm/)
+    await ctx.database.db
+      .update(users)
+      .set({ pendingSince: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) })
+      .where(eq(users.email, stale))
+
+    const fresh = nextEmail()
+    await signUp(fresh)
+    await emailTo(fresh, /Confirm/)
+
+    expect(await ctx.database.db.select().from(users).where(eq(users.email, stale))).toEqual([])
+  })
+
+  it('lets a server without email reuse the address of an unfinished sign-up', async () => {
+    const plain = await createTestContext()
+    const email = nextEmail()
+    await plain.database.db.insert(users).values({
+      email,
+      name: 'Left over',
+      passwordHash: 'x',
+      pendingSince: new Date(),
+    })
+
+    const response = await plain.app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { email, name: 'Pat', password: TEST_PASSWORD },
+    })
+    await plain.close()
+
+    expect(response.statusCode, response.body).toBe(201)
   })
 })
 
