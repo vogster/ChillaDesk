@@ -9,111 +9,47 @@ import {
   updateTaskRequestSchema,
   updateWikiPageRequestSchema,
   wikiListQuerySchema,
-  type Status,
-  type Task,
-  type LiveResource,
-  type TaskInContext,
-  type WikiPage,
 } from '@chilladesk/shared'
 import { z } from 'zod'
-import type { Db } from '../../db/client'
-import { AppError, forbidden, invalid } from '../../errors'
+import { AppError, forbidden } from '../../errors'
 import { loggableError } from '../../http/error-handler'
-import type { AuthContext } from '../auth/service'
+import { listAttachments } from '../attachments/service'
 import { listLabels } from '../labels/service'
+import { listMilestones } from '../milestones/service'
 import { listMyTasks, search } from '../overview/service'
 import { listMembers, listProjects } from '../projects/service'
+import { listChecklist } from '../tasks/checklist.service'
 import { addComment, listComments } from '../tasks/comments.service'
+import { listLinks } from '../tasks/links.service'
 import { createTask, listTasks, moveTask, updateTask } from '../tasks/service'
 import { listStatuses } from '../tasks/statuses.service'
 import { createPage, listPages, updatePage } from '../wiki/service'
+import { INBOX_TOOLS } from './tools.inbox'
+import { PLANNING_TOOLS } from './tools.planning'
+import {
+  describePage,
+  describeTask,
+  describeTaskInContext,
+  project,
+  taskKey,
+  tool,
+  validate,
+  type ToolContext,
+  type ToolDefinition,
+} from './toolkit'
 import {
   labelsByName,
   memberByEmail,
+  milestoneByName,
   projectByKey,
   statusByName,
   taskByKey,
   wikiPageByTitle,
 } from './resolve'
 
-export interface ToolContext {
-  db: Db
-  auth: AuthContext
-  /** Write tools report the project they changed, so open screens can refresh. */
-  changed?(projectId: string, resource: LiveResource): void
-}
+export type { ToolContext, ToolDefinition } from './toolkit'
 
-export interface ToolDefinition {
-  name: string
-  title: string
-  description: string
-  /** Read tools are open to read-only tokens; the rest need write access. */
-  readOnly: boolean
-  inputSchema: z.ZodRawShape
-  run(input: never, context: ToolContext): Promise<unknown>
-}
-
-function tool<Shape extends z.ZodRawShape>(definition: {
-  name: string
-  title: string
-  description: string
-  readOnly: boolean
-  inputSchema: Shape
-  run(input: z.infer<z.ZodObject<Shape>>, context: ToolContext): Promise<unknown>
-}): ToolDefinition {
-  return definition as ToolDefinition
-}
-
-/**
- * Checks tool input against the schema the REST API uses for the same operation, so both
- * doors accept exactly the same data and a model gets a message it can act on.
- */
-function validate<T>(schema: z.ZodType<T>, value: unknown): T {
-  const result = schema.safeParse(value)
-  if (result.success) return result.data
-  const problems = result.error.issues
-    .map((issue) => [issue.path.join('.'), issue.message].filter(Boolean).join(': '))
-    .join('; ')
-  throw invalid(`Invalid input: ${problems}`)
-}
-
-const project = z.string().describe('Project key, e.g. "CHL". Use list_projects to see them.')
-const taskKey = z.string().describe('Task key: project key, dash, number, e.g. "CHL-12".')
-
-const statusName = (statuses: Status[], statusId: string) =>
-  statuses.find((status) => status.id === statusId)?.name ?? 'Unknown'
-
-/** A task as an agent needs it: names instead of ids, nothing internal. */
-function describeTask(task: Task, statuses: Status[]) {
-  return {
-    key: task.key,
-    title: task.title,
-    status: statusName(statuses, task.statusId),
-    priority: task.priority,
-    assignee: task.assignee?.email ?? null,
-    reporter: task.reporter?.email ?? null,
-    dueDate: task.dueDate,
-    labels: task.labels.map((label) => label.name),
-    description: task.description,
-    updatedAt: task.updatedAt,
-  }
-}
-
-/** A task found outside one project: its status comes with it, and its description is left out. */
-function describeTaskInContext(task: TaskInContext) {
-  const { description: _description, ...summary } = describeTask(task, [task.status])
-  return { project: task.project.key, ...summary }
-}
-
-const describePage = (page: WikiPage) => ({
-  title: page.title,
-  version: page.version,
-  content: page.content,
-  updatedBy: page.updatedBy?.email ?? null,
-  updatedAt: page.updatedAt,
-})
-
-export const TOOLS: ToolDefinition[] = [
+const CORE_TOOLS: ToolDefinition[] = [
   tool({
     name: 'list_projects',
     title: 'List projects',
@@ -167,16 +103,17 @@ export const TOOLS: ToolDefinition[] = [
     name: 'get_project',
     title: 'Get project',
     description:
-      'A project with its board statuses (columns, left to right), labels and members. ' +
-      'Call this before creating or moving tasks to learn the valid status names, label names and assignee emails.',
+      'A project with its board statuses (columns, left to right), labels, open milestones and members. ' +
+      'Call this before creating or moving tasks to learn the valid status, label and milestone names and assignee emails.',
     readOnly: true,
     inputSchema: { project },
     run: async (input, { db, auth }) => {
       const found = await projectByKey(db, auth.user.id, input.project)
-      const [statuses, members, labels] = await Promise.all([
+      const [statuses, members, labels, milestones] = await Promise.all([
         listStatuses(db, auth.user.id, found.id),
         listMembers(db, auth.user.id, found.id),
         listLabels(db, auth.user.id, found.id),
+        listMilestones(db, auth.user.id, found.id),
       ])
       return {
         key: found.key,
@@ -185,6 +122,9 @@ export const TOOLS: ToolDefinition[] = [
         yourRole: found.role,
         statuses: statuses.map(({ name, category }) => ({ name, category })),
         labels: labels.map((label) => label.name),
+        milestones: milestones
+          .filter((milestone) => !milestone.closed)
+          .map(({ name, dueDate }) => ({ name, dueDate })),
         members: members.map(({ name, email, role }) => ({ name, email, role })),
       }
     },
@@ -205,6 +145,10 @@ export const TOOLS: ToolDefinition[] = [
         .describe('Email of the assignee, or "none" for unassigned tasks.'),
       priority: taskPrioritySchema.optional(),
       label: z.string().optional().describe('Only tasks that carry the label with this name.'),
+      milestone: z
+        .string()
+        .optional()
+        .describe('Only tasks on the milestone with this name, or "none" for tasks without one.'),
       query: z.string().optional().describe('Text to look for in titles and descriptions.'),
       limit: z.number().int().min(1).max(200).default(50),
     },
@@ -227,6 +171,14 @@ export const TOOLS: ToolDefinition[] = [
         ...(input.label
           ? { labelId: (await labelsByName(db, userId, found.id, [input.label]))[0]?.id }
           : {}),
+        ...(input.milestone === undefined
+          ? {}
+          : {
+              milestoneId:
+                input.milestone === 'none'
+                  ? 'none'
+                  : (await milestoneByName(db, userId, found.id, input.milestone)).id,
+            }),
         ...(input.query?.trim() ? { q: input.query.trim() } : {}),
       })
       const list = await listTasks(db, userId, found.id, filters)
@@ -243,18 +195,34 @@ export const TOOLS: ToolDefinition[] = [
   tool({
     name: 'get_task',
     title: 'Get task',
-    description: 'One task in full, with its Markdown description and comments.',
+    description:
+      'One task in full: its Markdown description, checklist, links to other tasks, attached files and comments.',
     readOnly: true,
     inputSchema: { key: taskKey },
     run: async (input, { db, auth }) => {
       const userId = auth.user.id
       const { project: found, task } = await taskByKey(db, userId, input.key)
-      const [statuses, comments] = await Promise.all([
+      const [statuses, comments, checklist, links, files] = await Promise.all([
         listStatuses(db, userId, found.id),
         listComments(db, userId, found.id, task.id),
+        listChecklist(db, userId, found.id, task.id),
+        listLinks(db, userId, found.id, task.id),
+        listAttachments(db, userId, found.id, { taskId: task.id }),
       ])
       return {
         ...describeTask(task, statuses),
+        checklist: checklist.map((item, index) => ({
+          number: index + 1,
+          text: item.text,
+          done: item.done,
+        })),
+        links: links.map((link) => ({
+          relation: link.relation,
+          task: link.task.key,
+          title: link.task.title,
+          done: link.task.done,
+        })),
+        attachments: files.map(({ fileName, mimeType, size }) => ({ fileName, mimeType, size })),
         comments: comments.map((comment) => ({
           author: comment.author?.email ?? null,
           body: comment.body,
@@ -278,6 +246,7 @@ export const TOOLS: ToolDefinition[] = [
       assignee: z.string().optional().describe('Email of a project member.'),
       dueDate: dueDateSchema.optional().describe('YYYY-MM-DD'),
       labels: z.array(z.string()).optional().describe('Names of existing labels; see get_project.'),
+      milestone: z.string().optional().describe('Name of an open milestone; see get_project.'),
     },
     run: async (input, { db, auth, changed }) => {
       const userId = auth.user.id
@@ -295,6 +264,9 @@ export const TOOLS: ToolDefinition[] = [
         assigneeId: assignee?.userId ?? null,
         dueDate: input.dueDate ?? null,
         statusId: status?.id,
+        milestoneId: input.milestone
+          ? (await milestoneByName(db, userId, found.id, input.milestone)).id
+          : null,
         labelIds: (await labelsByName(db, userId, found.id, input.labels ?? [])).map(
           (label) => label.id,
         ),
@@ -327,6 +299,11 @@ export const TOOLS: ToolDefinition[] = [
         .array(z.string())
         .optional()
         .describe('The complete new set of label names; an empty list removes all labels.'),
+      milestone: z
+        .string()
+        .nullable()
+        .optional()
+        .describe('Name of a milestone, or null to take the task off its milestone.'),
     },
     run: async (input, { db, auth, changed }) => {
       const userId = auth.user.id
@@ -341,6 +318,14 @@ export const TOOLS: ToolDefinition[] = [
         ...(input.priority !== undefined ? { priority: input.priority } : {}),
         ...(assigneeId !== undefined ? { assigneeId } : {}),
         ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
+        ...(input.milestone !== undefined
+          ? {
+              milestoneId:
+                input.milestone === null
+                  ? null
+                  : (await milestoneByName(db, userId, found.id, input.milestone)).id,
+            }
+          : {}),
         ...(input.labels !== undefined
           ? {
               labelIds: (await labelsByName(db, userId, found.id, input.labels)).map(
@@ -494,6 +479,9 @@ export const TOOLS: ToolDefinition[] = [
     },
   }),
 ]
+
+/** Every tool the MCP server offers, in the order a model sees them. */
+export const TOOLS: ToolDefinition[] = [...CORE_TOOLS, ...PLANNING_TOOLS, ...INBOX_TOOLS]
 
 /** Runs a tool for the caller, refusing write tools to a read-only token. */
 export function runTool(

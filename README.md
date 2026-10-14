@@ -149,15 +149,20 @@ server to your MCP client (the tokens page shows this snippet filled in):
 Tools address things by name: projects by key (`CHL`), tasks by key (`CHL-12`), statuses by
 name, people by email and wiki pages by title.
 
-| Tool                                   | What it does                                       |
-| -------------------------------------- | -------------------------------------------------- |
-| `list_projects`, `get_project`         | Projects, their board statuses and members         |
-| `list_tasks`, `get_task`               | Tasks with filters; one task with its comments     |
-| `my_tasks`, `search`                   | Your tasks, and search, across every project       |
-| `create_task`, `update_task`           | Create, edit, assign and move tasks (write tokens) |
-| `add_comment`                          | Comment on a task (write tokens)                   |
-| `list_wiki_pages`, `get_wiki_page`     | List, search and read wiki pages                   |
-| `create_wiki_page`, `update_wiki_page` | Write wiki pages, keeping history (write tokens)   |
+| Tool                                                      | What it does                                                               |
+| --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `list_projects`, `get_project`                            | Projects, their columns, labels, open milestones and members               |
+| `list_tasks`, `get_task`                                  | Tasks with filters; one task with its checklist, links, files and comments |
+| `my_tasks`, `search`                                      | Your tasks, and search, across every project                               |
+| `create_task`, `update_task`                              | Create, edit, assign, move and plan tasks (write tokens)                   |
+| `add_comment`                                             | Comment on a task (write tokens)                                           |
+| `add_checklist_item`, `check_checklist_item`              | Build and tick off the checklist of a task (write tokens)                  |
+| `link_tasks`, `watch_task`                                | Link tasks (blocks, duplicates, subtask…); follow a task (write tokens)    |
+| `list_milestones`, `create_milestone`, `update_milestone` | Milestones and their progress                                              |
+| `create_label`                                            | Add a label to a project (write tokens)                                    |
+| `list_notifications`, `mark_notifications_read`           | The token owner's own notifications                                        |
+| `list_wiki_pages`, `get_wiki_page`                        | List, search and read wiki pages                                           |
+| `create_wiki_page`, `update_wiki_page`                    | Write wiki pages, keeping history (write tokens)                           |
 
 The endpoint is stateless Streamable HTTP. An assistant reads whatever project members wrote,
 so give it a read-only token unless it needs to make changes.

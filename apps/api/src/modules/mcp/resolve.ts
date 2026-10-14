@@ -1,7 +1,16 @@
-import type { Label, Project, ProjectMember, Status, Task, WikiPage } from '@chilladesk/shared'
+import type {
+  Label,
+  Milestone,
+  Project,
+  ProjectMember,
+  Status,
+  Task,
+  WikiPage,
+} from '@chilladesk/shared'
 import type { Db } from '../../db/client'
 import { invalid, notFound } from '../../errors'
 import { listLabels } from '../labels/service'
+import { listMilestones } from '../milestones/service'
 import { listMembers, listProjects } from '../projects/service'
 import { getTaskByNumber } from '../tasks/service'
 import { listStatuses } from '../tasks/statuses.service'
@@ -93,4 +102,19 @@ export async function wikiPageByTitle(
   )
   if (!summary) throw notFound(`Wiki page "${title}"`)
   return getPage(db, userId, projectId, summary.id)
+}
+
+export async function milestoneByName(
+  db: Db,
+  userId: string,
+  projectId: string,
+  name: string,
+): Promise<Milestone> {
+  const milestones = await listMilestones(db, userId, projectId)
+  const milestone = milestones.find((item) => sameText(item.name, name.trim()))
+  if (!milestone) {
+    const available = milestones.map((item) => `"${item.name}"`).join(', ') || 'none yet'
+    throw invalid(`Unknown milestone "${name}". This project has: ${available}`)
+  }
+  return milestone
 }

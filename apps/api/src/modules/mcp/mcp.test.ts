@@ -1,12 +1,7 @@
-import type { CreatedApiToken } from '@chilladesk/shared'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { SESSION_COOKIE } from '../auth/plugin'
-import {
-  createTestContext,
-  type ProjectFixture,
-  type TestContext,
-  type TestUser,
-} from '../../test/harness'
+import { createTestContext, type ProjectFixture, type TestContext } from '../../test/harness'
+import { mcpClient, type RpcResponse } from '../../test/mcp'
 import { runTool, runToolForClient, TOOLS, type ToolContext, type ToolDefinition } from './tools'
 
 let ctx: TestContext
@@ -19,59 +14,7 @@ afterAll(async () => {
   await ctx.close()
 })
 
-async function tokenFor(user: TestUser, scope: 'read' | 'write' = 'write'): Promise<string> {
-  const response = await ctx.request(user, 'POST', '/api/tokens', { name: `MCP ${scope}`, scope })
-  expect(response.statusCode, response.body).toBe(201)
-  return response.json<CreatedApiToken>().token
-}
-
-interface RpcResponse {
-  result?: Record<string, unknown>
-  error?: { code: number; message: string }
-}
-
-async function rpc(token: string | null, method: string, params: Record<string, unknown> = {}) {
-  const response = await ctx.app.inject({
-    method: 'POST',
-    url: '/api/mcp',
-    headers: {
-      accept: 'application/json, text/event-stream',
-      'content-type': 'application/json',
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-    payload: { jsonrpc: '2.0', id: 1, method, params },
-  })
-  return {
-    status: response.statusCode,
-    headers: response.headers,
-    body: response.json<RpcResponse>(),
-  }
-}
-
-/** Calls a tool and returns its parsed JSON result, or its error text. */
-async function call<T = unknown>(
-  token: string,
-  name: string,
-  args: Record<string, unknown> = {},
-): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
-  const { status, body } = await rpc(token, 'tools/call', { name, arguments: args })
-  expect(status, JSON.stringify(body)).toBe(200)
-  const result = body.result as { isError?: boolean; content: { text: string }[] }
-  const text = result.content[0]?.text ?? ''
-  return result.isError ? { ok: false, message: text } : { ok: true, data: JSON.parse(text) as T }
-}
-
-async function expectData<T>(promise: ReturnType<typeof call<T>>): Promise<T> {
-  const result = await promise
-  if (!result.ok) throw new Error(`Tool failed: ${result.message}`)
-  return result.data
-}
-
-async function expectError(promise: ReturnType<typeof call>): Promise<string> {
-  const result = await promise
-  if (result.ok) throw new Error(`Tool unexpectedly succeeded: ${JSON.stringify(result.data)}`)
-  return result.message
-}
+const { tokenFor, rpc, call, expectData, expectError } = mcpClient(() => ctx)
 
 interface TaskView {
   key: string
@@ -118,19 +61,29 @@ describe('protocol', () => {
       annotations: { readOnlyHint: boolean }
     }[]
     expect(tools.map((tool) => tool.name).sort()).toEqual([
+      'add_checklist_item',
       'add_comment',
+      'check_checklist_item',
+      'create_label',
+      'create_milestone',
       'create_task',
       'create_wiki_page',
       'get_project',
       'get_task',
       'get_wiki_page',
+      'link_tasks',
+      'list_milestones',
+      'list_notifications',
       'list_projects',
       'list_tasks',
       'list_wiki_pages',
+      'mark_notifications_read',
       'my_tasks',
       'search',
+      'update_milestone',
       'update_task',
       'update_wiki_page',
+      'watch_task',
     ])
     const byName = new Map(tools.map((tool) => [tool.name, tool]))
     expect(byName.get('get_task')?.annotations.readOnlyHint).toBe(true)
