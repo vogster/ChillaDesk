@@ -24,9 +24,15 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 ## Quick start (Docker)
 
 ```bash
+git clone https://github.com/vogster/ChillaDesk.git && cd ChillaDesk
 cp .env.example .env   # then set POSTGRES_PASSWORD
-docker compose up -d --build
+docker compose pull    # released images; skip it to build from source
+docker compose up -d
 ```
+
+Released images are `ghcr.io/vogster/chilladesk-api` and `ghcr.io/vogster/chilladesk-web`
+(amd64 and arm64). Pin a version with `CHILLADESK_VERSION=0.2.0` in `.env`;
+`docker compose up -d --build` builds the checked-out source instead.
 
 Open http://localhost:8080 and sign up; whoever creates a project owns it. API docs live at
 http://localhost:8080/api/docs.
@@ -56,7 +62,8 @@ serving the web app and proxying `/api`. Database migrations run when the API st
   To restore into an empty database:
   `docker compose exec -T db psql -U chillawiki chillawiki < chilladesk-backup.sql`.
 
-- **Upgrading.** Back up, pull the new version, then `docker compose up -d --build`.
+- **Upgrading.** Back up, then `git pull`, `docker compose pull` and `docker compose up -d`
+  (or `docker compose up -d --build` when you build from source). Migrations run on start.
 - **Checking an installation.** `pnpm --filter @chilladesk/api stack-check http://localhost:8080`
   drives a running instance end to end (it creates and removes throwaway data, so use it on
   a test instance).

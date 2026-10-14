@@ -20,6 +20,8 @@ services:
       retries: 10
 
   api:
+    # A released image is pulled; `docker compose up --build` builds this checkout instead.
+    image: ${CHILLADESK_IMAGE_PREFIX:-ghcr.io/vogster/chilladesk}-api:${CHILLADESK_VERSION:-latest}
     build:
       context: .
       target: api
@@ -49,6 +51,7 @@ services:
         condition: service_healthy
 
   web:
+    image: ${CHILLADESK_IMAGE_PREFIX:-ghcr.io/vogster/chilladesk}-web:${CHILLADESK_VERSION:-latest}
     build:
       context: .
       target: web
