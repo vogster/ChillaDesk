@@ -1,4 +1,4 @@
-import type { NotificationType } from '@chilladesk/shared'
+import { localeSchema, type NotificationType } from '@chilladesk/shared'
 import {
   aliasedTable,
   and,
@@ -16,6 +16,7 @@ import {
 import { createTransport } from 'nodemailer'
 import type { Db } from '../../db/client'
 import { notifications, projectMembers, projects, tasks, users, wikiPages } from '../../db/schema'
+import { NOTIFICATION_EMAIL_TEXTS } from './email-texts'
 
 export interface MailMessage {
   to: string
@@ -74,6 +75,8 @@ interface PendingEmail {
   attempts: number
   to: string
   wantsEmail: boolean
+  /** The recipient's language; emails in any other are written in English. */
+  locale: string | null
   /** Whether the recipient has proved the address is theirs. */
   verified: Date | null
   /** Null when the recipient has left the project since. */
@@ -86,33 +89,36 @@ interface PendingEmail {
 
 const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim()
 
-const ACTIONS: Record<NotificationType, string> = {
-  task_assigned: 'assigned you a task',
-  task_commented: 'commented on a task',
-  task_moved: 'moved a task',
-  mentioned: 'mentioned you',
-}
-
 function renderEmail(pending: PendingEmail, publicUrl: string): MailMessage {
   const { project, task, page } = pending
-  const who = oneLine(pending.actorName ?? 'Someone')
+  const locale = localeSchema.safeParse(pending.locale)
+  const words = NOTIFICATION_EMAIL_TEXTS[locale.success ? locale.data : 'en']
+  const who = oneLine(pending.actorName ?? words.someone)
+  const action = words.actions[pending.type]
   const taskKey = task ? `${project.key}-${task.number}` : null
-  const base = `${publicUrl.replace(/\/+$/, '')}/projects/${project.id}`
+  const site = publicUrl.replace(/\/+$/, '')
+  const base = `${site}/projects/${project.id}`
 
   const where = page
-    ? `on the wiki page “${page.title}”`
+    ? words.onPage(page.title)
     : taskKey && pending.type === 'mentioned'
-      ? `in ${taskKey} ${task?.title ?? ''}`.trimEnd()
-      : `in ${project.name}`
+      ? words.inTask(`${taskKey} ${task?.title ?? ''}`.trimEnd())
+      : words.inProject(project.name)
   // An assignment's excerpt is the task title, which the heading line already carries.
   const heading = taskKey && pending.type !== 'mentioned' ? `${taskKey} ${task?.title ?? ''}` : null
   const quote = pending.type === 'task_assigned' ? null : pending.excerpt
   const link = page ? `${base}/wiki/${page.id}` : task ? `${base}/tasks/${task.number}` : base
 
-  const blocks = [`${who} ${ACTIONS[pending.type]} ${where}:`, heading, quote, link]
+  const blocks = [
+    `${who} ${action} ${where}:`,
+    heading,
+    quote,
+    link,
+    words.footer(`${site}/profile`),
+  ]
   return {
     to: pending.to,
-    subject: oneLine(`[${taskKey ?? project.key}] ${who} ${ACTIONS[pending.type]}`),
+    subject: oneLine(`[${taskKey ?? project.key}] ${who} ${action}`),
     text: blocks.filter((block): block is string => Boolean(block)).join('\n\n'),
   }
 }
@@ -160,6 +166,7 @@ async function claimBatch(db: Db, now: Date): Promise<PendingEmail[]> {
       attempts: notifications.emailAttempts,
       to: users.email,
       wantsEmail: users.emailNotifications,
+      locale: users.locale,
       verified: users.emailVerifiedAt,
       memberId: projectMembers.userId,
       actorName: actors.name,

@@ -81,9 +81,33 @@ describe('deliverPending', () => {
           `${task.key} Review the PR`,
           '',
           `${PUBLIC_URL}/projects/${fixture.project.id}/tasks/${task.number}`,
+          '',
+          `You get this email because you did not see the notification in ChillaDesk. Turn these emails off in your profile: ${PUBLIC_URL}/profile`,
         ].join('\n'),
       },
     ])
+  })
+
+  it('writes to each person in their own language', async () => {
+    const fixture = await ctx.createProject()
+    await ctx.database.db.delete(notifications)
+    await ctx.database.db.update(users).set({ locale: 'ru' }).where(eq(users.id, fixture.member.id))
+    const task = (
+      await fixture.call(fixture.owner, 'POST', '/tasks', {
+        title: 'Проверить',
+        assigneeId: fixture.member.id,
+      })
+    ).json<Task>()
+    const sent: MailMessage[] = []
+
+    await deliverPending(ctx.database.db, async (message) => void sent.push(message), {
+      publicUrl: PUBLIC_URL,
+    })
+
+    expect(sent).toHaveLength(1)
+    expect(sent[0]?.subject).toBe(`[${task.key}] Olga Owner назначил(а) вам задачу`)
+    expect(sent[0]?.text).toContain(`в проекте ${fixture.project.name}:`)
+    expect(sent[0]?.text).toContain('Отключить такие письма можно в профиле')
   })
 
   it('words comments and mentions differently and links a wiki page', async () => {
