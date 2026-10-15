@@ -142,21 +142,32 @@ export async function requestPasswordReset(
   email: string,
   now: Date = new Date(),
 ): Promise<void> {
-  const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase()))
-  if (!user) return
-  const [recent] = await db
-    .select({ id: emailTokens.id })
-    .from(emailTokens)
-    .where(
-      and(
-        eq(emailTokens.userId, user.id),
-        eq(emailTokens.kind, 'reset'),
-        gt(emailTokens.createdAt, new Date(now.getTime() - RESET_REISSUE_AFTER_MS)),
-      ),
-    )
-  if (recent) return
-  const token = await issueToken(db, user.id, 'reset', now)
-  await mail.send(passwordResetEmail(accountEmail(user, mail, 'reset-password', token)))
+  // The account is locked while it is decided, so requests at the same moment cannot each
+  // find no recent link and send one, the later making the earlier useless.
+  const issued = await db.transaction(async (tx) => {
+    const [user] = await tx
+      .select()
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()))
+      .for('update')
+    if (!user) return null
+    const [recent] = await tx
+      .select({ id: emailTokens.id })
+      .from(emailTokens)
+      .where(
+        and(
+          eq(emailTokens.userId, user.id),
+          eq(emailTokens.kind, 'reset'),
+          gt(emailTokens.createdAt, new Date(now.getTime() - RESET_REISSUE_AFTER_MS)),
+        ),
+      )
+    if (recent) return null
+    return { user, token: await issueToken(tx, user.id, 'reset', now) }
+  })
+  if (!issued) return
+  await mail.send(
+    passwordResetEmail(accountEmail(issued.user, mail, 'reset-password', issued.token)),
+  )
 }
 
 /**

@@ -225,12 +225,16 @@ describe('signing up on a server that sends email', () => {
 
   it('sends one address no more emails than the limit, however often it is used', async () => {
     const email = nextEmail()
+    const sent = () => outbox.filter((message) => message.to === email).length
     for (let index = 0; index < 6; index += 1) {
       expect((await signUp(email)).statusCode).toBe(202)
+      // The sign-up goes on after the answer. Each one is let finish before the next, as
+      // one person would do; sign-ups at the very same moment send a single email.
+      if (index < 3) await expect.poll(sent).toBe(index + 1)
     }
-    await emailTo(email, /Confirm/)
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    expect(outbox.filter((message) => message.to === email)).toHaveLength(3)
+    // The ones past the limit have had time to send something, had they been allowed.
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(sent()).toBe(3)
   })
 })
 
@@ -541,11 +545,13 @@ describe('resetting a forgotten password', () => {
     await emailTo(email, /Confirm/)
     outbox = []
 
-    const statuses = []
-    for (let index = 0; index < 5; index += 1) {
-      statuses.push((await post('/password-reset', { email })).statusCode)
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    // At the same moment, which is when two requests could each find no recent link.
+    const answers = await Promise.all(
+      Array.from({ length: 5 }, () => post('/password-reset', { email })),
+    )
+    const statuses = answers.map((answer) => answer.statusCode)
+    await emailTo(email, /Reset your/)
+    await new Promise((resolve) => setTimeout(resolve, 300))
 
     expect(statuses).toEqual([204, 204, 204, 204, 204])
     // A second email would make the first link useless to the person about to click it.
