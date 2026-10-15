@@ -1,7 +1,8 @@
 name: Release
 
 # A version tag (v0.2.0) builds the Docker images of that version and publishes them to the
-# GitHub Container Registry, so an installation can pull them instead of building.
+# GitHub Container Registry, so an installation can pull them instead of building, then
+# makes a GitHub release of the tag with its changelog.
 on:
   push:
     tags: ['v*']
@@ -52,3 +53,23 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.target }}
           cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+
+  # Once the images are out, the tag gets a release on GitHub: the changelog of the version
+  # and how to install exactly it. The release is what watchers of the repository hear about.
+  release:
+    needs: images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: node scripts/release-notes.mjs "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+      - run: >-
+          gh release create "$GITHUB_REF_NAME" --verify-tag
+          --title "ChillaDesk ${GITHUB_REF_NAME#v}" --notes-file "$RUNNER_TEMP/notes.md"
+        env:
+          GH_TOKEN: ${{ github.token }}
