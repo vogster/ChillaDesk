@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The version is shown at the bottom of every page; an About page and a note in the header
+  tell project owners when a new version is out, with its changelog (`UPDATE_CHECK`).
+
 ## 0.3.0
 
 - One-container image `ghcr.io/vogster/chilladesk` for a single `docker run`: the API serves the

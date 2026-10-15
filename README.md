@@ -145,25 +145,26 @@ migrations run when the API starts, whichever way it is installed.
 
 ### Configuration
 
-| Variable                 | Default         | Purpose                                                                      |
-| ------------------------ | --------------- | ---------------------------------------------------------------------------- |
-| `POSTGRES_PASSWORD`      | — (required)    | Password of the bundled PostgreSQL (URL-safe characters)                     |
-| `CHILLADESK_PORT`        | `8080`          | Host port of the web UI                                                      |
-| `COOKIE_SECURE`          | `auto`          | `true` behind an HTTPS proxy, so the session cookie is HTTPS-only            |
-| `REGISTRATION_ENABLED`   | `true`          | `invite`: sign-up only with an invite link; `false`: nobody                  |
-| `RATE_LIMIT_MAX`         | `600`           | Requests per minute from one address (a shared NAT counts as one)            |
-| `DATABASE_URL`           | embedded PGlite | PostgreSQL connection string (set by compose)                                |
-| `TRUST_PROXY`            | `false`         | Number of reverse proxies in front of the API (compose: `1`)                 |
-| `LOG_LEVEL`              | `info`          | `fatal` … `trace`, or `silent`                                               |
-| `MAX_UPLOAD_MB`          | `10`            | Largest file that can be attached to a task or a wiki page                   |
-| `PROJECT_FILES_MB`       | `1024`          | Room all the files of one project may take up together                       |
-| `FILES_DIR`              | `./.data/files` | Where attached files are kept (compose: the `api-data` volume)               |
-| `SMTP_URL`               | — (no email)    | `smtp://user:password@host:587`; turns notification emails on                |
-| `MAIL_FROM`              | —               | Sender of the emails, e.g. `ChillaDesk <wiki@example.com>`                   |
-| `PUBLIC_URL`             | —               | Address people open ChillaDesk at; links in emails and webhooks              |
-| `WEBHOOKS_ALLOW_PRIVATE` | `false`         | Let webhooks reach private addresses (a CI server in your network)           |
-| `WEB_DIR`                | —               | The built web app, served by the API itself (set in the one-container image) |
-| `PUID`, `PGID`           | `1000`          | One-container image: the user that owns `/data` and runs the server          |
+| Variable                 | Default         | Purpose                                                                            |
+| ------------------------ | --------------- | ---------------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD`      | — (required)    | Password of the bundled PostgreSQL (URL-safe characters)                           |
+| `CHILLADESK_PORT`        | `8080`          | Host port of the web UI                                                            |
+| `COOKIE_SECURE`          | `auto`          | `true` behind an HTTPS proxy, so the session cookie is HTTPS-only                  |
+| `REGISTRATION_ENABLED`   | `true`          | `invite`: sign-up only with an invite link; `false`: nobody                        |
+| `RATE_LIMIT_MAX`         | `600`           | Requests per minute from one address (a shared NAT counts as one)                  |
+| `DATABASE_URL`           | embedded PGlite | PostgreSQL connection string (set by compose)                                      |
+| `TRUST_PROXY`            | `false`         | Number of reverse proxies in front of the API (compose: `1`)                       |
+| `LOG_LEVEL`              | `info`          | `fatal` … `trace`, or `silent`                                                     |
+| `MAX_UPLOAD_MB`          | `10`            | Largest file that can be attached to a task or a wiki page                         |
+| `PROJECT_FILES_MB`       | `1024`          | Room all the files of one project may take up together                             |
+| `FILES_DIR`              | `./.data/files` | Where attached files are kept (compose: the `api-data` volume)                     |
+| `SMTP_URL`               | — (no email)    | `smtp://user:password@host:587`; turns notification emails on                      |
+| `MAIL_FROM`              | —               | Sender of the emails, e.g. `ChillaDesk <wiki@example.com>`                         |
+| `PUBLIC_URL`             | —               | Address people open ChillaDesk at; links in emails and webhooks                    |
+| `WEBHOOKS_ALLOW_PRIVATE` | `false`         | Let webhooks reach private addresses (a CI server in your network)                 |
+| `WEB_DIR`                | —               | The built web app, served by the API itself (set in the one-container image)       |
+| `PUID`, `PGID`           | `1000`          | One-container image: the user that owns `/data` and runs the server                |
+| `UPDATE_CHECK`           | `true`          | Look for new versions in the changelog on GitHub twice a day; `false` turns it off |
 
 ### Import and export
 
@@ -240,6 +241,13 @@ Email is optional: set `SMTP_URL`, `MAIL_FROM` and `PUBLIC_URL` together. Then
 Without these settings nothing is sent, and a forgotten password cannot be recovered.
 Accounts created before email was turned on are unconfirmed until their owner asks for the
 confirmation email on the profile page. Emails are written in the language of the account.
+
+### New versions
+
+The version that runs is shown at the bottom of every page and on the **About** page. Twice a
+day the server reads [CHANGELOG.md](CHANGELOG.md) from GitHub; when a newer version is out,
+project owners see it in the header, and the About page lists what changed and how to update.
+The request for that public file is all that is sent; `UPDATE_CHECK=false` turns it off.
 
 ### Your account
 

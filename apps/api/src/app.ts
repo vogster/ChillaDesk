@@ -37,6 +37,8 @@ import { taskRoutes } from './modules/tasks/routes'
 import { statusRoutes } from './modules/tasks/statuses.routes'
 import { tokenRoutes } from './modules/tokens/routes'
 import { transferRoutes } from './modules/transfer/routes'
+import { createUpdateChecker, type UpdateChecker } from './modules/updates/checker'
+import { versionRoutes } from './modules/updates/routes'
 import { webhookRoutes } from './modules/webhooks/routes'
 import { wikiRoutes } from './modules/wiki/routes'
 import { healthRoutes } from './routes/health'
@@ -81,6 +83,8 @@ export interface AppOptions {
   projectQuotaBytes?: number
   /** Files one client may upload per minute. */
   uploadRateLimitMax?: number
+  /** Looks for new versions; without one, the API reports none and never checks. */
+  updateChecker?: UpdateChecker
   /** The built web app, to serve it from the API (the all-in-one image). */
   webDir?: string | undefined
   /** Lets webhooks point at private addresses. */
@@ -109,6 +113,7 @@ export async function buildApp({
   uploadRateLimitMax = 60,
   webhooksAllowPrivate = false,
   webDir,
+  updateChecker = createUpdateChecker({ current: packageJson.version, enabled: false }),
 }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: logLevel },
@@ -234,6 +239,7 @@ export async function buildApp({
     db,
     allowPrivate: webhooksAllowPrivate,
   })
+  await app.register(versionRoutes, { prefix: '/api/version', checker: updateChecker })
   await app.register(transferRoutes, {
     prefix: '/api/projects/:projectId',
     db,

@@ -43,6 +43,7 @@ services:
       PROJECT_FILES_MB: ${PROJECT_FILES_MB:-1024}
       # Set to true to let webhooks reach addresses in your own network (a CI server).
       WEBHOOKS_ALLOW_PRIVATE: ${WEBHOOKS_ALLOW_PRIVATE:-false}
+      UPDATE_CHECK: ${UPDATE_CHECK:-true}
     volumes:
       # Files attached to tasks and wiki pages.
       - api-data:/data

@@ -6,6 +6,7 @@ import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { LanguageSwitcher, useT } from '../i18n'
 import { NotificationBell } from '../pages/notifications/NotificationBell'
 import { Button, Spinner } from './ui'
+import { UpdateNotice, VersionFooter } from './VersionNotices'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `text-sm hover:underline ${
@@ -74,6 +75,7 @@ export function AppLayout({ user }: { user: User }) {
           </nav>
           <SearchBox />
           <div className="ml-auto flex items-center gap-3">
+            <UpdateNotice />
             <NotificationBell />
             <NavLink to="/tokens" className={navLinkClass}>
               {t.shell.nav.tokens}
@@ -97,6 +99,7 @@ export function AppLayout({ user }: { user: User }) {
           <Outlet />
         </Suspense>
       </main>
+      <VersionFooter />
     </div>
   )
 }

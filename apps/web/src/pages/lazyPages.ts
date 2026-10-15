@@ -28,6 +28,7 @@ export const ConfirmEmailChangePage = page(
 )
 export const ProfilePage = page(() => import('./ProfilePage'), 'ProfilePage')
 export const TokensPage = page(() => import('./TokensPage'), 'TokensPage')
+export const AboutPage = page(() => import('./about/AboutPage'), 'AboutPage')
 export const BoardPage = page(() => import('./project/BoardPage'), 'BoardPage')
 export const ListPage = page(() => import('./project/ListPage'), 'ListPage')
 export const MembersPage = page(() => import('./project/MembersPage'), 'MembersPage')

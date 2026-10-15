@@ -4,7 +4,9 @@ import { loadConfig } from './config'
 import { createDatabase } from './db/client'
 import { sweepFiles } from './modules/attachments/service'
 import { createMailSender, startMailWorker } from './modules/notifications/mailer'
+import { createUpdateChecker } from './modules/updates/checker'
 import { startWebhookWorker } from './modules/webhooks/delivery'
+import packageJson from '../package.json' with { type: 'json' }
 
 const config = loadConfig(process.env)
 
@@ -20,7 +22,13 @@ const mail = config.mail
       publicUrl: config.mail.publicUrl,
     }
   : undefined
+// Looks at the changelog on GitHub for newer versions, unless UPDATE_CHECK=false.
+const updateChecker = createUpdateChecker({
+  current: packageJson.version,
+  enabled: config.updateCheck,
+})
 const app = await buildApp({
+  updateChecker,
   database,
   mail,
   logLevel: config.logLevel,
@@ -54,6 +62,9 @@ app.log.info({ driver: database.driver }, 'database connected and migrated')
 const stopMailWorker = mail
   ? startMailWorker({ db: database.db, ...mail, log: app.log })
   : undefined
+const stopUpdateChecks = updateChecker.start((error) =>
+  app.log.warn({ err: error }, 'could not look for a new version'),
+)
 const stopWebhookWorker = startWebhookWorker({
   db: database.db,
   publicUrl: config.publicUrl,
@@ -81,6 +92,7 @@ async function shutdown(signal: string): Promise<void> {
   try {
     await stopMailWorker?.()
     await stopWebhookWorker()
+    stopUpdateChecks()
     await app.close()
     await database.close()
     process.exit(0)
