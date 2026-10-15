@@ -1,6 +1,6 @@
 {
   "name": "chilladesk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Lightweight self-hosted project tracker: tasks, kanban boards and a Markdown wiki, with a REST API and MCP access for AI agents.",

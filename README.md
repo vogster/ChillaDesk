@@ -31,14 +31,14 @@ A lightweight, self-hosted project tracker — a small and simple alternative to
 | ![The board in the dark theme](docs/screenshots/board-dark.png)            | ![The board in Russian](docs/screenshots/board-ru.png)       |
 | A dark theme that follows the system                                       | The interface in Russian                                     |
 
-> Status: 0.3.0. Everything listed above works; see [CHANGELOG.md](CHANGELOG.md) for what is
+> Status: 0.4.0. Everything listed above works; see [CHANGELOG.md](CHANGELOG.md) for what is
 > new. Expect rough edges, and back up your data before upgrading.
 
 ## Install
 
 Three ways, from the quickest to the most complete. Each opens on http://localhost:8080: sign
 up there, and whoever creates a project owns it. API docs live at `/api/docs`. Images are on
-`ghcr.io/vogster` for amd64 and arm64; add a version (`:0.3.0`) instead of `:latest` to pin one.
+`ghcr.io/vogster` for amd64 and arm64; add a version (`:0.4.0`) instead of `:latest` to pin one.
 
 ### One container
 
@@ -103,7 +103,7 @@ docker compose up -d   # or: docker compose up -d --build
 ```
 
 This starts the same three containers (data in the `db-data` and `api-data` volumes), with
-every setting in `.env`. Pin a version with `CHILLADESK_VERSION=0.3.0` there. Database
+every setting in `.env`. Pin a version with `CHILLADESK_VERSION=0.4.0` there. Database
 migrations run when the API starts, whichever way it is installed.
 
 ### Running it for a team

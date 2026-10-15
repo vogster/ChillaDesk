@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 - The version is shown at the bottom of every page; an About page and a note in the header
-  tell project owners when a new version is out, with its changelog (`UPDATE_CHECK`).
+  tell project owners when a new version is out, with its changelog (`UPDATE_CHECK`). From
+  this version on, a server finds out about new releases by itself.
+- Fixed: two password reset requests at the same moment could each send a link, the second
+  making the first useless.
 
 ## 0.3.0
 
